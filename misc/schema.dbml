@@ -1,0 +1,108 @@
+Table users {
+  id integer [primary key]
+  email varchar
+  created_at timestamp
+}
+
+Table roles {
+  id integer [primary key]
+  name varchar
+}
+
+Table role_assignments {
+  id integer [primary key]
+  user_id integer [ref: > users.id]
+  role_id integer [ref: > roles.id]
+}
+
+Table account_types {
+  id integer [primary key]
+  name varchar [note: 'fix, floating, installment']
+  description text
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table accounts {
+  id integer [primary key]
+  user_id integer [ref: > users.id]
+  account_type_id integer [ref: > account_types.id]
+  account_number varchar [unique]
+  capital decimal [note: 'Initial investment amount']
+  transaction_date timestamp
+  end_date timestamp
+  status varchar [note: 'active, closed, suspended']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table fix_rate_accounts {
+  id integer [primary key]
+  account_id integer [ref: > accounts.id]
+  annual_rate decimal [note: 'e.g., 0.17 for 17%']
+  monthly_rate decimal [note: 'calculated monthly rate']
+  interest_calculation_method varchar [note: 'flat, compound']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table floating_rate_accounts {
+  id integer [primary key]
+  account_id integer [ref: > accounts.id]
+  hurdle_rate decimal [note: 'e.g., 0.10 for 10%']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table installment_accounts {
+  id integer [primary key]
+  account_id integer [ref: > accounts.id]
+  period_months integer
+  monthly_rate decimal [note: 'e.g., 0.02 for 2%']
+  monthly_principle decimal
+  monthly_cof decimal
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table vc_performance {
+  id integer [primary key]
+  date timestamp [note: 'First day of the month']
+  aum decimal [note: 'Assets Under Management']
+  gross_profit decimal
+  roi_percentage decimal
+  cof_fix_rate decimal [note: 'Cost of Fund for Fix Rate accounts']
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    date [unique, note: 'Ensure only one entry per month']
+  }
+}
+
+Table floating_rate_calculations {
+  id integer [primary key]
+  floating_rate_account_id integer [ref: > floating_rate_accounts.id]
+  vc_performance_id integer [ref: > vc_performance.id]
+  gross_profit_for_floating decimal [note: 'Gross Profit - CoF Fix Rate']
+  performance_percentage decimal [note: 'Calculated as (gross_profit_for_floating / total_floating_capital) * 100']
+  calculated_rate decimal [note: 'Calculated based on performance_percentage and hurdle_rate']
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table mutations {
+  id integer [primary key]
+  account_id integer [ref: > accounts.id]
+  type varchar [note: 'inbound, outbound']
+  amount decimal
+  description text [note: 'e.g., "New investment", "Withdrawal", "Interest payment"']
+  status varchar [note: 'pending, completed, failed']
+  transaction_date timestamp
+  created_at timestamp
+  updated_at timestamp
+
+  indexes {
+    (account_id, transaction_date) [note: 'For tracking account history']
+  }
+}

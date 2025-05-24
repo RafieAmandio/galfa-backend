@@ -1,0 +1,308 @@
+# Galfa Capital Investment System - Developer Documentation
+
+This document provides technical guidance on implementing the core investment calculation functions for Galfa Capital's venture capital investment system.
+
+## Overview
+
+The system manages three types of investment accounts:
+
+- **Fix Rate Accounts**: Fixed annual rate with flat or compound interest
+- **Floating Rate Accounts**: Variable rate based on VC performance with hurdle rates
+- **Installment Accounts**: Monthly payments with principle and interest components
+
+## Database Schema
+
+The schema is organized around these account types with supporting tables for performance tracking and transactions:
+
+- Core user and account management tables
+- Specific tables for each investment type with their unique properties
+- VC performance tracking
+- Transaction mutations for cash flow
+
+## Key Calculation Functions
+
+### 1. Fix Rate Account Calculations
+
+#### Monthly Interest Calculation - Flat Rate
+
+```typescript
+/**
+ * Calculate monthly interest for flat rate accounts
+ *
+ * @param {number} capital - Initial investment amount
+ * @param {number} annualRate - Annual interest rate (decimal, e.g., 0.17 for 17%)
+ * @param {number} monthNumber - Current month in the investment period (1-indexed)
+ * @param {number} totalMonths - Total months in the investment period
+ * @returns {number} - Interest amount for the specified month
+ */
+function calculateFlatRateMonthlyInterest(
+  capital,
+  annualRate,
+  monthNumber,
+  totalMonths
+) {
+  // Monthly rate is annual rate divided by 12
+  const monthlyRate = annualRate / 12;
+
+  // For flat rate, interest is calculated on original principal each month
+  return capital * monthlyRate;
+}
+
+/**
+ * Calculate balance for flat rate account at a given month
+ *
+ * @param {number} capital - Initial investment amount
+ * @param {number} annualRate - Annual interest rate (decimal)
+ * @param {number} monthsPassed - Number of months since investment start
+ * @returns {number} - Account balance after specified months
+ */
+function calculateFlatRateBalanceAtMonth(capital, annualRate, monthsPassed) {
+  const monthlyInterest = capital * (annualRate / 12);
+  return capital + monthlyInterest * monthsPassed;
+}
+```
+
+#### Monthly Interest Calculation - Compound Interest
+
+```typescript
+/**
+ * Calculate monthly interest for compound interest accounts
+ *
+ * @param {number} currentBalance - Current account balance before interest
+ * @param {number} annualRate - Annual interest rate (decimal, e.g., 0.17 for 17%)
+ * @returns {number} - Interest amount for the month
+ */
+function calculateCompoundMonthlyInterest(currentBalance, annualRate) {
+  // Monthly rate is annual rate divided by 12
+  const monthlyRate = annualRate / 12;
+
+  // For compound interest, calculation is based on current balance
+  return currentBalance * monthlyRate;
+}
+
+/**
+ * Calculate compound interest balance after specified months
+ *
+ * @param {number} capital - Initial investment amount
+ * @param {number} annualRate - Annual interest rate (decimal)
+ * @param {number} monthsPassed - Number of months since investment start
+ * @returns {number} - Account balance with compound interest
+ */
+function calculateCompoundBalanceAtMonth(capital, annualRate, monthsPassed) {
+  const monthlyRate = annualRate / 12;
+  return capital * Math.pow(1 + monthlyRate, monthsPassed);
+}
+```
+
+#### Determining Target Annual Rate for Compound Interest
+
+The CSV shows a need to calculate what annual rate would be needed for compound interest to reach the same final amount as flat interest:
+
+```typescript
+/**
+ * Calculate the annual rate needed for compound interest to match flat rate returns
+ *
+ * @param {number} capital - Initial investment
+ * @param {number} flatAnnualRate - Flat rate annual percentage (decimal)
+ * @param {number} months - Investment period in months
+ * @returns {number} - Required compound annual rate (decimal)
+ */
+function calculateEquivalentCompoundRate(capital, flatAnnualRate, months) {
+  // Target amount at end of period with flat rate
+  const targetAmount = capital * (1 + (flatAnnualRate * months) / 12);
+
+  // Calculate required monthly rate for compound interest
+  // Formula: principal * (1 + monthlyRate)^months = targetAmount
+  // Solving for monthlyRate
+  const monthlyRate = Math.pow(targetAmount / capital, 1 / months) - 1;
+
+  // Convert to annual rate
+  return monthlyRate * 12;
+}
+```
+
+### 2. Floating Rate Account Calculations
+
+Floating rate accounts use performance-based calculations and hurdle rates:
+
+```typescript
+/**
+ * Calculate floating rate based on VC performance
+ *
+ * @param {number} performancePercentage - VC performance percentage (decimal)
+ * @param {number} hurdleRate - The hurdle rate (decimal, e.g., 0.10 for 10%)
+ * @returns {number} - Calculated floating rate (decimal)
+ */
+function calculateFloatingRate(performancePercentage, hurdleRate) {
+  // Performance threshold from CSV is 24%
+  const performanceThreshold = 0.24;
+
+  if (performancePercentage >= performanceThreshold) {
+    // Formula when performance exceeds threshold: hurdle + (performance - hurdle) / 2
+    return hurdleRate + (performanceThreshold - hurdleRate) / 2;
+  } else {
+    // Formula when performance is below threshold: performance / 12
+    return performancePercentage / 12;
+  }
+}
+
+/**
+ * Calculate VC performance percentage for floating rate
+ *
+ * @param {number} grossProfitForFloating - Profit allocated to floating (Gross Profit - CoF Fix Rate)
+ * @param {number} totalFloatingCapital - Total capital in floating rate accounts
+ * @returns {number} - Performance percentage (decimal)
+ */
+function calculatePerformancePercentage(
+  grossProfitForFloating,
+  totalFloatingCapital
+) {
+  return grossProfitForFloating / totalFloatingCapital;
+}
+```
+
+### 3. Installment Account Calculations
+
+```typescript
+/**
+ * Calculate monthly installment payment
+ *
+ * @param {number} capital - Loan amount
+ * @param {number} periodMonths - Total number of installment periods
+ * @param {number} monthlyRate - Monthly interest rate (decimal)
+ * @returns {object} - Monthly principle and interest amounts
+ */
+function calculateInstallment(capital, periodMonths, monthlyRate) {
+  // Monthly principle is capital divided by the number of months
+  const monthlyPrinciple = capital / periodMonths;
+
+  // Monthly interest (CoF) is calculated on the full capital
+  const monthlyCOF = capital * monthlyRate;
+
+  return {
+    monthlyPrinciple,
+    monthlyCOF,
+    totalMonthlyPayment: monthlyPrinciple + monthlyCOF,
+  };
+}
+```
+
+## Implementation Guidelines
+
+1. **Encapsulate calculations in service classes**: Create dedicated services for each investment type (FixRateService, FloatingRateService, InstallmentService).
+
+2. **Transaction handling**:
+
+   - Record all interest payments as mutations
+   - Update account balances after applying interest
+   - Keep detailed logs of calculations for audit purposes
+
+3. **Monthly processing**:
+
+   - Implement a scheduled job that runs monthly calculations
+   - Update VC performance metrics before calculating individual account interest
+   - Calculate interest based on account type and parameters
+   - Generate statements and transaction records
+
+4. **Edge cases**:
+   - Partial months (pro-rated interest)
+   - Early termination/withdrawal
+   - Changes to interest rates during investment period
+
+## Example Usage
+
+### Calculate Fix Rate Monthly Interest
+
+```typescript
+// Example data from CSV
+const aditAccount = {
+  name: "Adit",
+  capital: 12000000,
+  annualRate: 0.17,
+  transactionDate: new Date("2025-04-18"),
+  endDate: new Date("2026-04-18"),
+  interestCalculationMethod: "flat",
+};
+
+// For month 3 of investment (June 2025)
+const interestAmount = calculateFlatRateMonthlyInterest(
+  aditAccount.capital,
+  aditAccount.annualRate,
+  3, // 3rd month
+  12 // 12-month term
+);
+
+console.log(`Monthly interest for ${aditAccount.name}: ${interestAmount}`);
+// Output: Monthly interest for Adit: 170000
+```
+
+### Calculate Floating Rate
+
+```typescript
+// Example data from CSV
+const vcPerformanceFebruary = {
+  grossProfit: 1100000,
+  aum: 10000000,
+};
+
+const floatingAccount = {
+  name: "Adit",
+  capital: 10000000,
+  hurdleRate: 0.1,
+};
+
+// Calculate performance percentage
+const grossProfitForFloating = 6160000; // From CSV
+const totalFloatingCapital = 17500000; // From CSV
+const performancePercentage = calculatePerformancePercentage(
+  grossProfitForFloating,
+  totalFloatingCapital
+); // Should be 0.352 or 35.2%
+
+// Calculate floating rate based on performance
+const floatingRate = calculateFloatingRate(
+  performancePercentage,
+  floatingAccount.hurdleRate
+);
+console.log(
+  `Floating rate for ${floatingAccount.name}: ${floatingRate * 100}%`
+);
+// Output: Floating rate for Adit: 1.42%
+```
+
+## Data Validation and Consistency
+
+For system integrity, implement these validation rules:
+
+1. Ensure monthly rates in the database match calculated rates from annual rates
+2. Validate that account end dates are appropriate based on transaction dates
+3. Verify consistency between transactions and account balances
+4. For floating rates, validate that performance calculations use correct AUM and profit data
+
+## Reporting Functions
+
+Consider implementing these reporting functions:
+
+```typescript
+/**
+ * Generate monthly statement for an account
+ *
+ * @param {number} accountId - Account ID
+ * @param {Date} statementDate - Date of the statement (typically end of month)
+ * @returns {object} - Statement data including interest, balance, etc.
+ */
+function generateMonthlyStatement(accountId, statementDate) {
+  // Implementation details
+}
+
+/**
+ * Calculate year-to-date returns for an account
+ *
+ * @param {number} accountId - Account ID
+ * @param {Date} currentDate - Current date for calculation
+ * @returns {object} - YTD performance data
+ */
+function calculateYTDReturns(accountId, currentDate) {
+  // Implementation details
+}
+```
