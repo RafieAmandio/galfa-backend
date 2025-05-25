@@ -94,7 +94,7 @@ export const vcPerformance = pgTable("vc_performance", {
   id: serial("id").primaryKey(),
   date: timestamp("date").notNull(),
   aum: decimal("aum", { precision: 20, scale: 2 }).notNull(),
-  gross_profit: decimal("gross_profit", { precision: 20, scale: 2 }).notNull(),
+  // gross_profit: decimal("gross_profit", { precision: 20, scale: 2 }).notNull(),
   roi_percentage: decimal("roi_percentage", {
     precision: 5,
     scale: 2,
