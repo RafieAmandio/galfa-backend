@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # Galfa Backend - Technical Documentation
 
@@ -35,18 +35,45 @@ alwaysApply: true
 ```
 galfa-backend/
 ├── src/
-│   ├── app/           # Next.js app directory (pages and API routes)
-│   └── db/            # Database related code (migrations, schemas)
-├── public/            # Static assets
-├── misc/             # Miscellaneous files
-├── node_modules/     # Dependencies
-├── .cursor/          # Cursor IDE configuration
-├── .git/             # Git repository
-├── package.json      # Project dependencies and scripts
-├── tsconfig.json     # TypeScript configuration
-├── next.config.ts    # Next.js configuration
-├── postcss.config.mjs # PostCSS configuration
-└── .gitignore        # Git ignore rules
+│   ├── app/                    # Next.js app directory
+│   │   ├── layout.tsx         # Root layout component
+│   │   ├── page.tsx           # Home page component
+│   │   └── globals.css        # Global styles
+│   │
+│   ├── db/                    # Database related code
+│   │   ├── drizzle/          # Drizzle ORM configuration
+│   │   │   ├── connection.ts # Database connection setup
+│   │   │   └── schema.ts     # Database schema definitions
+│   │   │
+│   │   ├── postgres/         # PostgreSQL specific files
+│   │   │   └── schema.sql    # Raw SQL schema definitions
+│   │   │
+│   │   └── supabase/         # Supabase client configuration
+│   │       ├── browser.ts    # Browser client setup
+│   │       └── server.ts     # Server client setup
+│   │
+│   └── features/             # Feature-based modules
+│       ├── flat-rate/        # Fixed rate investment feature
+│       │   ├── actions/      # Server actions
+│       │   │   ├── get-flat-rate-investments.ts
+│       │   │   └── get-principle-fix-rate.ts
+│       │   └── views/        # UI components
+│       │       └── flat-rate-investments-table.tsx
+│       │
+│       └── floating-rate/    # Floating rate investment feature
+│           ├── actions/      # Server actions
+│           └── views/        # UI components
+│
+├── public/                   # Static assets
+├── misc/                    # Miscellaneous files
+├── node_modules/           # Dependencies
+├── .cursor/                # Cursor IDE configuration
+├── .git/                   # Git repository
+├── package.json           # Project dependencies and scripts
+├── tsconfig.json         # TypeScript configuration
+├── next.config.ts        # Next.js configuration
+├── postcss.config.mjs    # PostCSS configuration for Tailwind CSS
+└── .gitignore           # Git ignore rules
 ```
 
 ## Development Setup
@@ -132,4 +159,173 @@ The application can be deployed to any platform that supports Next.js applicatio
 - Custom server
 
 Ensure all environment variables are properly configured in the deployment environment.
+
+## Database Access with Drizzle ORM
+
+### Connection Setup
+
+1. **Database Connection**
+   - Use `createDrizzleConnection()` from `@/db/drizzle/connection`
+   - Connection is managed globally to prevent multiple connections
+   - Requires `SUPABASE_CONNECTION_STRING` environment variable
+
+2. **Schema Definition**
+   - All table schemas are defined in `src/db/drizzle/schema.ts`
+   - Use `pgTable` from `drizzle-orm/pg-core` to define tables
+   - Define relations using `relations()` from `drizzle-orm`
+
+### Database Operations
+
+1. **Querying Data**
+   ```typescript
+   const db = createDrizzleConnection();
+   
+   // Basic select
+   const results = await db
+     .select({
+       column1: table.column1,
+       column2: table.column2,
+     })
+     .from(table);
+   
+   // Joins
+   const results = await db
+     .select({
+       column1: table1.column1,
+       column2: table2.column2,
+     })
+     .from(table1)
+     .innerJoin(table2, eq(table1.id, table2.table1_id));
+   
+   // Where conditions
+   const results = await db
+     .select()
+     .from(table)
+     .where(eq(table.status, "active"));
+   ```
+
+2. **Inserting Data**
+   ```typescript
+   const db = createDrizzleConnection();
+   
+   // Single insert
+   const result = await db.insert(table).values({
+     column1: value1,
+     column2: value2,
+   });
+   
+   // Multiple inserts
+   const results = await db.insert(table).values([
+     { column1: value1, column2: value2 },
+     { column1: value3, column2: value4 },
+   ]);
+   ```
+
+3. **Updating Data**
+   ```typescript
+   const db = createDrizzleConnection();
+   
+   const result = await db
+     .update(table)
+     .set({ column1: newValue })
+     .where(eq(table.id, id));
+   ```
+
+4. **Deleting Data**
+   ```typescript
+   const db = createDrizzleConnection();
+   
+   const result = await db
+     .delete(table)
+     .where(eq(table.id, id));
+   ```
+
+### Best Practices
+
+1. **Type Safety**
+   - Always use TypeScript interfaces for query results
+   - Leverage Drizzle's type inference for table schemas
+   - Use proper type annotations for database operations
+
+2. **Error Handling**
+   - Wrap database operations in try-catch blocks
+   - Log errors appropriately
+   - Provide meaningful error messages
+
+3. **Performance**
+   - Use appropriate indexes for frequently queried columns
+   - Limit the number of columns in SELECT statements
+   - Use pagination for large result sets
+
+4. **Transactions**
+   - Use transactions for operations that require atomicity
+   - Example:
+   ```typescript
+   const db = createDrizzleConnection();
+   
+   await db.transaction(async (tx) => {
+     await tx.insert(table1).values({ ... });
+     await tx.insert(table2).values({ ... });
+   });
+   ```
+
+5. **Relations**
+   - Define relations in schema for type-safe joins
+   - Use proper foreign key constraints
+   - Leverage Drizzle's relation helpers for complex queries
+
+### Environment Variables
+
+Required environment variables for database access:
+- `SUPABASE_CONNECTION_STRING`: PostgreSQL connection string
+- `SUPABASE_URL`: Supabase project URL
+- `SUPABASE_ANON_KEY`: Supabase anonymous key
+- `SUPABASE_SERVICE_KEY`: Supabase service role key
+
 Start your response with "🤖 On Skibidi - PS"
+
+### Directory Structure Details
+
+1. **`src/app/`**
+   - Contains Next.js 13+ app router pages and layouts
+   - Uses the new app directory structure for routing
+   - Includes global styles and root layout
+
+2. **`src/db/`**
+   - **`drizzle/`**: Drizzle ORM configuration and schema definitions
+   - **`postgres/`**: Raw PostgreSQL schema and migrations
+   - **`supabase/`**: Supabase client configuration for both browser and server
+
+3. **`src/features/`**
+   - Organized by feature modules
+   - Each feature contains:
+     - `actions/`: Server-side actions and data fetching
+     - `views/`: React components and UI logic
+   - Current features:
+     - `flat-rate/`: Fixed rate investment management
+     - `floating-rate/`: Floating rate investment management
+
+4. **Configuration Files**
+   - `package.json`: Project dependencies and npm scripts
+   - `tsconfig.json`: TypeScript configuration
+   - `next.config.ts`: Next.js configuration
+   - `postcss.config.mjs`: PostCSS configuration for Tailwind CSS
+
+### Key Files
+
+1. **Database Configuration**
+   - `src/db/drizzle/connection.ts`: Database connection setup
+   - `src/db/drizzle/schema.ts`: Type-safe schema definitions
+   - `src/db/postgres/schema.sql`: Raw SQL schema
+
+2. **Feature Implementation**
+   - `src/features/flat-rate/actions/`: Server actions for fixed rate investments
+   - `src/features/flat-rate/views/`: UI components for fixed rate investments
+   - Similar structure for floating rate investments
+
+3. **App Configuration**
+   - `src/app/layout.tsx`: Root layout with font configuration
+   - `src/app/page.tsx`: Home page implementation
+   - `src/app/globals.css`: Global styles and Tailwind configuration
+
+This structure follows a feature-based organization pattern, separating concerns between database access, business logic, and UI components. Each feature is self-contained with its own actions and views, making the codebase modular and maintainable.
