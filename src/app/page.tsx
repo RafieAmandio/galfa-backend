@@ -1,9 +1,8 @@
-import Image from "next/image";
-import { FlatRateInvestmentsTable } from "@/features/flat-rate/views/flat-rate-investments-table";
+import InvestmentCharts from "@/features/investments/views/investment-charts";
 export default function Home() {
   return (
     <div>
-      <FlatRateInvestmentsTable />
+      <InvestmentCharts />
     </div>
   );
 }

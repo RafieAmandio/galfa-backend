@@ -44,6 +44,18 @@ CREATE TABLE fix_rate_accounts (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Installment accounts table
+CREATE TABLE installment_accounts (
+    id SERIAL PRIMARY KEY,
+    account_id INTEGER REFERENCES accounts(id),
+    period_months INTEGER NOT NULL,
+    monthly_rate DECIMAL(5,4) NOT NULL,
+    monthly_principle DECIMAL(20,2) NOT NULL,
+    monthly_cof DECIMAL(20,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## Key Calculation Functions
@@ -180,26 +192,96 @@ function calculatePerformancePercentage(
 ### 3. Installment Account Calculations
 
 ```typescript
-/**
- * Calculate monthly installment payment
- *
- * @param {number} capital - Loan amount
- * @param {number} periodMonths - Total number of installment periods
- * @param {number} monthlyRate - Monthly interest rate (decimal)
- * @returns {object} - Monthly principle and interest amounts
- */
-function calculateInstallment(capital, periodMonths, monthlyRate) {
-  // Monthly principle is capital divided by the number of months
-  const monthlyPrinciple = capital / periodMonths;
-
-  // Monthly interest (CoF) is calculated on the full capital
-  const monthlyCOF = capital * monthlyRate;
-
-  return {
-    monthlyPrinciple,
-    monthlyCOF,
-    totalMonthlyPayment: monthlyPrinciple + monthlyCOF,
+interface InstallmentInvestment {
+  name: string;
+  capital: number;
+  transDate: Date;
+  periodMonths: number;
+  endDate: Date;
+  monthlyRate: number;
+  monthlyPrinciple: number;
+  monthlyCoF: number;
+  monthlyPayments: {
+    [key: string]: number; // Format: "MMM YYYY" (e.g., "Jan 2025")
   };
+}
+
+/**
+ * Get all active installment investments with their details
+ * 
+ * @returns {Promise<InstallmentInvestment[]>} Array of installment investments
+ */
+async function getInstallmentInvestments(): Promise<InstallmentInvestment[]> {
+  const results = await db
+    .select({
+      name: accounts.account_number,
+      capital: accounts.capital,
+      transDate: accounts.transaction_date,
+      periodMonths: installmentAccounts.period_months,
+      endDate: accounts.end_date,
+      monthlyRate: installmentAccounts.monthly_rate,
+      monthlyPrinciple: installmentAccounts.monthly_principle,
+      monthlyCoF: installmentAccounts.monthly_cof,
+    })
+    .from(accounts)
+    .innerJoin(installmentAccounts, eq(accounts.id, installmentAccounts.account_id))
+    .where(eq(accounts.status, "active"));
+
+  return results.map((result) => {
+    const monthlyPrinciple = Number(result.monthlyPrinciple);
+    const monthlyCoF = Number(result.monthlyCoF);
+    
+    return {
+      name: result.name,
+      capital: Number(result.capital),
+      transDate: result.transDate,
+      periodMonths: result.periodMonths,
+      endDate: result.endDate!,
+      monthlyRate: Number(result.monthlyRate),
+      monthlyPrinciple,
+      monthlyCoF,
+      monthlyPayments: calculateMonthlyPayments({
+        transDate: result.transDate,
+        periodMonths: result.periodMonths,
+        monthlyPrinciple,
+        monthlyCoF,
+      }),
+    };
+  });
+}
+
+/**
+ * Calculate monthly payments for an installment investment
+ * 
+ * @param {object} params - Parameters for calculation
+ * @param {Date} params.transDate - Transaction start date
+ * @param {number} params.periodMonths - Number of months in the installment period
+ * @param {number} params.monthlyPrinciple - Monthly principle payment amount
+ * @param {number} params.monthlyCoF - Monthly cost of funds (interest) amount
+ * @returns {object} - Monthly payments indexed by month
+ */
+function calculateMonthlyPayments(params: {
+  transDate: Date;
+  periodMonths: number;
+  monthlyPrinciple: number;
+  monthlyCoF: number;
+}): { [key: string]: number } {
+  const payments: { [key: string]: number } = {};
+  const startDate = new Date(params.transDate);
+  
+  for (let i = 0; i < params.periodMonths; i++) {
+    const paymentDate = new Date(startDate);
+    paymentDate.setMonth(startDate.getMonth() + i + 1);
+    
+    const monthKey = paymentDate.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric'
+    });
+    
+    payments[monthKey] = params.monthlyPrinciple + params.monthlyCoF;
+  }
+  
+  return payments;
 }
 ```
 
@@ -229,45 +311,51 @@ function calculateInstallment(capital, periodMonths, monthlyRate) {
 
 ## Example Usage
 
-### Display Principle Fix Rate Summary
+### Display Installment Investments Table
 
 ```typescript
 // In a React component
-const [principleFixRate, setPrincipleFixRate] = useState<PrincipleFixRateResult>();
+const [installments, setInstallments] = useState<InstallmentInvestment[]>();
 
 useEffect(() => {
   const fetchData = async () => {
-    const data = await getPrincipleFixRate();
-    setPrincipleFixRate(data);
+    const data = await getInstallmentInvestments();
+    setInstallments(data);
   };
   fetchData();
 }, []);
 
 // In JSX
-<div className="bg-white p-6 rounded-lg shadow">
-  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-    Principle Fix Rate Summary
-  </h3>
-  <div className="space-y-4">
-    <div className="flex justify-between items-center">
-      <span className="text-gray-600">Total Capital:</span>
-      <span className="font-medium text-black">
-        {new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        }).format(principleFixRate?.totalCapital || 0)}
-      </span>
-    </div>
-    <div className="flex justify-between items-center">
-      <span className="text-gray-600">Total Cost of Funds:</span>
-      <span className="font-medium text-black">
-        {new Intl.NumberFormat("id-ID", {
-          style: "currency",
-          currency: "IDR",
-        }).format(principleFixRate?.totalCoF || 0)}
-      </span>
-    </div>
-  </div>
+<div className="overflow-x-auto">
+  <table className="min-w-full divide-y divide-gray-200">
+    <thead className="bg-gray-50">
+      <tr>
+        <th>Account</th>
+        <th>Capital</th>
+        <th>Trans Date</th>
+        <th>Period</th>
+        <th>End Date</th>
+        <th>Monthly Rate</th>
+        <th>Monthly Principle</th>
+        <th>Monthly CoF</th>
+        {/* Dynamic month columns */}
+      </tr>
+    </thead>
+    <tbody>
+      {installments?.map((investment) => (
+        <tr key={investment.name}>
+          <td>{investment.name}</td>
+          <td>
+            {new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            }).format(investment.capital)}
+          </td>
+          {/* Other columns */}
+        </tr>
+      ))}
+    </tbody>
+  </table>
 </div>
 ```
 
@@ -279,6 +367,10 @@ For system integrity, implement these validation rules:
 2. Validate that account end dates are appropriate based on transaction dates
 3. Verify consistency between transactions and account balances
 4. For floating rates, validate that performance calculations use correct AUM and profit data
+5. For installment accounts, validate that:
+   - Monthly principle * period months = total capital
+   - Monthly CoF = capital * monthly rate
+   - End date matches transaction date + period months
 
 ## Reporting Functions
 
@@ -308,4 +400,4 @@ function calculateYTDReturns(accountId, currentDate) {
 }
 ```
 
-Start your response with "🍌 On Skibidi - IC"
+Start your response with "�� On Skibidi - IC"
