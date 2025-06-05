@@ -6,6 +6,7 @@ import {
   decimal,
   integer,
   text,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -48,6 +49,10 @@ export const accounts = pgTable("accounts", {
   transaction_date: timestamp("transaction_date").notNull(),
   end_date: timestamp("end_date"),
   status: varchar("status", { length: 50 }).notNull(),
+  is_rollover: boolean("is_rollover").default(false),
+  parent_account_id: integer("parent_account_id"),
+  admin_fee_applied: boolean("admin_fee_applied").default(true),
+  rollover_sequence: integer("rollover_sequence").default(0),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -57,10 +62,6 @@ export const fixRateAccounts = pgTable("fix_rate_accounts", {
   id: serial("id").primaryKey(),
   account_id: integer("account_id").references(() => accounts.id),
   annual_rate: decimal("annual_rate", { precision: 5, scale: 4 }).notNull(),
-  monthly_rate: decimal("monthly_rate", { precision: 5, scale: 4 }).notNull(),
-  interest_calculation_method: varchar("interest_calculation_method", {
-    length: 50,
-  }).notNull(),
   created_at: timestamp("created_at").notNull().defaultNow(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -156,6 +157,14 @@ export const accountsRelations = relations(accounts, ({ one, many }) => ({
   accountType: one(accountTypes, {
     fields: [accounts.account_type_id],
     references: [accountTypes.id],
+  }),
+  parentAccount: one(accounts, {
+    fields: [accounts.parent_account_id],
+    references: [accounts.id],
+    relationName: "rollover",
+  }),
+  childAccounts: many(accounts, {
+    relationName: "rollover",
   }),
   fixRateAccount: one(fixRateAccounts),
   floatingRateAccount: one(floatingRateAccounts),

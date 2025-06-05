@@ -48,8 +48,6 @@ CREATE TABLE fix_rate_accounts (
     id SERIAL PRIMARY KEY,
     account_id INTEGER REFERENCES accounts(id),
     annual_rate DECIMAL(5,4) NOT NULL, -- e.g., 0.17 for 17%
-    monthly_rate DECIMAL(5,4) NOT NULL, -- calculated monthly rate
-    interest_calculation_method VARCHAR(50) NOT NULL, -- flat, compound
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
