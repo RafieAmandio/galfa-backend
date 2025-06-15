@@ -121,9 +121,6 @@ export const floatingRateAccounts = pgTable("floating_rate_accounts", {
 export const installmentAccounts = pgTable("installment_accounts", {
   id: serial("id").primaryKey(),
   account_id: integer("account_id").references(() => accounts.id),
-  period_months: integer("period_months").notNull(),
-  monthly_rate: decimal("monthly_rate").notNull(),
-  monthly_principle: decimal("monthly_principle").notNull(),
   monthly_cof: decimal("monthly_cof").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),

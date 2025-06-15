@@ -1,6 +1,7 @@
 "use client";
 
 import { FlatRateInvestmentsTable } from "@/features/flat-rate/views/flat-rate-investments-table";
+import { RedeemFlatRateModal } from "@/features/flat-rate/components/redeem-flat-rate-modal";
 import { getAdminStatus } from "@/lib/auth/client-admin-check";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -116,6 +117,12 @@ export default function Page() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <RedeemFlatRateModal
+                onRedemptionComplete={() => {
+                  // Optionally refresh the table data
+                  window.location.reload();
+                }}
+              />
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                 <svg
                   className="w-3 h-3 mr-1"

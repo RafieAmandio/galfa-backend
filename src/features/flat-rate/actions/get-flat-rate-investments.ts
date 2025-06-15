@@ -5,6 +5,7 @@ import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 
 interface MonthlyData {
   monthYear: string;
@@ -13,9 +14,11 @@ interface MonthlyData {
   beginningBalance: number;
   monthlyInterest: number;
   endingBalance: number;
+  redemptions?: number; // Add redemptions tracking
 }
 
 interface FlatRateInvestment {
+  id: number; // Add account ID
   name: string;
   grossCapital: number;
   adminFee: number;
@@ -23,7 +26,11 @@ interface FlatRateInvestment {
   rate: number;
   transDate: Date;
   endDate: Date;
+  status: string;
   annualizedCoF: number;
+  currentValue: number; // NPV with redemptions
+  totalRedemptions: number; // Total amount redeemed
+  remainingPrincipal: number; // Principal after redemptions
   monthlyData: MonthlyData[];
 }
 
@@ -32,6 +39,7 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
 
   const results = await db
     .select({
+      id: accounts.id, // Add account ID
       name: accounts.account_number,
       grossCapital: accounts.capital, // Full capital from database
       rate: fixRateAccounts.annual_rate,
@@ -40,48 +48,72 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
       isRollover: accounts.is_rollover,
       adminFeeApplied: accounts.admin_fee_applied,
       rolloverSequence: accounts.rollover_sequence,
+      status: accounts.status,
     })
     .from(accounts)
-    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
-    .where(eq(accounts.status, "active"));
+    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id));
 
-  return results.map((result) => {
-    const grossCapital = Number(result.grossCapital);
-    const annualRate = Number(result.rate);
-    const isRollover = result.isRollover || false;
-    const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
+  // Process each result and calculate NPV with redemptions
+  const investments = await Promise.all(
+    results.map(async (result) => {
+      const grossCapital = Number(result.grossCapital);
+      const annualRate = Number(result.rate);
+      const isRollover = result.isRollover || false;
+      const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
 
-    // Calculate admin fee and net capital based on account type
-    let adminFee: number;
-    let netCapital: number;
+      // Calculate admin fee and net capital based on account type
+      let adminFee: number;
+      let netCapital: number;
 
-    if (isRollover && !adminFeeApplied) {
-      // Rollover account: no additional admin fee, use full capital
-      adminFee = 0;
-      netCapital = grossCapital;
-    } else {
-      // Regular account: apply admin fee
-      adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
-      netCapital = grossCapital - adminFee;
-    }
+      if (isRollover && !adminFeeApplied) {
+        // Rollover account: no additional admin fee, use full capital
+        adminFee = 0;
+        netCapital = grossCapital;
+      } else {
+        // Regular account: apply admin fee
+        adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
+        netCapital = grossCapital - adminFee;
+      }
 
-    return {
-      name: result.name,
-      grossCapital,
-      adminFee,
-      netCapital,
-      rate: Number((annualRate * 100).toFixed(2)),
-      transDate: result.transDate,
-      endDate: result.endDate!,
-      annualizedCoF: netCapital * annualRate, // CoF calculated on net capital
-      monthlyData: calculateMonthlyData({
+      // Calculate NPV with redemptions
+      const npvWithRedemptions = await calculateNetPresentValueWithRedemptions(
+        result.id,
+        grossCapital,
+        annualRate,
+        result.transDate,
+        new Date(),
+        isRollover,
+        adminFeeApplied
+      );
+
+      return {
+        id: result.id,
+        name: result.name,
+        grossCapital,
+        adminFee,
+        netCapital,
+        rate: Number((annualRate * 100).toFixed(2)),
         transDate: result.transDate,
         endDate: result.endDate!,
-        annualRate,
-        netCapital,
-      }),
-    };
-  });
+        status: result.status,
+        annualizedCoF: netCapital * annualRate, // CoF calculated on net capital
+        currentValue: npvWithRedemptions.currentValue,
+        totalRedemptions: npvWithRedemptions.totalRedemptions,
+        remainingPrincipal: npvWithRedemptions.remainingPrincipal,
+        monthlyData: npvWithRedemptions.monthlyBreakdown.map((month) => ({
+          monthYear: month.monthYear,
+          daysInPeriod: month.daysInPeriod,
+          effectiveRate: 0, // Will calculate based on interest earned
+          beginningBalance: month.startingBalance,
+          monthlyInterest: month.interestEarned,
+          endingBalance: month.endingBalance,
+          redemptions: month.redemptions,
+        })),
+      };
+    })
+  );
+
+  return investments;
 }
 
 function calculateMonthlyData(params: {

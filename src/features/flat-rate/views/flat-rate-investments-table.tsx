@@ -69,10 +69,16 @@ export function FlatRateInvestmentsTable() {
                 End Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Annualized CoF
+                Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Monthly Rates
+                Current Value
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Total Redeemed
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Monthly Details
               </th>
             </tr>
           </thead>
@@ -112,18 +118,48 @@ export function FlatRateInvestmentsTable() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {new Date(investment.endDate).toLocaleDateString("id-ID")}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        investment.status === "active"
+                          ? "bg-green-100 text-green-800"
+                          : investment.status === "redeemed"
+                          ? "bg-purple-100 text-purple-800"
+                          : investment.status === "rollover"
+                          ? "bg-blue-100 text-blue-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {investment.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
                     {new Intl.NumberFormat("id-ID", {
                       style: "currency",
                       currency: "IDR",
-                    }).format(investment.annualizedCoF)}
+                    }).format(investment.currentValue)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                    {investment.totalRedemptions > 0 ? (
+                      <>
+                        -
+                        {new Intl.NumberFormat("id-ID", {
+                          style: "currency",
+                          currency: "IDR",
+                        }).format(investment.totalRedemptions)}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">None</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <button
                       onClick={() => toggleExpansion(index)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 rounded-md text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      {expandedRows.has(index) ? "Hide Rates" : "Show Rates"}
+                      {expandedRows.has(index)
+                        ? "Hide Details"
+                        : "Show Details"}
                       <svg
                         className={`ml-1 h-3 w-3 transform transition-transform ${
                           expandedRows.has(index) ? "rotate-180" : ""
@@ -146,7 +182,7 @@ export function FlatRateInvestmentsTable() {
                 {/* Monthly Rates Rows - Only show if expanded */}
                 {expandedRows.has(index) && (
                   <>
-                    {/* Header row for monthly rates */}
+                    {/* Header row for monthly details */}
                     <tr className="bg-blue-50">
                       <td className="px-6 py-2 text-xs font-medium text-blue-700">
                         Monthly Details for {investment.name}
@@ -167,7 +203,7 @@ export function FlatRateInvestmentsTable() {
                         Ending Balance
                       </td>
                       <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                        Monthly Rate
+                        Redemptions
                       </td>
                       <td colSpan={2}></td>
                     </tr>
@@ -202,8 +238,19 @@ export function FlatRateInvestmentsTable() {
                             currency: "IDR",
                           }).format(monthData.endingBalance)}
                         </td>
-                        <td className="px-6 py-1 text-sm text-center text-gray-600">
-                          {(monthData.effectiveRate * 100).toFixed(4)}%
+                        <td className="px-6 py-1 text-sm text-center text-red-600">
+                          {monthData.redemptions &&
+                          monthData.redemptions > 0 ? (
+                            <>
+                              -
+                              {new Intl.NumberFormat("id-ID", {
+                                style: "currency",
+                                currency: "IDR",
+                              }).format(monthData.redemptions)}
+                            </>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td colSpan={2}></td>
                       </tr>

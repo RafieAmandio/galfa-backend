@@ -9,7 +9,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
-import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
+import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 
 interface InvestorSummary {
   email: string;
@@ -37,96 +37,6 @@ interface InvestmentDetail {
   gainLoss: number; // Current gain or loss
   gainLossPercentage: number; // Percentage gain or loss
   daysInvested: number; // Total days the investment has been active
-}
-
-// Helper function to calculate NPV for an investment
-function calculateNetPresentValue(
-  netCapital: number,
-  annualRate: number,
-  startDate: Date,
-  currentDate: Date = new Date()
-): { currentValue: number; daysInvested: number } {
-  const monthlyRate = getMonthlyCompoundRate(netCapital, annualRate);
-
-  console.log("  🧮 NPV Calculation:");
-  console.log("    - Net capital:", netCapital.toLocaleString());
-  console.log("    - Annual rate:", (annualRate * 100).toFixed(4) + "%");
-  console.log("    - Monthly rate:", (monthlyRate * 100).toFixed(6) + "%");
-  console.log("    - Start date:", startDate.toISOString().split("T")[0]);
-  console.log("    - Current date:", currentDate.toISOString().split("T")[0]);
-
-  let currentValue = netCapital;
-  let calculationDate = new Date(startDate);
-  const endDate = currentDate;
-  let monthCounter = 0;
-
-  // Calculate total days invested
-  const daysInvested = Math.ceil(
-    (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  console.log("    - Days invested:", daysInvested);
-
-  while (calculationDate <= endDate) {
-    monthCounter++;
-    const monthStart = new Date(calculationDate);
-    const monthEnd = new Date(
-      calculationDate.getFullYear(),
-      calculationDate.getMonth() + 1,
-      0
-    ); // Last day of current month
-    const actualEndDate = monthEnd > endDate ? endDate : monthEnd;
-
-    // Calculate days in this period
-    let daysInPeriod = Math.ceil(
-      (actualEndDate.getTime() - calculationDate.getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-
-    // Add 1 day only for full months (not for partial start/end months)
-    const isStartMonth = calculationDate.getTime() === startDate.getTime();
-    const isEndMonth = actualEndDate.getTime() === endDate.getTime();
-
-    if (!isStartMonth && !isEndMonth) {
-      daysInPeriod += 1;
-    }
-
-    // Calculate effective rate based on whether it's a full month or partial month
-    let effectiveRate: number;
-
-    if (isStartMonth || isEndMonth) {
-      // Partial month: proportional rate based on days
-      const actualMonthDays = new Date(
-        calculationDate.getFullYear(),
-        calculationDate.getMonth() + 1,
-        0
-      ).getDate();
-      effectiveRate = (daysInPeriod / actualMonthDays) * monthlyRate;
-    } else {
-      // Full month: always use the full monthly rate regardless of calendar days
-      effectiveRate = monthlyRate;
-    }
-
-    const periodInterest = currentValue * effectiveRate;
-    currentValue = currentValue + periodInterest;
-
-    console.log(
-      `    - Month ${monthCounter}: +${periodInterest.toFixed(
-        2
-      )} → ${currentValue.toFixed(2)}`
-    );
-
-    // Move to first day of next month
-    calculationDate = new Date(
-      calculationDate.getFullYear(),
-      calculationDate.getMonth() + 1,
-      1
-    );
-  }
-
-  console.log("    - Final current value:", currentValue.toLocaleString());
-
-  return { currentValue, daysInvested };
 }
 
 export async function getInvestorSummary(
@@ -262,109 +172,136 @@ export async function getInvestorSummary(
   console.log("PROCESSING EACH ACTIVE INVESTMENT:");
   console.log("-".repeat(50));
 
-  activeAccounts.forEach((result, index: number) => {
-    console.log(`\nInvestment ${index + 1}: ${result.accountNumber}`);
-    console.log("  Raw gross capital:", result.grossCapital);
-    console.log("  Is rollover:", result.isRollover);
-    console.log("  Admin fee applied:", result.adminFeeApplied);
-    console.log("  Rollover sequence:", result.rolloverSequence);
-    console.log("  Parent account ID:", result.parentAccountId);
+  const investmentPromises = activeAccounts.map(
+    async (result, index: number) => {
+      console.log(`\nInvestment ${index + 1}: ${result.accountNumber}`);
+      console.log("  Raw gross capital:", result.grossCapital);
+      console.log("  Is rollover:", result.isRollover);
+      console.log("  Admin fee applied:", result.adminFeeApplied);
+      console.log("  Rollover sequence:", result.rolloverSequence);
+      console.log("  Parent account ID:", result.parentAccountId);
 
-    const grossCapital = Number(result.grossCapital);
-    const annualRate = Number(result.annualRate);
-    const isRollover = result.isRollover || false;
-    const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
+      const grossCapital = Number(result.grossCapital);
+      const annualRate = Number(result.annualRate);
+      const isRollover = result.isRollover || false;
+      const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
 
-    console.log("  Processed values:");
-    console.log("    - Gross capital (number):", grossCapital);
-    console.log("    - Annual rate:", annualRate);
-    console.log("    - Is rollover (boolean):", isRollover);
-    console.log("    - Admin fee applied (boolean):", adminFeeApplied);
+      console.log("  Processed values:");
+      console.log("    - Gross capital (number):", grossCapital);
+      console.log("    - Annual rate:", annualRate);
+      console.log("    - Is rollover (boolean):", isRollover);
+      console.log("    - Admin fee applied (boolean):", adminFeeApplied);
 
-    // Calculate admin fee and net capital based on account type
-    let adminFee: number;
-    let netCapital: number;
+      // Calculate admin fee and net capital based on account type
+      let adminFee: number;
+      let netCapital: number;
 
-    if (isRollover && !adminFeeApplied) {
-      // Rollover account: no additional admin fee, use full capital
-      adminFee = 0;
-      netCapital = grossCapital;
-      console.log("  💰 ROLLOVER CALCULATION (NO ADMIN FEE):");
-      console.log("    - Admin fee: 0");
-      console.log("    - Net capital: ", netCapital);
-    } else {
-      // Regular account: apply admin fee
-      adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
-      netCapital = grossCapital - adminFee;
-      console.log("  📊 REGULAR CALCULATION (WITH ADMIN FEE):");
-      console.log(
-        "    - Admin fee calculation:",
+      if (isRollover && !adminFeeApplied) {
+        // Rollover account: no additional admin fee, use full capital
+        adminFee = 0;
+        netCapital = grossCapital;
+        console.log("  💰 ROLLOVER CALCULATION (NO ADMIN FEE):");
+        console.log("    - Admin fee: 0");
+        console.log("    - Net capital: ", netCapital);
+      } else {
+        // Regular account: apply admin fee
+        adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
+        netCapital = grossCapital - adminFee;
+        console.log("  📊 REGULAR CALCULATION (WITH ADMIN FEE):");
+        console.log(
+          "    - Admin fee calculation:",
+          grossCapital,
+          "×",
+          ADMIN_FEE_PERCENTAGE,
+          "=",
+          adminFee
+        );
+        console.log(
+          "    - Net capital calculation:",
+          grossCapital,
+          "-",
+          adminFee,
+          "=",
+          netCapital
+        );
+      }
+
+      // Calculate Net Present Value using redemption-aware utility
+      const npvResult = await calculateNetPresentValueWithRedemptions(
+        result.id,
         grossCapital,
-        "×",
-        ADMIN_FEE_PERCENTAGE,
-        "=",
-        adminFee
+        annualRate,
+        result.startDate,
+        new Date(),
+        isRollover,
+        adminFeeApplied
       );
+
+      const gainLoss = npvResult.currentValue - netCapital;
+      const gainLossPercentage =
+        netCapital > 0 ? (gainLoss / netCapital) * 100 : 0;
+
+      console.log("  📈 NPV SUMMARY:");
+      console.log("    - Net capital:", netCapital.toLocaleString());
       console.log(
-        "    - Net capital calculation:",
+        "    - Current value:",
+        npvResult.currentValue.toLocaleString()
+      );
+      console.log("    - Gain/Loss:", gainLoss.toLocaleString());
+      console.log("    - Gain/Loss %:", gainLossPercentage.toFixed(4) + "%");
+      console.log("    - Days invested:", npvResult.daysInvested);
+
+      // Return investment data for accumulation
+      return {
         grossCapital,
-        "-",
+        netCapital,
         adminFee,
-        "=",
-        netCapital
-      );
+        npvCurrentValue: npvResult.currentValue,
+        investmentDetail: {
+          accountNumber: result.accountNumber,
+          netInvestedAmount: netCapital,
+          grossInvestedAmount: grossCapital,
+          adminFee,
+          startDate: result.startDate,
+          endDate: result.endDate,
+          annualRate,
+          isRollover,
+          rolloverSequence: result.rolloverSequence || 0,
+          currentValue: npvResult.currentValue,
+          gainLoss,
+          gainLossPercentage,
+          daysInvested: npvResult.daysInvested,
+        },
+      };
     }
+  );
 
-    // Calculate Net Present Value
-    const npvResult = calculateNetPresentValue(
-      netCapital,
-      annualRate,
-      result.startDate
-    );
+  // Wait for all investments to be processed
+  const processedInvestments = await Promise.all(investmentPromises);
 
-    const gainLoss = npvResult.currentValue - netCapital;
-    const gainLossPercentage =
-      netCapital > 0 ? (gainLoss / netCapital) * 100 : 0;
+  // Accumulate totals
+  processedInvestments.forEach((processed, index) => {
+    totalGrossInvestedFund += processed.grossCapital;
+    totalNetInvestedFund += processed.netCapital;
+    totalAdminFees += processed.adminFee;
+    totalNetPresentValue += processed.npvCurrentValue;
 
-    console.log("  📈 NPV SUMMARY:");
-    console.log("    - Net capital:", netCapital.toLocaleString());
-    console.log(
-      "    - Current value:",
-      npvResult.currentValue.toLocaleString()
-    );
-    console.log("    - Gain/Loss:", gainLoss.toLocaleString());
-    console.log("    - Gain/Loss %:", gainLossPercentage.toFixed(4) + "%");
-    console.log("    - Days invested:", npvResult.daysInvested);
-
-    // Add to totals
-    totalGrossInvestedFund += grossCapital;
-    totalNetInvestedFund += netCapital;
-    totalAdminFees += adminFee;
-    totalNetPresentValue += npvResult.currentValue;
-
-    console.log("  Running totals after this investment:");
-    console.log("    - Total gross fund:", totalGrossInvestedFund);
-    console.log("    - Total net fund:", totalNetInvestedFund);
-    console.log("    - Total admin fees:", totalAdminFees);
-    console.log("    - Total NPV:", totalNetPresentValue);
+    console.log(`  Investment ${index + 1} totals:`);
+    console.log("    - Gross capital:", processed.grossCapital);
+    console.log("    - Net capital:", processed.netCapital);
+    console.log("    - Admin fee:", processed.adminFee);
+    console.log("    - NPV:", processed.npvCurrentValue);
 
     // Add investment detail
-    investments.push({
-      accountNumber: result.accountNumber,
-      netInvestedAmount: netCapital,
-      grossInvestedAmount: grossCapital,
-      adminFee,
-      startDate: result.startDate,
-      endDate: result.endDate,
-      annualRate,
-      isRollover,
-      rolloverSequence: result.rolloverSequence || 0,
-      currentValue: npvResult.currentValue,
-      gainLoss,
-      gainLossPercentage,
-      daysInvested: npvResult.daysInvested,
-    });
+    investments.push(processed.investmentDetail);
   });
+
+  console.log("");
+  console.log("FINAL TOTALS AFTER ALL INVESTMENTS:");
+  console.log("    - Total gross fund:", totalGrossInvestedFund);
+  console.log("    - Total net fund:", totalNetInvestedFund);
+  console.log("    - Total admin fees:", totalAdminFees);
+  console.log("    - Total NPV:", totalNetPresentValue);
 
   // Calculate total portfolio gain/loss
   const totalGainLoss = totalNetPresentValue - totalNetInvestedFund;
