@@ -122,6 +122,8 @@ export const installmentAccounts = pgTable("installment_accounts", {
   id: serial("id").primaryKey(),
   account_id: integer("account_id").references(() => accounts.id),
   monthly_cof: decimal("monthly_cof").notNull(),
+  admin_fee: decimal("admin_fee").notNull(),
+  investment_type: varchar("investment_type", { length: 20 }).notNull(), // 'principle' or 'interest_only'
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

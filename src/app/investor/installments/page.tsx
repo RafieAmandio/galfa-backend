@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
-import { AdminInstallmentTable } from "@/features/installment/views/admin-installment-table";
+import { InvestorInstallmentTable } from "@/features/installment/views/investor-installment-table";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 
-export default function InstallmentsPage() {
+export default function InvestorInstallmentsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const { isAdmin, loading } = useAdminCheck(user);
 
   useEffect(() => {
     const supabase = createBrowserClient();
@@ -31,7 +29,7 @@ export default function InstallmentsPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div className="container mx-auto p-4">
         <div className="flex justify-center items-center h-64">
@@ -49,22 +47,7 @@ export default function InstallmentsPage() {
             Authentication Required
           </h1>
           <p className="text-gray-600">
-            Please log in to view installment investments.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            Access Denied
-          </h1>
-          <p className="text-gray-600">
-            You need admin privileges to view installment investments.
+            Please log in to view your installment investments.
           </p>
         </div>
       </div>
@@ -75,15 +58,15 @@ export default function InstallmentsPage() {
     <div className="container mx-auto p-4">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Installment Investments - Admin View
+          Your Installment Investments
         </h1>
         <p className="text-gray-600">
-          Track gained funds, present value, and net present value for all
-          installment investments.
+          View your installment investment schedule and track your net investor
+          fund.
         </p>
       </div>
 
-      <AdminInstallmentTable />
+      <InvestorInstallmentTable investorEmail={user.email || ""} />
     </div>
   );
 }

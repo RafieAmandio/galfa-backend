@@ -75,12 +75,20 @@ export function Navigation() {
                     </>
                   ) : !adminLoading ? (
                     // Regular user navigation
-                    <Link
-                      href="/investor/summary"
-                      className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
-                    >
-                      Dashboard
-                    </Link>
+                    <>
+                      <Link
+                        href="/investor/summary"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        href="/investor/installments"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        Installments
+                      </Link>
+                    </>
                   ) : null}
                 </div>
               )}
