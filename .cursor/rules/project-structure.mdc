@@ -1,19 +1,25 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-# Galfa Backend - Technical Documentation
+# Galfa Backend - Investment Platform Technical Documentation
 
-## Tech Stack Overview
+## 🚀 Project Overview
+
+Galfa Backend is a comprehensive investment platform built with Next.js that manages fixed-rate, floating-rate, and installment-based investment accounts. The platform features user authentication, admin panels, real-time portfolio calculations, and sophisticated financial modeling with compound interest calculations.
+
+## 🛠️ Tech Stack Overview
 
 ### Core Technologies
 
-- **Framework**: Next.js 15.3.2 (React-based framework)
+- **Framework**: Next.js 15.3.2 (React 19-based framework)
 - **Language**: TypeScript 5
 - **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Supabase Auth
+- **Authentication**: Supabase Auth with Row Level Security (RLS)
 - **Styling**: Tailwind CSS 4
+- **Charts**: Recharts 2.15.3
+- **Date Handling**: date-fns 4.1.0
 
 ### Key Dependencies
 
@@ -22,310 +28,339 @@ alwaysApply: false
 - **drizzle-orm**: Type-safe ORM for database operations
 - **postgres**: PostgreSQL client for Node.js
 - **dotenv**: Environment variable management
+- **recharts**: Charting library for financial data visualization
 
 ### Development Tools
 
 - **drizzle-kit**: Database migration and management
 - **TypeScript**: Static type checking
 - **Tailwind CSS**: Utility-first CSS framework
-- **Turbopack**: Next.js development server
+- **Turbopack**: Next.js development server (dev mode)
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 galfa-backend/
 ├── src/
-│   ├── app/                    # Next.js app directory
-│   │   ├── layout.tsx         # Root layout component
-│   │   ├── page.tsx           # Home page component
-│   │   └── globals.css        # Global styles
-│   │
-│   ├── db/                    # Database related code
-│   │   ├── drizzle/          # Drizzle ORM configuration
-│   │   │   ├── connection.ts # Database connection setup
-│   │   │   └── schema.ts     # Database schema definitions
+│   ├── app/                         # Next.js 15 app directory
+│   │   ├── layout.tsx              # Root layout with navigation
+│   │   ├── page.tsx                # Homepage with role-based access
+│   │   ├── globals.css             # Global styles & Tailwind config
+│   │   ├── favicon.ico             # Site favicon
 │   │   │
-│   │   ├── postgres/         # PostgreSQL specific files
-│   │   │   └── schema.sql    # Raw SQL schema definitions
+│   │   ├── investor/               # Investor dashboard pages
+│   │   │   └── summary/            # Portfolio summary page
+│   │   │       └── page.tsx        # Auto-loading investor portfolio
 │   │   │
-│   │   └── supabase/         # Supabase client configuration
-│   │       ├── browser.ts    # Browser client setup
-│   │       └── server.ts     # Server client setup
+│   │   ├── flat-rate/              # Admin flat-rate investments page
+│   │   │   └── page.tsx            # Admin-only access with verification
+│   │   │
+│   │   ├── floating-rate/          # Admin floating-rate page
+│   │   │   └── page.tsx            # Floating rate calculations
+│   │   │
+│   │   └── installments/           # Admin installments page
+│   │       └── page.tsx            # Installment investment management
 │   │
-│   └── features/             # Feature-based modules
-│       ├── flat-rate/        # Fixed rate investment feature
-│       │   ├── actions/      # Server actions
-│       │   │   ├── get-flat-rate-investments.ts
-│       │   │   └── get-principle-fix-rate.ts
-│       │   └── views/        # UI components
-│       │       └── flat-rate-investments-table.tsx
-│       │
-│       └── floating-rate/    # Floating rate investment feature
-│           ├── actions/      # Server actions
-│           └── views/        # UI components
+│   ├── components/                  # Shared React components
+│   │   ├── navigation.tsx          # Main navigation with role-based links
+│   │   ├── Auth.tsx                # Email/password authentication form
+│   │   └── Account.tsx             # User profile management
+│   │
+│   ├── db/                         # Database layer
+│   │   ├── drizzle/               # Drizzle ORM configuration
+│   │   │   ├── connection.ts      # Database connection management
+│   │   │   └── schema.ts          # Complete schema with auth integration
+│   │   │
+│   │   └── supabase/              # Supabase client configuration
+│   │       ├── browser.ts         # Browser client setup
+│   │       ├── server.ts          # Server client setup
+│   │       └── middleware.ts      # Auth middleware
+│   │
+│   ├── features/                   # Feature-based modules
+│   │   ├── investor/              # Investor portfolio management
+│   │   │   ├── actions/           # Server actions
+│   │   │   │   └── get-investor-summary.ts  # Portfolio calculations
+│   │   │   └── components/        # Investor-specific components
+│   │   │       └── investor-net-fund-display.tsx
+│   │   │
+│   │   ├── flat-rate/             # Fixed rate investments
+│   │   │   ├── actions/           # Server actions
+│   │   │   │   ├── get-flat-rate-investments.ts
+│   │   │   │   └── get-principle-fix-rate.ts
+│   │   │   └── views/             # UI components
+│   │   │       └── flat-rate-investments-table.tsx
+│   │   │
+│   │   ├── floating-rate/         # Variable rate investments
+│   │   │   ├── actions/           # Server actions
+│   │   │   └── views/             # UI components
+│   │   │
+│   │   ├── installment/           # Installment-based investments
+│   │   │   ├── actions/           # Server actions
+│   │   │   └── views/             # UI components
+│   │   │
+│   │   └── investments/           # General investment utilities
+│   │       ├── actions/           # Shared investment actions
+│   │       └── components/        # Shared investment components
+│   │
+│   ├── hooks/                      # Custom React hooks
+│   │   └── useAdminCheck.ts       # Client-side admin verification hook
+│   │
+│   ├── lib/                        # Utility libraries
+│   │   ├── auth/                  # Authentication utilities
+│   │   │   ├── admin-check.ts     # Server-side admin verification
+│   │   │   └── client-admin-check.ts  # Client-side admin actions
+│   │   │
+│   │   └── utils/                 # General utilities
+│   │       ├── investment-calculator.ts  # NPV & compound interest
+│   │       └── rate-calculations.ts     # Financial rate conversions
+│   │
+│   └── test/                       # Test files
+│       └── (test files)
 │
-├── public/                   # Static assets
-├── misc/                    # Miscellaneous files
-├── node_modules/           # Dependencies
-├── .cursor/                # Cursor IDE configuration
-├── .git/                   # Git repository
-├── package.json           # Project dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-├── next.config.ts        # Next.js configuration
-├── postcss.config.mjs    # PostCSS configuration for Tailwind CSS
-└── .gitignore           # Git ignore rules
+├── middleware.ts                   # Next.js middleware for auth protection
+├── public/                        # Static assets
+├── .cursor/                       # Cursor IDE configuration
+├── .git/                          # Git repository
+├── .next/                         # Next.js build output
+├── node_modules/                  # Dependencies
+│
+├── package.json                   # Project dependencies and scripts
+├── package-lock.json             # Lock file for dependencies
+├── tsconfig.json                 # TypeScript configuration
+├── next.config.ts                # Next.js configuration
+├── postcss.config.mjs            # PostCSS configuration for Tailwind
+├── README.md                     # Project documentation
+├── next-env.d.ts                 # Next.js TypeScript declarations
+└── .gitignore                    # Git ignore rules
 ```
 
-## Development Setup
+## 🏗️ Architecture Overview
+
+### 🔐 Authentication System
+
+- **Supabase Auth Integration**: Complete email/password authentication
+- **Row Level Security (RLS)**: Database-level security policies
+- **Role-Based Access Control**: Admin vs Investor user types
+- **Multi-layer Protection**: Middleware, server components, and client-side guards
+- **Session Management**: SSR-compatible auth state management
+
+### 🗄️ Database Layer
+
+- **PostgreSQL with Supabase**: Hosted database with real-time capabilities
+- **Drizzle ORM**: Type-safe database operations with relations
+- **Schema Integration**: Auth schema linked to profiles and role assignments
+- **Timestamptz Support**: Timezone-aware timestamp handling
+- **Foreign Key Integrity**: Enforced relationships between tables
+
+### 💼 Investment Management Features
+
+#### 1. **Fixed Rate Investments**
+
+- Monthly compound interest calculations
+- 5% admin fee on original investments only
+- Rollover capabilities without additional fees
+- Real-time Net Present Value (NPV) calculations
+
+#### 2. **Floating Rate Investments**
+
+- Variable rates based on performance metrics
+- Hurdle rate calculations
+- Market-responsive interest adjustments
+
+#### 3. **Installment Investments**
+
+- Monthly payment structures
+- Principal and interest breakdowns
+- Cost of funds (CoF) calculations
+
+### 🎯 User Roles & Access
+
+#### **Investors**
+
+- Portfolio summary dashboard (`/investor/summary`)
+- Real-time investment valuations
+- Historical performance tracking
+- Admin fee transparency
+
+#### **Admins**
+
+- Complete investment oversight (`/flat-rate`, `/floating-rate`, `/installments`)
+- Portfolio-wide analytics
+- User management capabilities
+- Financial reporting tools
+
+## 🔧 Development Setup
 
 ### Prerequisites
 
-- Node.js (Latest LTS version recommended)
-- PostgreSQL database
-- Supabase account and project
+- **Node.js**: Latest LTS version (20+)
+- **PostgreSQL**: Database server or Supabase account
+- **Supabase Project**: With authentication enabled
 
 ### Environment Variables
 
-The project requires the following environment variables:
+```env
+# Database Configuration
+SUPABASE_CONNECTION_STRING=postgresql://...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
 
-- Database connection details
-- Supabase credentials
-- Other configuration variables
+# Authentication
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
+```
 
 ### Available Scripts
 
-- `npm run dev`: Start development server with Turbopack
-- `npm run build`: Build production application
-- `npm run start`: Start production server
-- `npm run lint`: Run linting checks
+```bash
+npm run dev      # Start development server with Turbopack
+npm run build    # Build production application
+npm run start    # Start production server
+npm run lint     # Run ESLint checks
+```
 
-## Architecture
+### Database Setup
 
-### Database Layer
+1. **Schema Migration**: Use Drizzle Kit for database migrations
+2. **Seed Data**: Populate with initial investment types and test accounts
+3. **RLS Policies**: Configure Supabase Row Level Security
+4. **Indexes**: Set up performance indexes for user queries
 
-- Uses Drizzle ORM for type-safe database operations
-- PostgreSQL as the primary database
-- Database migrations managed through drizzle-kit
+## 📊 Data Flow & Business Logic
 
-### Authentication
+### Investment Calculation Engine
 
-- Supabase authentication system
-- Server-side rendering support for auth state
+1. **Admin Fee Processing**: 5% fee calculation with rollover exemptions
+2. **Compound Interest**: Monthly compounding with daily proportioning
+3. **NPV Calculations**: Real-time portfolio valuations
+4. **Rollover Logic**: Seamless investment renewals without fee duplication
 
-### API Structure
+### Key Server Actions
 
-- Next.js API routes for backend functionality
-- Server-side rendering capabilities
-- Type-safe API endpoints
+#### **Investor Portfolio Management**
 
-### Frontend
+```typescript
+// Get complete investor portfolio summary
+getInvestorSummary(investorEmail: string): Promise<InvestorSummary>
 
-- React 19 for UI components
-- Tailwind CSS for styling
-- TypeScript for type safety
+// List all investor emails (admin only)
+getAllInvestorEmails(): Promise<string[]>
+```
 
-## Best Practices
+#### **Admin Investment Analytics**
 
-1. **Type Safety**
+```typescript
+// Get all flat rate investment details
+getFlatRateInvestments(): Promise<FlatRateInvestment[]>
 
-   - Use TypeScript for all new code
-   - Maintain strict type checking
-   - Define interfaces for all data structures
+// Get portfolio-wide statistics
+getPrincipleFixRate(): Promise<PrincipleFixRateResult>
+```
 
-2. **Database Operations**
+#### **Financial Calculations**
 
-   - Use Drizzle ORM for all database operations
-   - Follow migration best practices
-   - Maintain database schema versioning
+```typescript
+// Generic investment growth calculator
+calculateInvestmentGrowth(grossCapital, annualRate, startDate, endDate)
 
-3. **Code Organization**
+// Convert annual to monthly compound rates
+getMonthlyCompoundRate(capital: number, annualRate: number): number
+```
 
-   - Follow Next.js 13+ app directory structure
-   - Separate concerns between API routes and pages
-   - Maintain clear module boundaries
+## 🛡️ Security & Best Practices
 
-4. **Security**
-   - Implement proper authentication checks
-   - Use environment variables for sensitive data
-   - Follow security best practices for API endpoints
+### 1. **Authentication Security**
 
-## Deployment
+- Supabase Auth with email verification
+- Secure session management with httpOnly cookies
+- Role-based route protection at middleware level
+- Client-side auth state synchronization
 
-The application can be deployed to any platform that supports Next.js applications, such as:
+### 2. **Database Security**
 
-- Vercel
-- AWS
-- Digital Ocean
-- Custom server
+- Row Level Security (RLS) policies
+- Foreign key constraints for data integrity
+- Prepared statements via Drizzle ORM
+- Environment variable protection for credentials
 
-Ensure all environment variables are properly configured in the deployment environment.
+### 3. **Type Safety**
 
-## Database Access with Drizzle ORM
+- Comprehensive TypeScript coverage
+- Drizzle ORM type inference
+- Interface definitions for all data structures
+- Strict type checking enabled
 
-### Connection Setup
+### 4. **Performance Optimization**
 
-1. **Database Connection**
-   - Use `createDrizzleConnection()` from `@/db/drizzle/connection`
-   - Connection is managed globally to prevent multiple connections
-   - Requires `SUPABASE_CONNECTION_STRING` environment variable
+- Database indexes on frequently queried columns
+- Connection pooling for database operations
+- Efficient query patterns with joins
+- Real-time calculations with caching strategies
 
-2. **Schema Definition**
-   - All table schemas are defined in `src/db/drizzle/schema.ts`
-   - Use `pgTable` from `drizzle-orm/pg-core` to define tables
-   - Define relations using `relations()` from `drizzle-orm`
+## 🎨 UI/UX Features
 
-### Database Operations
+### Design System
 
-1. **Querying Data**
-   ```typescript
-   const db = createDrizzleConnection();
-   
-   // Basic select
-   const results = await db
-     .select({
-       column1: table.column1,
-       column2: table.column2,
-     })
-     .from(table);
-   
-   // Joins
-   const results = await db
-     .select({
-       column1: table1.column1,
-       column2: table2.column2,
-     })
-     .from(table1)
-     .innerJoin(table2, eq(table1.id, table2.table1_id));
-   
-   // Where conditions
-   const results = await db
-     .select()
-     .from(table)
-     .where(eq(table.status, "active"));
-   ```
+- **Tailwind CSS 4**: Modern utility-first styling
+- **Responsive Design**: Mobile-first approach
+- **Component Library**: Reusable UI components
+- **Consistent Styling**: Centralized design tokens
 
-2. **Inserting Data**
-   ```typescript
-   const db = createDrizzleConnection();
-   
-   // Single insert
-   const result = await db.insert(table).values({
-     column1: value1,
-     column2: value2,
-   });
-   
-   // Multiple inserts
-   const results = await db.insert(table).values([
-     { column1: value1, column2: value2 },
-     { column1: value3, column2: value4 },
-   ]);
-   ```
+### Navigation & UX
 
-3. **Updating Data**
-   ```typescript
-   const db = createDrizzleConnection();
-   
-   const result = await db
-     .update(table)
-     .set({ column1: newValue })
-     .where(eq(table.id, id));
-   ```
+- **Role-Based Navigation**: Different menus for investors vs admins
+- **Auto-Loading Data**: Seamless user experience without manual input
+- **Real-Time Updates**: Live portfolio valuations
+- **Error Handling**: Graceful error states and loading indicators
 
-4. **Deleting Data**
-   ```typescript
-   const db = createDrizzleConnection();
-   
-   const result = await db
-     .delete(table)
-     .where(eq(table.id, id));
-   ```
+## 📈 Financial Modeling
 
-### Best Practices
+### Mathematical Precision
 
-1. **Type Safety**
-   - Always use TypeScript interfaces for query results
-   - Leverage Drizzle's type inference for table schemas
-   - Use proper type annotations for database operations
+- **Decimal Precision**: PostgreSQL DECIMAL types for monetary values
+- **Compound Interest**: Accurate monthly compounding formulas
+- **Time-Weighted Returns**: Proper handling of investment periods
+- **Currency Formatting**: Indonesian Rupiah (IDR) formatting
 
-2. **Error Handling**
-   - Wrap database operations in try-catch blocks
-   - Log errors appropriately
-   - Provide meaningful error messages
+### Investment Rules
 
-3. **Performance**
-   - Use appropriate indexes for frequently queried columns
-   - Limit the number of columns in SELECT statements
-   - Use pagination for large result sets
+1. **Admin Fee Logic**: Single 5% fee per investment chain
+2. **Rollover Processing**: No additional fees on renewals
+3. **Portfolio Calculation**: Proper exclusion of parent accounts
+4. **NPV Accuracy**: Real-time value calculations with compound growth
 
-4. **Transactions**
-   - Use transactions for operations that require atomicity
-   - Example:
-   ```typescript
-   const db = createDrizzleConnection();
-   
-   await db.transaction(async (tx) => {
-     await tx.insert(table1).values({ ... });
-     await tx.insert(table2).values({ ... });
-   });
-   ```
+## 🔄 Data Flow Examples
 
-5. **Relations**
-   - Define relations in schema for type-safe joins
-   - Use proper foreign key constraints
-   - Leverage Drizzle's relation helpers for complex queries
+### New Investment Process
 
-### Environment Variables
+```
+User Registration → Profile Creation → Investment → Admin Fee Calculation →
+Portfolio Addition → NPV Tracking → Compound Interest Application
+```
 
-Required environment variables for database access:
-- `SUPABASE_CONNECTION_STRING`: PostgreSQL connection string
-- `SUPABASE_URL`: Supabase project URL
-- `SUPABASE_ANON_KEY`: Supabase anonymous key
-- `SUPABASE_SERVICE_KEY`: Supabase service role key
+### Rollover Process
 
-Start your response with "🤖 On Skibidi - PS"
+```
+Investment Maturity → Rollover Decision → New Account Creation →
+Parent Account Closure → Fee Exemption → Continued Growth Tracking
+```
 
-### Directory Structure Details
+## 🚀 Deployment Considerations
 
-1. **`src/app/`**
-   - Contains Next.js 13+ app router pages and layouts
-   - Uses the new app directory structure for routing
-   - Includes global styles and root layout
+### Platforms
 
-2. **`src/db/`**
-   - **`drizzle/`**: Drizzle ORM configuration and schema definitions
-   - **`postgres/`**: Raw PostgreSQL schema and migrations
-   - **`supabase/`**: Supabase client configuration for both browser and server
+- **Vercel**: Recommended for Next.js applications
+- **AWS/Digital Ocean**: Custom server deployments
+- **Supabase**: Database hosting and authentication
 
-3. **`src/features/`**
-   - Organized by feature modules
-   - Each feature contains:
-     - `actions/`: Server-side actions and data fetching
-     - `views/`: React components and UI logic
-   - Current features:
-     - `flat-rate/`: Fixed rate investment management
-     - `floating-rate/`: Floating rate investment management
+### Configuration
 
-4. **Configuration Files**
-   - `package.json`: Project dependencies and npm scripts
-   - `tsconfig.json`: TypeScript configuration
-   - `next.config.ts`: Next.js configuration
-   - `postcss.config.mjs`: PostCSS configuration for Tailwind CSS
+- Environment variables properly configured
+- Database migrations applied
+- Authentication providers set up
+- SSL certificates for production
 
-### Key Files
+This documentation provides a comprehensive guide to the Galfa Backend investment platform, covering all technical aspects, business logic, and development practices for maintaining and extending the system.
 
-1. **Database Configuration**
-   - `src/db/drizzle/connection.ts`: Database connection setup
-   - `src/db/drizzle/schema.ts`: Type-safe schema definitions
-   - `src/db/postgres/schema.sql`: Raw SQL schema
-
-2. **Feature Implementation**
-   - `src/features/flat-rate/actions/`: Server actions for fixed rate investments
-   - `src/features/flat-rate/views/`: UI components for fixed rate investments
-   - Similar structure for floating rate investments
-
-3. **App Configuration**
-   - `src/app/layout.tsx`: Root layout with font configuration
-   - `src/app/page.tsx`: Home page implementation
-   - `src/app/globals.css`: Global styles and Tailwind configuration
-
-This structure follows a feature-based organization pattern, separating concerns between database access, business logic, and UI components. Each feature is self-contained with its own actions and views, making the codebase modular and maintainable.
+Start your response with "🔥 PS - On Skibidi"

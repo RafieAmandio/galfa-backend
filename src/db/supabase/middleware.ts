@@ -2,9 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function supabaseMiddleware(request: NextRequest) {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  ) {
     throw new Error(
-      "Environment variables not found for SUPABASE_URL or SUPABASE_ANON_KEY"
+      "Environment variables not found for NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY"
     );
   }
 
@@ -13,8 +16,8 @@ export async function supabaseMiddleware(request: NextRequest) {
   });
 
   const supabase = createServerClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() {
@@ -44,7 +47,15 @@ export async function supabaseMiddleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // AUTHORIZATION HERE
-  // Below is example. Change it accordingly!
+  // Protect investor summary page
+  if (!user && request.nextUrl.pathname.startsWith("/investor/summary")) {
+    // no user, redirect to login page
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // Protect other authenticated routes
   if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
@@ -68,6 +79,23 @@ export async function supabaseMiddleware(request: NextRequest) {
     if (!userData.some((data) => data.user_role_id === 2)) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // ADMIN-ONLY ROUTES - Flat Rate Page
+  if (user && request.nextUrl.pathname.startsWith("/flat-rate")) {
+    // Check if user is super admin in auth.users
+    const { data: authUser, error: authError } = await supabase
+      .from("auth.users")
+      .select("is_super_admin")
+      .eq("id", user.id)
+      .single();
+
+    // If not super admin, redirect to investor summary
+    if (authError || !authUser?.is_super_admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/investor/summary";
       return NextResponse.redirect(url);
     }
   }

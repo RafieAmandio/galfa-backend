@@ -2,27 +2,20 @@
 
 import React from "react";
 import { getFlatRateInvestments } from "../actions/get-flat-rate-investments";
-import { getPrincipleFixRate } from "../actions/get-principle-fix-rate";
 import { useEffect, useState } from "react";
 
 export function FlatRateInvestmentsTable() {
   const [investments, setInvestments] = useState<
     Awaited<ReturnType<typeof getFlatRateInvestments>>
   >([]);
-  const [principleFixRate, setPrincipleFixRate] =
-    useState<Awaited<ReturnType<typeof getPrincipleFixRate>>>();
   const [loading, setLoading] = useState(true);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [investmentsData, principleFixRateData] = await Promise.all([
-          getFlatRateInvestments(),
-          getPrincipleFixRate(),
-        ]);
+        const [investmentsData] = await Promise.all([getFlatRateInvestments()]);
         setInvestments(investmentsData);
-        setPrincipleFixRate(principleFixRateData);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -49,59 +42,6 @@ export function FlatRateInvestmentsTable() {
 
   return (
     <div className="space-y-6">
-      {/* Principle Fix Rate Summary Box */}
-      {principleFixRate && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Principle Fix Rate Summary
-          </h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Gross Capital:</span>
-              <span className="font-medium text-black">
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                }).format(principleFixRate.totalGrossCapital)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">
-                Admin Fee (
-                {(principleFixRate.adminFeePercentage * 100).toFixed(1)}%):
-              </span>
-              <span className="font-medium text-red-600">
-                -
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                }).format(principleFixRate.totalAdminFee)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center border-t pt-2">
-              <span className="text-gray-600 font-medium">
-                Total Net Capital:
-              </span>
-              <span className="font-semibold text-green-600">
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                }).format(principleFixRate.totalNetCapital)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">Total Cost of Funds:</span>
-              <span className="font-medium text-black">
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                }).format(principleFixRate.totalCoF)}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Investments Table */}
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">

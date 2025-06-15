@@ -1,7 +1,12 @@
 "use server";
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
-import { accounts, fixRateAccounts, users } from "@/db/drizzle/schema";
+import {
+  accounts,
+  fixRateAccounts,
+  profiles,
+  authUsers,
+} from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
@@ -150,9 +155,12 @@ export async function getInvestorSummary(
       parentAccountId: accounts.parent_account_id,
     })
     .from(accounts)
-    .innerJoin(users, eq(accounts.user_id, users.id))
+    .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
     .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
-    .where(and(eq(users.email, investorEmail), eq(accounts.status, "active")));
+    .where(
+      and(eq(authUsers.email, investorEmail), eq(accounts.status, "active"))
+    );
 
   console.log("Database query results:", results.length, "accounts found");
   console.log("Raw data from database:", JSON.stringify(results, null, 2));
@@ -178,12 +186,15 @@ export async function getInvestorSummary(
     Array.from(parentAccountIds)
   );
 
-  // Filter out parent accounts that have been rolled over
+  // Separate parent accounts from active accounts
+  const parentAccounts = results.filter((result) =>
+    parentAccountIds.has(result.id)
+  );
   const activeAccounts = results.filter((result) => {
     const isParentWithRollover = parentAccountIds.has(result.id);
     if (isParentWithRollover) {
       console.log(
-        `⏭️  Excluding parent account ${result.accountNumber} (has rollover children)`
+        `⏭️  Excluding parent account ${result.accountNumber} from active investments (has rollover children)`
       );
       return false;
     }
@@ -193,6 +204,15 @@ export async function getInvestorSummary(
       })`
     );
     return true;
+  });
+
+  console.log("");
+  console.log("PARENT ACCOUNTS (for admin fee calculation only):");
+  console.log("-".repeat(50));
+  parentAccounts.forEach((acc) => {
+    console.log(
+      `  - ${acc.accountNumber} (Parent, admin fee will be included)`
+    );
   });
 
   console.log("");
@@ -212,6 +232,31 @@ export async function getInvestorSummary(
   let totalGrossInvestedFund = 0;
   let totalAdminFees = 0;
   let totalNetPresentValue = 0;
+
+  // First, calculate admin fees from parent accounts (not included in active investments)
+  console.log("");
+  console.log("CALCULATING ADMIN FEES FROM PARENT ACCOUNTS:");
+  console.log("-".repeat(50));
+
+  parentAccounts.forEach((result) => {
+    const grossCapital = Number(result.grossCapital);
+    const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
+
+    if (adminFeeApplied) {
+      const adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
+      totalAdminFees += adminFee;
+      console.log(`💰 Parent account ${result.accountNumber}:`);
+      console.log(`    - Gross capital: ${grossCapital.toLocaleString()}`);
+      console.log(`    - Admin fee: ${adminFee.toLocaleString()}`);
+      console.log(
+        `    - Running total admin fees: ${totalAdminFees.toLocaleString()}`
+      );
+    } else {
+      console.log(
+        `⚠️  Parent account ${result.accountNumber}: No admin fee applied`
+      );
+    }
+  });
 
   console.log("");
   console.log("PROCESSING EACH ACTIVE INVESTMENT:");
@@ -340,7 +385,9 @@ export async function getInvestorSummary(
 
   console.log("");
   console.log("=".repeat(80));
-  console.log("FINAL INVESTOR SUMMARY (ROLLOVER-FILTERED):");
+  console.log(
+    "FINAL INVESTOR SUMMARY (ROLLOVER-FILTERED WITH PARENT ADMIN FEES):"
+  );
   console.log("=".repeat(80));
   console.log("Email:", finalSummary.email);
   console.log(
@@ -352,7 +399,7 @@ export async function getInvestorSummary(
     finalSummary.totalGrossInvestedFund.toLocaleString()
   );
   console.log(
-    "Total Admin Fees:",
+    "Total Admin Fees (INCLUDING PARENT ACCOUNTS):",
     finalSummary.totalAdminFees.toLocaleString()
   );
   console.log("💰 PORTFOLIO PERFORMANCE:");
@@ -393,7 +440,7 @@ export async function getInvestorSummary(
   });
   console.log("");
   console.log(
-    "NOTE: Parent accounts with rollovers have been excluded to avoid double counting."
+    "NOTE: Parent accounts excluded from active investments but admin fees included in total."
   );
   console.log(
     "NPV calculated using compound interest from investment start date to current date."
@@ -409,11 +456,14 @@ export async function getAllInvestorEmails(): Promise<string[]> {
 
   const results = await db
     .selectDistinct({
-      email: users.email,
+      email: authUsers.email,
     })
-    .from(users)
-    .innerJoin(accounts, eq(users.id, accounts.user_id))
+    .from(profiles)
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+    .innerJoin(accounts, eq(profiles.id, accounts.user_id))
     .where(eq(accounts.status, "active"));
 
-  return results.map((result) => result.email);
+  return results
+    .map((result) => result.email)
+    .filter((email): email is string => email !== null);
 }
