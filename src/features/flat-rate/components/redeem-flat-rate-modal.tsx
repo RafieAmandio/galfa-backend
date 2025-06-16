@@ -247,7 +247,10 @@ export function RedeemFlatRateModal({
   const selectedAccount = accounts.find((acc) => acc.id === selectedAccountId);
 
   const defaultTrigger = (
-    <Button variant="destructive" className="flex items-center gap-2">
+    <Button
+      variant="destructive"
+      className="flex items-center gap-2 cursor-pointer"
+    >
       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
         <path
           fillRule="evenodd"

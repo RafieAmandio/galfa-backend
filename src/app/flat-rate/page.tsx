@@ -2,6 +2,7 @@
 
 import { FlatRateInvestmentsTable } from "@/features/flat-rate/views/flat-rate-investments-table";
 import { RedeemFlatRateModal } from "@/features/flat-rate/components/redeem-flat-rate-modal";
+import { CreateFlatRateModal } from "@/features/flat-rate/components/create-flat-rate-modal";
 import { getAdminStatus } from "@/lib/auth/client-admin-check";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -117,6 +118,12 @@ export default function Page() {
               </p>
             </div>
             <div className="flex items-center space-x-4">
+              <CreateFlatRateModal
+                onAccountCreated={() => {
+                  // Refresh the table data to show new investment
+                  window.location.reload();
+                }}
+              />
               <RedeemFlatRateModal
                 onRedemptionComplete={() => {
                   // Optionally refresh the table data
