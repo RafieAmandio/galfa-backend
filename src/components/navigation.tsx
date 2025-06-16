@@ -55,6 +55,12 @@ export function Navigation() {
                     // Admin navigation links
                     <>
                       <Link
+                        href="/admin/dashboard"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
                         href="/flat-rate"
                         className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
                       >

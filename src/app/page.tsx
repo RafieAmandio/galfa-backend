@@ -74,7 +74,7 @@ export default function Home() {
                   <>
                     <a
                       href="/flat-rate"
-                      className="block w-full bg-green-600 text-white text-center py-3 px-4 rounded-md hover:bg-green-700 transition-colors duration-200 flex items-center justify-center"
+                      className="w-full bg-green-600 text-white text-center py-3 px-4 rounded-md hover:bg-green-700 transition-colors duration-200 flex items-center justify-center"
                     >
                       <svg
                         className="w-4 h-4 mr-2"
@@ -91,7 +91,7 @@ export default function Home() {
                     </a>
                     <a
                       href="/admin/user-management"
-                      className="block w-full bg-purple-600 text-white text-center py-3 px-4 rounded-md hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center"
+                      className=" w-full bg-purple-600 text-white text-center py-3 px-4 rounded-md hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center"
                     >
                       <svg
                         className="w-4 h-4 mr-2"
