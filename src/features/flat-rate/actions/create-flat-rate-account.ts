@@ -7,8 +7,9 @@ import {
   accountTypes,
   profiles,
   authUsers,
+  mutations,
 } from "@/db/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, or, and, isNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
 
@@ -251,6 +252,26 @@ export async function createFlatRateAccount(
       updated_at: new Date(),
     });
 
+    // Create mutation record for the initial investment
+    const mutationDescription = isRollover
+      ? `Rollover investment from account ${request.parentAccountId || "N/A"}${
+          request.description ? ` - ${request.description}` : ""
+        }`
+      : `Initial investment${
+          request.description ? ` - ${request.description}` : ""
+        }`;
+
+    await db.insert(mutations).values({
+      account_id: accountId,
+      type: "inbound",
+      amount: request.capital.toString(),
+      description: mutationDescription,
+      status: "completed",
+      transaction_date: request.transactionDate,
+      created_at: new Date(),
+      updated_at: new Date(),
+    });
+
     return {
       success: true,
       message: `Flat-rate investment account ${request.accountNumber} created successfully for ${request.investorEmail}`,
@@ -264,6 +285,123 @@ export async function createFlatRateAccount(
     return {
       success: false,
       message: "An error occurred while creating the investment account",
+    };
+  }
+}
+
+/**
+ * Get accounts eligible for rollover (mature accounts only)
+ */
+export async function getMaturedAccountsForRollover(): Promise<{
+  success: boolean;
+  message: string;
+  accounts?: Array<{
+    id: number;
+    accountNumber: string;
+    investorEmail: string | null;
+    investorName: string | null;
+    originalCapital: string;
+    annualRate: string;
+    transactionDate: Date;
+    endDate: Date | null;
+    status: string;
+    maturedValue: number; // Calculated value at maturity including all compound interest
+    isRollover: boolean | null;
+    adminFeeApplied: boolean | null;
+  }>;
+}> {
+  // Check admin access
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    return {
+      success: false,
+      message: "Unauthorized: Admin access required",
+    };
+  }
+
+  const db = createDrizzleConnection();
+
+  try {
+    const maturedAccounts = await db
+      .select({
+        id: accounts.id,
+        accountNumber: accounts.account_number,
+        investorEmail: authUsers.email,
+        investorName: profiles.full_name,
+        originalCapital: accounts.capital,
+        annualRate: fixRateAccounts.annual_rate,
+        transactionDate: accounts.transaction_date,
+        endDate: accounts.end_date,
+        status: accounts.status,
+        isRollover: accounts.is_rollover,
+        adminFeeApplied: accounts.admin_fee_applied,
+      })
+      .from(accounts)
+      .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+      .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+      .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+      .where(
+        and(
+          eq(accounts.status, "mature"), // Only mature accounts can be rolled over
+          isNull(accounts.parent_account_id) // Exclude accounts that are already children of rollovers
+        )
+      )
+      .orderBy(accounts.end_date);
+
+    // Calculate matured value for each account
+    const accountsWithMaturedValue = await Promise.all(
+      maturedAccounts.map(async (account) => {
+        if (!account.endDate) {
+          return {
+            ...account,
+            maturedValue: parseFloat(account.originalCapital),
+          };
+        }
+
+        try {
+          // Calculate the matured value using NPV calculator
+          const { calculateNetPresentValueWithRedemptions } = await import(
+            "@/lib/utils/npv-calculator-with-redemptions"
+          );
+
+          const npvResult = await calculateNetPresentValueWithRedemptions(
+            account.id,
+            parseFloat(account.originalCapital),
+            parseFloat(account.annualRate),
+            account.transactionDate,
+            account.endDate,
+            account.isRollover || false,
+            account.adminFeeApplied || true
+          );
+
+          return {
+            ...account,
+            maturedValue: npvResult.currentValue,
+          };
+        } catch (error) {
+          console.error(
+            `Error calculating matured value for account ${account.id}:`,
+            error
+          );
+          // Fallback to original capital if calculation fails
+          return {
+            ...account,
+            maturedValue: parseFloat(account.originalCapital),
+          };
+        }
+      })
+    );
+
+    return {
+      success: true,
+      message: "Matured accounts retrieved successfully",
+      accounts: accountsWithMaturedValue,
+    };
+  } catch (error) {
+    console.error("Get matured accounts error:", error);
+    return {
+      success: false,
+      message: "An error occurred while retrieving matured accounts",
     };
   }
 }

@@ -5,6 +5,7 @@ import {
   createFlatRateAccount,
   getAllInvestors,
   validateParentAccount,
+  getMaturedAccountsForRollover,
 } from "../actions/create-flat-rate-account";
 import {
   Dialog,
@@ -48,12 +49,30 @@ interface InvestorOption {
   fullName: string | null;
 }
 
+interface RolloverAccountOption {
+  id: number;
+  accountNumber: string;
+  investorEmail: string | null;
+  investorName: string | null;
+  originalCapital: string;
+  annualRate: string;
+  transactionDate: Date;
+  endDate: Date | null;
+  status: string;
+  maturedValue: number;
+  isRollover: boolean | null;
+  adminFeeApplied: boolean | null;
+}
+
 export function CreateFlatRateModal({
   onAccountCreated,
   trigger,
 }: CreateFlatRateModalProps) {
   const [open, setOpen] = useState(false);
   const [investors, setInvestors] = useState<InvestorOption[]>([]);
+  const [rolloverAccounts, setRolloverAccounts] = useState<
+    RolloverAccountOption[]
+  >([]);
   const [selectedInvestorEmail, setSelectedInvestorEmail] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [capital, setCapital] = useState("");
@@ -61,35 +80,45 @@ export function CreateFlatRateModal({
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [isRollover, setIsRollover] = useState(false);
-  const [parentAccountId, setParentAccountId] = useState("");
+  const [selectedRolloverAccountId, setSelectedRolloverAccountId] =
+    useState<string>("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingInvestors, setLoadingInvestors] = useState(true);
+  const [loadingRolloverAccounts, setLoadingRolloverAccounts] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  // Load investors when modal opens
+  // Load investors and rollover accounts when modal opens
   useEffect(() => {
     if (open) {
-      const loadInvestors = async () => {
+      const loadData = async () => {
         setLoadingInvestors(true);
         try {
-          const investorList = await getAllInvestors();
+          const [investorList, rolloverAccountList] = await Promise.all([
+            getAllInvestors(),
+            getMaturedAccountsForRollover(),
+          ]);
+
           setInvestors(investorList);
+
+          if (rolloverAccountList.success && rolloverAccountList.accounts) {
+            setRolloverAccounts(rolloverAccountList.accounts);
+          }
         } catch (error) {
-          console.error("Error loading investors:", error);
+          console.error("Error loading data:", error);
           setMessage({
             type: "error",
-            text: "Failed to load investors",
+            text: "Failed to load data",
           });
         } finally {
           setLoadingInvestors(false);
         }
       };
 
-      loadInvestors();
+      loadData();
     }
   }, [open]);
 
@@ -103,11 +132,38 @@ export function CreateFlatRateModal({
       setTransactionDate(new Date());
       setEndDate(undefined);
       setIsRollover(false);
-      setParentAccountId("");
+      setSelectedRolloverAccountId("");
       setDescription("");
       setMessage(null);
     }
   }, [open]);
+
+  // When a rollover account is selected, auto-populate form fields
+  useEffect(() => {
+    if (isRollover && selectedRolloverAccountId) {
+      const selectedAccount = rolloverAccounts.find(
+        (acc) => acc.id.toString() === selectedRolloverAccountId
+      );
+
+      if (selectedAccount) {
+        // Set the investor to the selected account's investor
+        setSelectedInvestorEmail(selectedAccount.investorEmail || "");
+
+        // Set capital to the matured value
+        setCapital(selectedAccount.maturedValue.toString());
+
+        // Set annual rate to the same rate
+        setAnnualRate(
+          (parseFloat(selectedAccount.annualRate) * 100).toString()
+        );
+
+        // Set transaction date to the maturity date of the parent account
+        if (selectedAccount.endDate) {
+          setTransactionDate(new Date(selectedAccount.endDate));
+        }
+      }
+    }
+  }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
 
   // Calculate admin fee and net capital
   const calculateFinancials = () => {
@@ -172,11 +228,11 @@ export function CreateFlatRateModal({
       return;
     }
 
-    // Validate parent account if rollover
-    if (isRollover && parentAccountId) {
+    // Validate rollover account if specified
+    if (isRollover && selectedRolloverAccountId) {
       try {
         const validation = await validateParentAccount(
-          parseInt(parentAccountId)
+          parseInt(selectedRolloverAccountId)
         );
         if (!validation.valid) {
           setMessage({
@@ -188,7 +244,7 @@ export function CreateFlatRateModal({
       } catch (error) {
         setMessage({
           type: "error",
-          text: "Failed to validate parent account",
+          text: "Failed to validate rollover account",
         });
         return;
       }
@@ -206,8 +262,8 @@ export function CreateFlatRateModal({
         transactionDate,
         endDate,
         isRollover,
-        parentAccountId: parentAccountId
-          ? parseInt(parentAccountId)
+        parentAccountId: selectedRolloverAccountId
+          ? parseInt(selectedRolloverAccountId)
           : undefined,
         description,
       });
@@ -226,7 +282,7 @@ export function CreateFlatRateModal({
         setTransactionDate(new Date());
         setEndDate(undefined);
         setIsRollover(false);
-        setParentAccountId("");
+        setSelectedRolloverAccountId("");
         setDescription("");
 
         // Notify parent component
@@ -334,6 +390,78 @@ export function CreateFlatRateModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Investment Type Toggle */}
+              <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-md border border-yellow-200">
+                <Checkbox
+                  id="isRollover"
+                  checked={isRollover}
+                  onCheckedChange={(checked) => setIsRollover(checked === true)}
+                />
+                <label
+                  htmlFor="isRollover"
+                  className="text-sm font-medium text-yellow-900 cursor-pointer"
+                >
+                  This is a rollover investment (extend a matured account)
+                </label>
+              </div>
+
+              {/* Rollover Account Selection (only for rollovers) */}
+              {isRollover && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Select Matured Account to Rollover *
+                  </Label>
+                  <Select
+                    value={selectedRolloverAccountId}
+                    onValueChange={setSelectedRolloverAccountId}
+                    required={isRollover}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a matured account to rollover..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rolloverAccounts.map((account) => (
+                        <SelectItem
+                          key={account.id}
+                          value={account.id.toString()}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {account.accountNumber} - Original:{" "}
+                              {formatCurrency(
+                                parseFloat(account.originalCapital)
+                              )}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              Matured Value:{" "}
+                              {formatCurrency(account.maturedValue)}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {account.investorEmail} | Status: {account.status}
+                              {account.endDate &&
+                                ` | Ended: ${format(
+                                  new Date(account.endDate),
+                                  "PP"
+                                )}`}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Select the matured account to extend. The investor, capital
+                    amount, and start date will be auto-filled.
+                  </p>
+                  {rolloverAccounts.length === 0 && (
+                    <p className="text-sm text-orange-600">
+                      No matured accounts found. Only accounts with "mature"
+                      status can be rolled over.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Investor Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Select Investor *</Label>
@@ -341,6 +469,7 @@ export function CreateFlatRateModal({
                   value={selectedInvestorEmail}
                   onValueChange={setSelectedInvestorEmail}
                   required
+                  disabled={isRollover && selectedRolloverAccountId !== ""}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select an investor..." />
@@ -354,6 +483,11 @@ export function CreateFlatRateModal({
                     ))}
                   </SelectContent>
                 </Select>
+                {isRollover && selectedRolloverAccountId && (
+                  <p className="text-sm text-blue-600">
+                    ✓ Auto-selected from rollover account
+                  </p>
+                )}
               </div>
 
               {/* Account Number */}
@@ -374,44 +508,6 @@ export function CreateFlatRateModal({
                 </p>
               </div>
 
-              {/* Investment Type Toggle */}
-              <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-md border border-yellow-200">
-                <Checkbox
-                  id="isRollover"
-                  checked={isRollover}
-                  onCheckedChange={(checked) => setIsRollover(checked === true)}
-                />
-                <label
-                  htmlFor="isRollover"
-                  className="text-sm font-medium text-yellow-900 cursor-pointer"
-                >
-                  This is a rollover investment (no additional admin fee)
-                </label>
-              </div>
-
-              {/* Parent Account ID (only for rollovers) */}
-              {isRollover && (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="parentAccountId"
-                    className="text-sm font-medium"
-                  >
-                    Parent Account ID (Optional)
-                  </Label>
-                  <Input
-                    id="parentAccountId"
-                    type="number"
-                    value={parentAccountId}
-                    onChange={(e) => setParentAccountId(e.target.value)}
-                    placeholder="Enter parent account ID for rollover chain tracking"
-                  />
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Enter the account ID of the mature/closed account this
-                    rollover extends
-                  </p>
-                </div>
-              )}
-
               {/* Capital Amount */}
               <div className="space-y-2">
                 <Label htmlFor="capital" className="text-sm font-medium">
@@ -426,7 +522,13 @@ export function CreateFlatRateModal({
                   required
                   min="1"
                   step="1"
+                  disabled={isRollover && selectedRolloverAccountId !== ""}
                 />
+                {isRollover && selectedRolloverAccountId && (
+                  <p className="text-sm text-blue-600">
+                    ✓ Auto-filled with matured value from rollover account
+                  </p>
+                )}
               </div>
 
               {/* Annual Rate */}
@@ -445,9 +547,15 @@ export function CreateFlatRateModal({
                   max="100"
                   step="1"
                 />
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Enter as percentage (e.g., 17 for 17% annual rate)
-                </p>
+                {isRollover && selectedRolloverAccountId ? (
+                  <p className="text-sm text-blue-600">
+                    ✓ Auto-filled from rollover account (can be modified)
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Enter as percentage (e.g., 17 for 17% annual rate)
+                  </p>
+                )}
               </div>
 
               {/* Transaction Date */}
@@ -463,6 +571,7 @@ export function CreateFlatRateModal({
                         "w-full p-3 justify-start text-left font-normal",
                         !transactionDate && "text-muted-foreground"
                       )}
+                      disabled={isRollover && selectedRolloverAccountId !== ""}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {transactionDate ? (
@@ -488,6 +597,11 @@ export function CreateFlatRateModal({
                     />
                   </PopoverContent>
                 </Popover>
+                {isRollover && selectedRolloverAccountId && (
+                  <p className="text-sm text-blue-600">
+                    ✓ Auto-set to maturity date of rollover account
+                  </p>
+                )}
               </div>
 
               {/* End Date */}
@@ -543,15 +657,72 @@ export function CreateFlatRateModal({
                 />
               </div>
 
+              {/* Rollover Summary */}
+              {isRollover && selectedRolloverAccountId && (
+                <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                  <h3 className="font-medium text-blue-900 mb-3">
+                    Rollover Details
+                  </h3>
+                  {(() => {
+                    const selectedAccount = rolloverAccounts.find(
+                      (acc) => acc.id.toString() === selectedRolloverAccountId
+                    );
+                    if (!selectedAccount) return null;
+
+                    return (
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">
+                            Original Account:
+                          </span>
+                          <span className="font-medium">
+                            {selectedAccount.accountNumber}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">
+                            Original Capital:
+                          </span>
+                          <span className="font-medium">
+                            {formatCurrency(
+                              parseFloat(selectedAccount.originalCapital)
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-blue-700">Growth Period:</span>
+                          <span className="font-medium">
+                            {format(selectedAccount.transactionDate, "PP")} →{" "}
+                            {selectedAccount.endDate
+                              ? format(new Date(selectedAccount.endDate), "PP")
+                              : "N/A"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-blue-300 pt-2">
+                          <span className="text-blue-700 font-medium">
+                            Rolling Over:
+                          </span>
+                          <span className="font-bold text-green-600">
+                            {formatCurrency(selectedAccount.maturedValue)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               {/* Financial Summary */}
               {capital && parseFloat(capital) > 0 && (
                 <div className="bg-gray-50 p-4 rounded-md">
                   <h3 className="font-medium text-gray-900 mb-3">
-                    Financial Summary
+                    {isRollover ? "New Investment Period" : "Financial Summary"}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Gross Capital:</span>
+                      <span className="text-gray-600">
+                        {isRollover ? "Rollover Capital:" : "Gross Capital:"}
+                      </span>
                       <p className="font-medium">
                         {formatCurrency(parseFloat(capital))}
                       </p>
