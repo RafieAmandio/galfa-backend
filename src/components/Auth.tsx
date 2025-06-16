@@ -9,7 +9,6 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
 
   const supabase = createBrowserClient();
 
@@ -20,28 +19,15 @@ export default function Auth() {
     setMessage("");
 
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) {
-          setError(error.message);
-        } else {
-          setMessage("Check your email for the confirmation link!");
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          setError(error.message);
-        }
-        // No success message needed for login - user will be redirected
+      if (error) {
+        setError(error.message);
       }
+      // No success message needed for login - user will be redirected
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     }
@@ -58,9 +44,7 @@ export default function Auth() {
               Welcome to Galfa
             </h2>
             <p className="text-gray-600">
-              {isSignUp
-                ? "Create your account"
-                : "Sign in to access your investment portfolio"}
+              Sign in to access your investment portfolio
             </p>
           </div>
 
@@ -96,21 +80,13 @@ export default function Auth() {
                 id="password"
                 name="password"
                 type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
+                autoComplete="current-password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder={
-                  isSignUp ? "Create a password" : "Enter your password"
-                }
-                minLength={6}
+                placeholder="Enter your password"
               />
-              {isSignUp && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Password must be at least 6 characters long
-                </p>
-              )}
             </div>
 
             <div>
@@ -141,10 +117,8 @@ export default function Auth() {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    {isSignUp ? "Creating Account..." : "Signing In..."}
+                    Signing In...
                   </span>
-                ) : isSignUp ? (
-                  "Create Account"
                 ) : (
                   "Sign In"
                 )}
@@ -169,19 +143,9 @@ export default function Auth() {
           )}
 
           <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError("");
-                setMessage("");
-              }}
-              className="text-sm text-blue-600 hover:text-blue-800 underline"
-            >
-              {isSignUp
-                ? "Already have an account? Sign in"
-                : "Don't have an account? Sign up"}
-            </button>
+            <p className="text-sm text-gray-600">
+              Don't have an account? Contact your administrator to get access.
+            </p>
           </div>
         </div>
       </div>

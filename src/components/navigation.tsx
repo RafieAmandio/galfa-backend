@@ -72,6 +72,12 @@ export function Navigation() {
                       >
                         Installments
                       </Link>
+                      <Link
+                        href="/admin/user-management"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        User Management
+                      </Link>
                     </>
                   ) : !adminLoading ? (
                     // Regular user navigation

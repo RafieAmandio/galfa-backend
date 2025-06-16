@@ -100,6 +100,23 @@ export async function supabaseMiddleware(request: NextRequest) {
     }
   }
 
+  // ADMIN-ONLY ROUTES - Admin Pages
+  if (user && request.nextUrl.pathname.startsWith("/admin/")) {
+    // Check if user is super admin in auth.users
+    const { data: authUser, error: authError } = await supabase
+      .from("auth.users")
+      .select("is_super_admin")
+      .eq("id", user.id)
+      .single();
+
+    // If not super admin, redirect to investor summary
+    if (authError || !authUser?.is_super_admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/investor/summary";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:
