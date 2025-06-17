@@ -1,27 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format, startOfMonth } from "date-fns";
-import {
-  CalendarIcon,
-  TrendingUp,
-  DollarSign,
-  PieChart,
-  Users,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { TrendingUp, DollarSign, PieChart, Users } from "lucide-react";
 import { getFixRatePrincipleByMonth } from "../../flat-rate/actions/get-fix-rate-principle-by-month";
 import { getFixRateCoFByMonth } from "../../flat-rate/actions/get-fix-rate-cof-by-month";
 import { getInflowByMonth } from "../../investments/actions/get-inflow-by-month"; // Note: Now handles all account types, not just fixed rate
 import { getOutflowByMonth } from "../../investments/actions/get-outflow-by-month"; // Note: Handles all account types
-import { getVCPerformanceByMonth } from "../../floating-rate/actions/get-vc-performance-by-month";
+import { getVCPerformanceByMonth } from "../../investments/actions/get-vc-performance-by-month";
+import { getGrossProfitByMonth } from "../../investments/actions/get-gross-profit-by-month";
 
 interface PrincipleData {
   month: Date;
@@ -118,9 +112,34 @@ interface VCPerformanceData {
   latestDate: Date | null;
 }
 
+interface GrossProfitData {
+  month: Date;
+  currentMonthAUM: number;
+  previousMonthAUM: number;
+  totalInflow: number;
+  totalOutflow: number;
+  grossProfit: number;
+  grossProfitPercentage: number;
+  calculation: {
+    formula: string;
+    breakdown: string;
+    percentageFormula: string;
+    percentageBreakdown: string;
+  };
+  hasCurrentMonthData: boolean;
+  hasPreviousMonthData: boolean;
+}
+
 export function AdminDashboard() {
+  const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<Date>(
-    startOfMonth(new Date())
+    startOfMonth(currentDate)
+  );
+  const [selectedMonthNumber, setSelectedMonthNumber] = useState<string>(
+    (currentDate.getMonth() + 1).toString()
+  );
+  const [selectedYear, setSelectedYear] = useState<string>(
+    currentDate.getFullYear().toString()
   );
   const [principleData, setPrincipleData] = useState<PrincipleData | null>(
     null
@@ -133,6 +152,11 @@ export function AdminDashboard() {
   const [vcPerformanceWarning, setVcPerformanceWarning] = useState<
     string | null
   >(null);
+  const [grossProfitData, setGrossProfitData] =
+    useState<GrossProfitData | null>(null);
+  const [grossProfitWarning, setGrossProfitWarning] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,12 +173,14 @@ export function AdminDashboard() {
           inflowResult,
           outflowResult,
           vcPerformanceResult,
+          grossProfitResult,
         ] = await Promise.all([
           getFixRatePrincipleByMonth(selectedMonth),
           getFixRateCoFByMonth(selectedMonth),
           getInflowByMonth(selectedMonth),
           getOutflowByMonth(selectedMonth),
           getVCPerformanceByMonth(selectedMonth),
+          getGrossProfitByMonth(selectedMonth),
         ]);
 
         if (principleResult.success && principleResult.data) {
@@ -194,6 +220,18 @@ export function AdminDashboard() {
         } else {
           setError(vcPerformanceResult.message);
         }
+
+        if (grossProfitResult.success) {
+          setGrossProfitData(grossProfitResult.data || null);
+          // Set warning if there are data availability issues
+          if (grossProfitResult.message.includes("No AUM data found")) {
+            setGrossProfitWarning(grossProfitResult.message);
+          } else {
+            setGrossProfitWarning(null);
+          }
+        } else {
+          setError(grossProfitResult.message);
+        }
       } catch (err) {
         console.error("Error loading monthly data:", err);
         setError("Failed to load monthly data");
@@ -216,6 +254,46 @@ export function AdminDashboard() {
     return `${value.toFixed(2)}%`;
   };
 
+  // Handle month/year changes
+  const handleMonthChange = (month: string) => {
+    setSelectedMonthNumber(month);
+    const newDate = new Date(parseInt(selectedYear), parseInt(month) - 1, 1);
+    setSelectedMonth(startOfMonth(newDate));
+  };
+
+  const handleYearChange = (year: string) => {
+    setSelectedYear(year);
+    const newDate = new Date(
+      parseInt(year),
+      parseInt(selectedMonthNumber) - 1,
+      1
+    );
+    setSelectedMonth(startOfMonth(newDate));
+  };
+
+  // Generate year options (last 5 years to next 5 years)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [];
+  for (let i = currentYear - 10; i <= currentYear + 10; i++) {
+    yearOptions.push(i.toString());
+  }
+
+  // Month options
+  const monthOptions = [
+    { value: "1", label: "January" },
+    { value: "2", label: "February" },
+    { value: "3", label: "March" },
+    { value: "4", label: "April" },
+    { value: "5", label: "May" },
+    { value: "6", label: "June" },
+    { value: "7", label: "July" },
+    { value: "8", label: "August" },
+    { value: "9", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Month Selection */}
@@ -226,43 +304,62 @@ export function AdminDashboard() {
               Monthly Analytics
             </h2>
             <p className="text-sm text-gray-600">
-              Select a month to view detailed analytics
+              Select a month and year to view detailed analytics
             </p>
           </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[280px] justify-start text-left font-normal",
-                  !selectedMonth && "text-muted-foreground"
-                )}
+          <div className="flex items-center space-x-4">
+            {/* Month Selector */}
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">
+                Month
+              </label>
+              <Select
+                value={selectedMonthNumber}
+                onValueChange={handleMonthChange}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedMonth ? (
-                  format(selectedMonth, "MMMM yyyy")
-                ) : (
-                  <span>Pick a month</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedMonth}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedMonth(startOfMonth(date));
-                  }
-                }}
-                initialFocus
-                captionLayout="dropdown"
-                fromYear={2020}
-                toYear={2030}
-              />
-            </PopoverContent>
-          </Popover>
+                <SelectTrigger className="w-[140px]">
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {monthOptions.map((month) => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Year Selector */}
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">
+                Year
+              </label>
+              <Select value={selectedYear} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Selected Date Display */}
+            <div className="flex flex-col">
+              <label className="text-xs font-medium text-gray-600 mb-1">
+                Selected Period
+              </label>
+              <div className="px-3 py-2 bg-gray-50 rounded-md border text-sm font-medium text-gray-900">
+                {format(selectedMonth, "MMMM yyyy")}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -299,7 +396,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">
-                      New Inflow (All Types)
+                      New Inflow
                     </p>
                     <p className="text-xl font-bold text-gray-900">
                       {formatCurrency(inflowData.totalNetInflowFunds)}
@@ -321,7 +418,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-600">
-                      Total Outflow (All Types)
+                      Total Outflow
                     </p>
                     <p className="text-xl font-bold text-gray-900">
                       {formatCurrency(outflowData.totalOutflow)}
@@ -399,6 +496,138 @@ export function AdminDashboard() {
                           : "No date"}
                       </p>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gross Profit Warning */}
+            {grossProfitWarning && (
+              <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-orange-700 text-sm font-medium">
+                      Gross Profit Calculation Notice
+                    </p>
+                    <p className="text-orange-600 text-sm mt-1">
+                      {grossProfitWarning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Gross Profit Metric */}
+            {grossProfitData && (
+              <div className="bg-white p-6 rounded-lg shadow-sm border">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg">
+                      <TrendingUp className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        Gross Profit
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        {format(selectedMonth, "MMMM yyyy")} Portfolio Growth
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-gray-900">
+                      {formatCurrency(grossProfitData.grossProfit)}
+                    </p>
+                    <p
+                      className={`text-sm font-medium ${
+                        grossProfitData.grossProfit >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {grossProfitData.grossProfit >= 0 ? "↗ Profit" : "↘ Loss"}{" "}
+                      ({formatPercentage(grossProfitData.grossProfitPercentage)}
+                      )
+                    </p>
+                  </div>
+                </div>
+
+                {/* Calculation Breakdown */}
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Gross Profit Formula:
+                    </p>
+                    <p className="text-xs text-gray-600 font-mono">
+                      {grossProfitData.calculation.formula}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Breakdown:
+                    </p>
+                    <p className="text-xs text-gray-600 font-mono">
+                      {grossProfitData.calculation.breakdown}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Percentage Formula:
+                    </p>
+                    <p className="text-xs text-gray-600 font-mono">
+                      {grossProfitData.calculation.percentageFormula}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Percentage Breakdown:
+                    </p>
+                    <p className="text-xs text-gray-600 font-mono">
+                      {grossProfitData.calculation.percentageBreakdown}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Component Values */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                  <div className="text-center p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-600 font-medium">
+                      Current AUM
+                    </p>
+                    <p className="text-sm font-bold text-blue-800">
+                      {formatCurrency(grossProfitData.currentMonthAUM)}
+                    </p>
+                    {!grossProfitData.hasCurrentMonthData && (
+                      <p className="text-xs text-red-500">No data</p>
+                    )}
+                  </div>
+                  <div className="text-center p-3 bg-purple-50 rounded-lg">
+                    <p className="text-xs text-purple-600 font-medium">
+                      Previous AUM
+                    </p>
+                    <p className="text-sm font-bold text-purple-800">
+                      {formatCurrency(grossProfitData.previousMonthAUM)}
+                    </p>
+                    {!grossProfitData.hasPreviousMonthData && (
+                      <p className="text-xs text-red-500">No data</p>
+                    )}
+                  </div>
+                  <div className="text-center p-3 bg-green-50 rounded-lg">
+                    <p className="text-xs text-green-600 font-medium">Inflow</p>
+                    <p className="text-sm font-bold text-green-800">
+                      {formatCurrency(grossProfitData.totalInflow)}
+                    </p>
+                  </div>
+                  <div className="text-center p-3 bg-orange-50 rounded-lg">
+                    <p className="text-xs text-orange-600 font-medium">
+                      Outflow
+                    </p>
+                    <p className="text-sm font-bold text-orange-800">
+                      {formatCurrency(grossProfitData.totalOutflow)}
+                    </p>
                   </div>
                 </div>
               </div>

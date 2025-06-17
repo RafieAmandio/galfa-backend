@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { VCPerformanceTable } from "@/features/floating-rate/views/vc-performance-table";
+import { VCPerformanceTable } from "@/features/investments/views/vc-performance-table";
 
 export default async function VCPerformancePage() {
   // Check if user is admin before rendering the page
