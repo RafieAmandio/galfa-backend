@@ -16,6 +16,8 @@ import { getInflowByMonth } from "../../investments/actions/get-inflow-by-month"
 import { getOutflowByMonth } from "../../investments/actions/get-outflow-by-month"; // Note: Handles all account types
 import { getVCPerformanceByMonth } from "../../investments/actions/get-vc-performance-by-month";
 import { getGrossProfitByMonth } from "../../investments/actions/get-gross-profit-by-month";
+import { getInstallmentPrincipleByMonth } from "../../installment/actions/get-installment-principle-by-month";
+import { getInstallmentCoFByMonth } from "../../installment/actions/get-installment-cof-by-month";
 
 interface PrincipleData {
   month: Date;
@@ -130,6 +132,47 @@ interface GrossProfitData {
   hasPreviousMonthData: boolean;
 }
 
+interface InstallmentPrincipleData {
+  month: Date;
+  totalGrossCapital: number;
+  totalAdminFees: number;
+  totalNetCapital: number;
+  activeAccountsCount: number;
+  accounts: Array<{
+    id: number;
+    accountNumber: string;
+    investorEmail: string | null;
+    grossCapital: number;
+    adminFee: number;
+    netCapital: number;
+    monthlyCof: number;
+    investmentType: "principle" | "interest_only";
+    transactionDate: Date;
+    endDate: Date | null;
+  }>;
+}
+
+interface InstallmentCoFData {
+  month: Date;
+  totalGainedFunds: number;
+  totalNetCapitalWorking: number;
+  averageReturnPercentage: number;
+  activeAccountsCount: number;
+  accounts: Array<{
+    id: number;
+    accountNumber: string;
+    investorEmail: string | null;
+    netCapital: number;
+    monthlyCof: number;
+    investmentType: "principle" | "interest_only";
+    presentValue: number;
+    totalGainedFunds: number;
+    returnPercentage: number;
+    transactionDate: Date;
+    endDate: Date | null;
+  }>;
+}
+
 export function AdminDashboard() {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<Date>(
@@ -157,6 +200,10 @@ export function AdminDashboard() {
   const [grossProfitWarning, setGrossProfitWarning] = useState<string | null>(
     null
   );
+  const [installmentPrincipleData, setInstallmentPrincipleData] =
+    useState<InstallmentPrincipleData | null>(null);
+  const [installmentCoFData, setInstallmentCoFData] =
+    useState<InstallmentCoFData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,6 +221,8 @@ export function AdminDashboard() {
           outflowResult,
           vcPerformanceResult,
           grossProfitResult,
+          installmentPrincipleResult,
+          installmentCoFResult,
         ] = await Promise.all([
           getFixRatePrincipleByMonth(selectedMonth),
           getFixRateCoFByMonth(selectedMonth),
@@ -181,6 +230,8 @@ export function AdminDashboard() {
           getOutflowByMonth(selectedMonth),
           getVCPerformanceByMonth(selectedMonth),
           getGrossProfitByMonth(selectedMonth),
+          getInstallmentPrincipleByMonth(selectedMonth),
+          getInstallmentCoFByMonth(selectedMonth),
         ]);
 
         if (principleResult.success && principleResult.data) {
@@ -231,6 +282,21 @@ export function AdminDashboard() {
           }
         } else {
           setError(grossProfitResult.message);
+        }
+
+        if (
+          installmentPrincipleResult.success &&
+          installmentPrincipleResult.data
+        ) {
+          setInstallmentPrincipleData(installmentPrincipleResult.data);
+        } else {
+          setInstallmentPrincipleData(null);
+        }
+
+        if (installmentCoFResult.success && installmentCoFResult.data) {
+          setInstallmentCoFData(installmentCoFResult.data);
+        } else {
+          setInstallmentCoFData(null);
         }
       } catch (err) {
         console.error("Error loading monthly data:", err);
@@ -880,6 +946,268 @@ export function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* Installment Summary - Complete Section */}
+            {installmentPrincipleData && installmentCoFData && (
+              <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
+                {/* Section Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                      Installment Summary
+                    </h2>
+                    <p className="text-sm text-gray-600">
+                      Monthly analytics for {format(selectedMonth, "MMMM yyyy")}{" "}
+                      - Installment Investment Performance
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2 text-sm text-gray-500">
+                    <PieChart className="h-5 w-5" />
+                    <span>Installment Analytics</span>
+                  </div>
+                </div>
+
+                {/* Key Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Total Net Capital */}
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <DollarSign className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600">
+                          Net Capital Working
+                        </p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {formatCurrency(
+                            installmentPrincipleData.totalNetCapital
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Total Gained Funds */}
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-emerald-100 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600">
+                          Total Gained Funds
+                        </p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {formatCurrency(installmentCoFData.totalGainedFunds)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Average Monthly Return */}
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-teal-100 rounded-lg">
+                        <PieChart className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600">
+                          Avg Monthly Return
+                        </p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {formatPercentage(
+                            installmentCoFData.averageReturnPercentage
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Active Accounts */}
+                  <div className="bg-gray-50 p-4 rounded-lg border">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-amber-100 rounded-lg">
+                        <Users className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-xs font-medium text-gray-600">
+                          Active Accounts
+                        </p>
+                        <p className="text-sm font-bold text-gray-900">
+                          {installmentPrincipleData.activeAccountsCount}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Detailed Tables */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Principle Data Table */}
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Net Investor Funds (Principle)
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            Total Gross Capital
+                          </p>
+                          <p className="font-medium">
+                            {formatCurrency(
+                              installmentPrincipleData.totalGrossCapital
+                            )}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            Total Admin Fees
+                          </p>
+                          <p className="font-medium text-orange-600">
+                            {formatCurrency(
+                              installmentPrincipleData.totalAdminFees
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                                Account
+                              </th>
+                              <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                                Type
+                              </th>
+                              <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
+                                Net Capital
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="space-y-2">
+                            {installmentPrincipleData.accounts
+                              .slice(0, 5)
+                              .map((account) => (
+                                <tr
+                                  key={account.id}
+                                  className="border-b border-gray-100"
+                                >
+                                  <td className="py-2 text-sm">
+                                    <div>
+                                      <p className="font-medium">
+                                        {account.accountNumber}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {account.investorEmail}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-2 text-sm">
+                                    <span
+                                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                        account.investmentType === "principle"
+                                          ? "bg-blue-100 text-blue-800"
+                                          : "bg-green-100 text-green-800"
+                                      }`}
+                                    >
+                                      {account.investmentType === "principle"
+                                        ? "Principal"
+                                        : "Interest Only"}
+                                    </span>
+                                  </td>
+                                  <td className="py-2 text-sm text-right font-medium">
+                                    {formatCurrency(account.netCapital)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                        {installmentPrincipleData.accounts.length > 5 && (
+                          <p className="text-sm text-gray-500 text-center mt-4">
+                            ... and{" "}
+                            {installmentPrincipleData.accounts.length - 5} more
+                            accounts
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CoF Data Table */}
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                      Total Gained Funds (CoF)
+                    </h3>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="text-sm text-gray-600">
+                            Total Interest Earned
+                          </p>
+                          <p className="font-medium text-emerald-600">
+                            {formatCurrency(
+                              installmentCoFData.totalGainedFunds
+                            )}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                                Account
+                              </th>
+                              <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
+                                Monthly Rate
+                              </th>
+                              <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
+                                Interest Earned
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="space-y-2">
+                            {installmentCoFData.accounts
+                              .slice(0, 5)
+                              .map((account) => (
+                                <tr
+                                  key={account.id}
+                                  className="border-b border-gray-100"
+                                >
+                                  <td className="py-2 text-sm">
+                                    <div>
+                                      <p className="font-medium">
+                                        {account.accountNumber}
+                                      </p>
+                                    </div>
+                                  </td>
+                                  <td className="py-2 text-sm text-right">
+                                    {formatPercentage(account.monthlyCof * 100)}
+                                  </td>
+                                  <td className="py-2 text-sm text-right font-medium text-emerald-600">
+                                    {formatCurrency(account.totalGainedFunds)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                        {installmentCoFData.accounts.length > 5 && (
+                          <p className="text-sm text-gray-500 text-center mt-4">
+                            ... and {installmentCoFData.accounts.length - 5}{" "}
+                            more accounts
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
     </div>

@@ -57,6 +57,7 @@ interface InvestorInstallmentSummary {
 
 /**
  * Calculate monthly installment data for an investment
+ * Interest gains start in the month AFTER the transaction date
  */
 function calculateInstallmentData(
   netCapital: number,
@@ -76,7 +77,8 @@ function calculateInstallmentData(
   const totalMonthsToShow = durationMonths + 1;
 
   for (let month = 1; month <= totalMonthsToShow; month++) {
-    const currentDate = addMonths(startOfMonth(startDate), month - 1);
+    // Interest starts in the month AFTER the transaction date
+    const currentDate = addMonths(startOfMonth(startDate), month);
     const monthYear = format(currentDate, "MMM yyyy");
 
     let principalPayment = 0;
