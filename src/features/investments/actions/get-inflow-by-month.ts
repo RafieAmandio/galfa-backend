@@ -80,7 +80,7 @@ export async function getInflowByMonth(
         status: accounts.status,
         // Account type specific rates
         fixRateAnnualRate: fixRateAccounts.annual_rate,
-        floatingRateHurdleRate: floatingRateAccounts.hurdle_rate,
+        floatingRateAdminFee: floatingRateAccounts.admin_fee,
         installmentMonthlyCoF: installmentAccounts.monthly_cof,
         installmentAdminFee: installmentAccounts.admin_fee,
         installmentInvestmentType: installmentAccounts.investment_type,
@@ -124,10 +124,10 @@ export async function getInflowByMonth(
         accountType = "fixed_rate";
         rate = parseFloat(investment.fixRateAnnualRate);
         rateType = "Annual Rate";
-      } else if (investment.floatingRateHurdleRate !== null) {
+      } else if (investment.floatingRateAdminFee !== null) {
         accountType = "floating_rate";
-        rate = parseFloat(investment.floatingRateHurdleRate);
-        rateType = "Hurdle Rate";
+        rate = 0; // Floating rate doesn't have a fixed rate, it's performance-based
+        rateType = "Variable Rate";
       } else if (investment.installmentMonthlyCoF !== null) {
         accountType = "installment";
         rate = parseFloat(investment.installmentMonthlyCoF);
@@ -147,8 +147,14 @@ export async function getInflowByMonth(
       ) {
         // Installment accounts have specific admin fee structure
         adminFee = parseFloat(investment.installmentAdminFee);
-      } else if (investment.adminFeeApplied && accountType !== "installment") {
-        // Fixed rate and floating rate use standard 5% admin fee
+      } else if (
+        accountType === "floating_rate" &&
+        investment.floatingRateAdminFee !== null
+      ) {
+        // Floating rate accounts store admin fee directly
+        adminFee = parseFloat(investment.floatingRateAdminFee);
+      } else if (investment.adminFeeApplied && accountType === "fixed_rate") {
+        // Fixed rate accounts use standard 5% admin fee
         adminFee = grossAmount * ADMIN_FEE_PERCENTAGE;
       }
 

@@ -18,6 +18,9 @@ import { getVCPerformanceByMonth } from "../../investments/actions/get-vc-perfor
 import { getGrossProfitByMonth } from "../../investments/actions/get-gross-profit-by-month";
 import { getInstallmentPrincipleByMonth } from "../../installment/actions/get-installment-principle-by-month";
 import { getInstallmentCoFByMonth } from "../../installment/actions/get-installment-cof-by-month";
+import { getFloatingRatePrincipleByMonth } from "../../floating-rate/actions/get-floating-rate-principle-by-month";
+import { getFloatingRateAllocatedProfit } from "../../floating-rate/actions/get-floating-rate-allocated-profit";
+import { getFloatingRateGrowthPercentage } from "../../floating-rate/actions/get-floating-rate-growth-percentage";
 
 interface PrincipleData {
   month: Date;
@@ -173,6 +176,55 @@ interface InstallmentCoFData {
   }>;
 }
 
+interface FloatingRatePrincipleData {
+  month: Date;
+  totalGrossCapital: number;
+  totalAdminFees: number;
+  totalNetCapital: number;
+  activeAccountsCount: number;
+  accounts: Array<{
+    id: number;
+    accountNumber: string;
+    investorEmail: string | null;
+    grossCapital: number;
+    adminFee: number;
+    netCapital: number;
+    transactionDate: Date;
+  }>;
+}
+
+interface FloatingRateAllocatedProfitData {
+  month: Date;
+  totalGrossProfit: number;
+  fixRateCoF: number;
+  installmentCoF: number;
+  floatingRateAllocatedProfit: number;
+  floatingRatePrinciple: number;
+  performancePercentage: number;
+  calculation: {
+    formula: string;
+    breakdown: string;
+    performanceFormula: string;
+    performanceBreakdown: string;
+  };
+  hasGrossProfitData: boolean;
+  hasFixRateData: boolean;
+  hasInstallmentData: boolean;
+  hasPrincipleData: boolean;
+}
+
+interface FloatingRateGrowthData {
+  month: Date;
+  performancePercentage: number;
+  growthPercentage: number;
+  calculation: {
+    rule: string;
+    formula: string;
+    breakdown: string;
+  };
+  hasPerformanceData: boolean;
+}
+
 export function AdminDashboard() {
   const currentDate = new Date();
   const [selectedMonth, setSelectedMonth] = useState<Date>(
@@ -204,6 +256,15 @@ export function AdminDashboard() {
     useState<InstallmentPrincipleData | null>(null);
   const [installmentCoFData, setInstallmentCoFData] =
     useState<InstallmentCoFData | null>(null);
+  const [floatingRatePrincipleData, setFloatingRatePrincipleData] =
+    useState<FloatingRatePrincipleData | null>(null);
+  const [floatingRateAllocatedProfitData, setFloatingRateAllocatedProfitData] =
+    useState<FloatingRateAllocatedProfitData | null>(null);
+  const [floatingRateGrowthData, setFloatingRateGrowthData] =
+    useState<FloatingRateGrowthData | null>(null);
+  const [floatingRateWarning, setFloatingRateWarning] = useState<string | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -223,6 +284,9 @@ export function AdminDashboard() {
           grossProfitResult,
           installmentPrincipleResult,
           installmentCoFResult,
+          floatingRatePrincipleResult,
+          floatingRateAllocatedProfitResult,
+          floatingRateGrowthResult,
         ] = await Promise.all([
           getFixRatePrincipleByMonth(selectedMonth),
           getFixRateCoFByMonth(selectedMonth),
@@ -232,6 +296,9 @@ export function AdminDashboard() {
           getGrossProfitByMonth(selectedMonth),
           getInstallmentPrincipleByMonth(selectedMonth),
           getInstallmentCoFByMonth(selectedMonth),
+          getFloatingRatePrincipleByMonth(selectedMonth),
+          getFloatingRateAllocatedProfit(selectedMonth),
+          getFloatingRateGrowthPercentage(selectedMonth),
         ]);
 
         if (principleResult.success && principleResult.data) {
@@ -297,6 +364,36 @@ export function AdminDashboard() {
           setInstallmentCoFData(installmentCoFResult.data);
         } else {
           setInstallmentCoFData(null);
+        }
+
+        if (
+          floatingRatePrincipleResult.success &&
+          floatingRatePrincipleResult.data
+        ) {
+          setFloatingRatePrincipleData(floatingRatePrincipleResult.data);
+        } else {
+          setFloatingRatePrincipleData(null);
+        }
+
+        if (floatingRateAllocatedProfitResult.success) {
+          setFloatingRateAllocatedProfitData(
+            floatingRateAllocatedProfitResult.data || null
+          );
+          // Set warning if there are data availability issues
+          if (floatingRateAllocatedProfitResult.message.includes("Warning:")) {
+            setFloatingRateWarning(floatingRateAllocatedProfitResult.message);
+          } else {
+            setFloatingRateWarning(null);
+          }
+        } else {
+          setFloatingRateAllocatedProfitData(null);
+          setFloatingRateWarning(null);
+        }
+
+        if (floatingRateGrowthResult.success && floatingRateGrowthResult.data) {
+          setFloatingRateGrowthData(floatingRateGrowthResult.data);
+        } else {
+          setFloatingRateGrowthData(null);
         }
       } catch (err) {
         console.error("Error loading monthly data:", err);
@@ -968,7 +1065,7 @@ export function AdminDashboard() {
                 </div>
 
                 {/* Key Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                   {/* Total Net Capital */}
                   <div className="bg-gray-50 p-4 rounded-lg border">
                     <div className="flex items-center">
@@ -1208,6 +1305,428 @@ export function AdminDashboard() {
                 </div>
               </div>
             )}
+
+            {/* Floating Rate Summary - Complete Section */}
+            {floatingRatePrincipleData &&
+              floatingRateAllocatedProfitData &&
+              floatingRateGrowthData && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
+                  {/* Section Header */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                        Floating Rate Summary
+                      </h2>
+                      <p className="text-sm text-gray-600">
+                        Monthly analytics for{" "}
+                        {format(selectedMonth, "MMMM yyyy")} - Floating Rate
+                        Investment Performance
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2 text-sm text-gray-500">
+                      <TrendingUp className="h-5 w-5" />
+                      <span>Performance-Based Analytics</span>
+                    </div>
+                  </div>
+
+                  {/* Warning Message */}
+                  {floatingRateWarning && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg
+                            className="h-5 w-5 text-yellow-400"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-800">
+                            {floatingRateWarning}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Key Metrics Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Total Net Capital */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-purple-100 rounded-lg">
+                          <DollarSign className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">
+                            Total Net Capital
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatCurrency(
+                              floatingRatePrincipleData.totalNetCapital
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Allocated Profit */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <TrendingUp className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">
+                            Allocated Profit
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatCurrency(
+                              floatingRateAllocatedProfitData.floatingRateAllocatedProfit
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active Accounts */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                          <Users className="h-5 w-5 text-blue-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">
+                            Active Accounts
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {floatingRatePrincipleData.activeAccountsCount}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Performance Percentage */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-yellow-100 rounded-lg">
+                          <PieChart className="h-5 w-5 text-yellow-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">
+                            Performance Rate
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatPercentage(
+                              floatingRateAllocatedProfitData.performancePercentage
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Growth Percentage */}
+                    <div className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex items-center">
+                        <div className="p-2 bg-indigo-100 rounded-lg">
+                          <TrendingUp className="h-5 w-5 text-indigo-600" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-xs font-medium text-gray-600">
+                            Investor Growth Rate
+                          </p>
+                          <p className="text-sm font-bold text-gray-900">
+                            {formatPercentage(
+                              floatingRateGrowthData.growthPercentage
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed Information */}
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Principle Data */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Net Investor Funds (Principle)
+                      </h3>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              Total Gross Capital
+                            </p>
+                            <p className="font-medium">
+                              {formatCurrency(
+                                floatingRatePrincipleData.totalGrossCapital
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              Total Admin Fees
+                            </p>
+                            <p className="font-medium text-orange-600">
+                              {formatCurrency(
+                                floatingRatePrincipleData.totalAdminFees
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr className="border-b">
+                                <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                                  Account
+                                </th>
+                                <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                                  Investor
+                                </th>
+                                <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
+                                  Net Capital
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="space-y-2">
+                              {floatingRatePrincipleData.accounts
+                                .slice(0, 5)
+                                .map((account) => (
+                                  <tr
+                                    key={account.id}
+                                    className="border-b border-gray-100"
+                                  >
+                                    <td className="py-2 text-sm">
+                                      <div>
+                                        <p className="font-medium">
+                                          {account.accountNumber}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                          {format(
+                                            account.transactionDate,
+                                            "MMM dd, yyyy"
+                                          )}
+                                        </p>
+                                      </div>
+                                    </td>
+                                    <td className="py-2 text-sm text-gray-600">
+                                      {account.investorEmail}
+                                    </td>
+                                    <td className="py-2 text-sm text-right font-medium">
+                                      {formatCurrency(account.netCapital)}
+                                    </td>
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                          {floatingRatePrincipleData.accounts.length > 5 && (
+                            <p className="text-sm text-gray-500 text-center mt-4">
+                              ... and{" "}
+                              {floatingRatePrincipleData.accounts.length - 5}{" "}
+                              more accounts
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Allocated Profit Calculation */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Profit Allocation Calculation
+                      </h3>
+                      <div className="space-y-4">
+                        {/* Formula */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Formula:
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {
+                              floatingRateAllocatedProfitData.calculation
+                                .formula
+                            }
+                          </p>
+                        </div>
+
+                        {/* Breakdown */}
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Profit Calculation:
+                          </p>
+                          <p className="text-sm text-gray-600 font-mono">
+                            {
+                              floatingRateAllocatedProfitData.calculation
+                                .breakdown
+                            }
+                          </p>
+                        </div>
+
+                        {/* Performance Calculation */}
+                        <div className="p-4 bg-yellow-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Performance Formula:
+                          </p>
+                          <p className="text-sm text-gray-600 mb-2">
+                            {
+                              floatingRateAllocatedProfitData.calculation
+                                .performanceFormula
+                            }
+                          </p>
+                          <p className="text-sm text-gray-600 font-mono">
+                            {
+                              floatingRateAllocatedProfitData.calculation
+                                .performanceBreakdown
+                            }
+                          </p>
+                        </div>
+
+                        {/* Component Breakdown */}
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              Total Gross Profit
+                            </span>
+                            <span className="text-sm font-medium">
+                              {formatCurrency(
+                                floatingRateAllocatedProfitData.totalGrossProfit
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              - Fixed Rate CoF
+                            </span>
+                            <span className="text-sm font-medium text-red-600">
+                              {formatCurrency(
+                                floatingRateAllocatedProfitData.fixRateCoF
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">
+                              - Installment CoF
+                            </span>
+                            <span className="text-sm font-medium text-red-600">
+                              {formatCurrency(
+                                floatingRateAllocatedProfitData.installmentCoF
+                              )}
+                            </span>
+                          </div>
+                          <div className="border-t pt-2 space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-900">
+                                Floating Rate Allocated Profit
+                              </span>
+                              <span className="text-sm font-bold text-green-600">
+                                {formatCurrency(
+                                  floatingRateAllocatedProfitData.floatingRateAllocatedProfit
+                                )}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-900">
+                                Performance Percentage
+                              </span>
+                              <span className="text-sm font-bold text-yellow-600">
+                                {formatPercentage(
+                                  floatingRateAllocatedProfitData.performancePercentage
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Growth Rate Calculation */}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Investor Growth Rate Calculation
+                      </h3>
+                      <div className="space-y-4">
+                        {/* Business Rule */}
+                        <div className="p-4 bg-indigo-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Applied Rule:
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {floatingRateGrowthData.calculation.rule}
+                          </p>
+                        </div>
+
+                        {/* Formula */}
+                        <div className="p-4 bg-gray-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Formula:
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            {floatingRateGrowthData.calculation.formula}
+                          </p>
+                        </div>
+
+                        {/* Calculation Breakdown */}
+                        <div className="p-4 bg-blue-50 rounded-lg">
+                          <p className="text-sm font-medium text-gray-900 mb-2">
+                            Calculation:
+                          </p>
+                          <p className="text-sm text-gray-600 font-mono">
+                            {floatingRateGrowthData.calculation.breakdown}
+                          </p>
+                        </div>
+
+                        {/* Business Rules Explanation */}
+                        <div className="space-y-3">
+                          <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400">
+                            <p className="text-sm font-medium text-yellow-800">
+                              Business Rules:
+                            </p>
+                            <ul className="text-sm text-yellow-700 mt-1 space-y-1">
+                              <li>
+                                • If performance &lt; 24%: Growth = Performance
+                                ÷ 12
+                              </li>
+                              <li>
+                                • If performance ≥ 24%: Growth = 1.42% (fixed)
+                              </li>
+                            </ul>
+                          </div>
+
+                          <div className="flex justify-between items-center pt-2 border-t">
+                            <span className="text-sm font-medium text-gray-900">
+                              Current Performance
+                            </span>
+                            <span className="text-sm font-medium">
+                              {formatPercentage(
+                                floatingRateGrowthData.performancePercentage
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-gray-900">
+                              Investor Growth Rate
+                            </span>
+                            <span className="text-sm font-bold text-indigo-600">
+                              {formatPercentage(
+                                floatingRateGrowthData.growthPercentage
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
           </>
         )}
     </div>

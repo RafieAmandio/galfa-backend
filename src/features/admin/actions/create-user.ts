@@ -4,6 +4,7 @@ import { createServerAdminClient } from "@/db/supabase/server";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { profiles, roleAssignments } from "@/db/drizzle/schema";
+import { eq } from "drizzle-orm";
 
 export interface CreateUserResult {
   success: boolean;
@@ -48,20 +49,39 @@ export async function createUserByAdmin(
       };
     }
 
-    // Create profile in database
+    // Create or update profile in database
     const db = createDrizzleConnection();
 
-    await db.insert(profiles).values({
-      id: userData.user.id,
-      full_name: fullName,
-      updated_at: new Date(),
-    });
+    // Use upsert to handle cases where profile might already exist
+    await db
+      .insert(profiles)
+      .values({
+        id: userData.user.id,
+        full_name: fullName,
+        updated_at: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: profiles.id,
+        set: {
+          full_name: fullName,
+          updated_at: new Date(),
+        },
+      });
 
-    // Assign role
-    await db.insert(roleAssignments).values({
-      user_id: userData.user.id,
-      role_name: role,
-    });
+    // Check if role assignment already exists
+    const existingRole = await db
+      .select()
+      .from(roleAssignments)
+      .where(eq(roleAssignments.user_id, userData.user.id))
+      .limit(1);
+
+    // Only assign role if it doesn't already exist
+    if (existingRole.length === 0) {
+      await db.insert(roleAssignments).values({
+        user_id: userData.user.id,
+        role_name: role,
+      });
+    }
 
     return {
       success: true,

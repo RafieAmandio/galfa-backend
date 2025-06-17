@@ -79,7 +79,7 @@ function calculateInstallmentData(
   for (let month = 1; month <= totalMonthsToShow; month++) {
     // Interest starts in the month AFTER the transaction date
     const currentDate = addMonths(startOfMonth(startDate), month);
-    const monthYear = format(currentDate, "MMM yyyy");
+    const monthYear = format(currentDate, "MMM yyyy") || `Month ${month}`;
 
     let principalPayment = 0;
     let interestPayment = 0;
@@ -238,10 +238,13 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
 
     // Accumulate monthly gains for admin
     monthlyData.forEach((month) => {
-      if (!monthlyGainedFunds[month.monthYear]) {
-        monthlyGainedFunds[month.monthYear] = 0;
+      // Safety check to ensure monthYear is valid
+      if (month && month.monthYear && typeof month.monthYear === "string") {
+        if (!monthlyGainedFunds[month.monthYear]) {
+          monthlyGainedFunds[month.monthYear] = 0;
+        }
+        monthlyGainedFunds[month.monthYear] += month.interestPayment;
       }
-      monthlyGainedFunds[month.monthYear] += month.interestPayment;
     });
 
     return {

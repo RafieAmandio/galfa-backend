@@ -1,3 +1,32 @@
-export default function Page() {
-  return <div className="container mx-auto p-4"></div>;
+import { redirect } from "next/navigation";
+import { checkAdminAccess } from "@/lib/auth/admin-check";
+import FloatingRateInvestmentsMonthlyTable from "@/features/floating-rate/views/floating-rate-investments-monthly-table";
+import { CreateFloatingRateModal } from "@/features/floating-rate/components/create-floating-rate-modal";
+
+export default async function FloatingRatePage() {
+  // Check admin access on server side
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    redirect("/");
+  }
+
+  return (
+    <div className="container mx-auto p-6">
+      <div className="mb-6">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Floating Rate Investments
+            </h1>
+            <p className="text-muted-foreground">
+              Manage and monitor floating rate investment accounts
+            </p>
+          </div>
+          <CreateFloatingRateModal />
+        </div>
+      </div>
+
+      <FloatingRateInvestmentsMonthlyTable />
+    </div>
+  );
 }

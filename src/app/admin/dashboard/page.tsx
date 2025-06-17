@@ -16,7 +16,8 @@ export default async function AdminDashboardPage() {
           Admin Dashboard
         </h1>
         <p className="text-gray-600">
-          Monthly analytics and insights for flat-rate investments
+          Monthly analytics and insights for all investment types including
+          floating rate performance
         </p>
       </div>
 

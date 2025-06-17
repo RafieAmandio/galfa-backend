@@ -103,19 +103,39 @@ async function getFlatRateAccountTypeId(): Promise<number> {
     return existingType[0].id;
   }
 
-  // Create flat-rate account type if it doesn't exist
-  const newType = await db
-    .insert(accountTypes)
-    .values({
-      name: "fix",
-      description:
-        "Fixed annual rate investment accounts with monthly compounding",
-      created_at: new Date(),
-      updated_at: new Date(),
-    })
-    .returning({ id: accountTypes.id });
+  // Try to create the account type, handle duplicate key error gracefully
+  try {
+    const newType = await db
+      .insert(accountTypes)
+      .values({
+        name: "fix",
+        description:
+          "Fixed annual rate investment accounts with monthly compounding",
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning({ id: accountTypes.id });
 
-  return newType[0].id;
+    return newType[0].id;
+  } catch (error: any) {
+    // If we get a duplicate key error, it means the account type already exists
+    // Try to find it again
+    if (error?.code === "23505") {
+      // PostgreSQL duplicate key error code
+      const retryExistingType = await db
+        .select({ id: accountTypes.id })
+        .from(accountTypes)
+        .where(eq(accountTypes.name, "fix"))
+        .limit(1);
+
+      if (retryExistingType.length > 0) {
+        return retryExistingType[0].id;
+      }
+    }
+
+    // Re-throw the error if it's not a duplicate key error or we can't find the existing record
+    throw error;
+  }
 }
 
 /**
