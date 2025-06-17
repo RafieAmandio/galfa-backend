@@ -9,6 +9,7 @@ import {
   boolean,
   uuid,
   pgSchema,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -132,10 +133,8 @@ export const installmentAccounts = pgTable("installment_accounts", {
 export const vcPerformance = pgTable("vc_performance", {
   id: serial("id").primaryKey(),
   date: timestamp("date", { withTimezone: true }).notNull(),
-  aum: decimal("aum").notNull(),
-  gross_profit: decimal("gross_profit").notNull(),
-  roi_percentage: decimal("roi_percentage").notNull(),
-  cof_fix_rate: decimal("cof_fix_rate").notNull(),
+  aum: numeric("aum").notNull(),
+  profitTaken: numeric("profit_taken").notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

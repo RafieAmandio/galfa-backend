@@ -1,0 +1,138 @@
+"use server";
+
+import { createDrizzleConnection } from "@/db/drizzle/connection";
+import { vcPerformance } from "@/db/drizzle/schema";
+import { eq, and, gte, lt, ne } from "drizzle-orm";
+import { startOfMonth, endOfMonth } from "date-fns";
+
+interface UpdateVCPerformanceRequest {
+  id: number;
+  date: Date;
+  aum: number;
+  profitTaken: number;
+}
+
+interface UpdateVCPerformanceResponse {
+  success: boolean;
+  data?: {
+    id: number;
+    date: Date;
+    aum: number;
+    profitTaken: number;
+  };
+  message: string;
+}
+
+export async function updateVCPerformance(
+  request: UpdateVCPerformanceRequest
+): Promise<UpdateVCPerformanceResponse> {
+  try {
+    const db = createDrizzleConnection();
+    const { id, date, aum, profitTaken } = request;
+
+    // Validation
+    if (!date) {
+      return {
+        success: false,
+        message: "Date is required",
+      };
+    }
+
+    if (aum < 0) {
+      return {
+        success: false,
+        message: "Assets Under Management cannot be negative",
+      };
+    }
+
+    if (profitTaken < 0) {
+      return {
+        success: false,
+        message: "Profit Taken cannot be negative",
+      };
+    }
+
+    // Check if record exists
+    const existingRecord = await db
+      .select({
+        id: vcPerformance.id,
+        date: vcPerformance.date,
+      })
+      .from(vcPerformance)
+      .where(eq(vcPerformance.id, id))
+      .limit(1);
+
+    if (existingRecord.length === 0) {
+      return {
+        success: false,
+        message: "VC performance record not found",
+      };
+    }
+
+    // Check if another record already exists for this month (excluding current record)
+    const monthStart = startOfMonth(date);
+    const monthEnd = endOfMonth(date);
+
+    const conflictingRecords = await db
+      .select({
+        id: vcPerformance.id,
+        date: vcPerformance.date,
+      })
+      .from(vcPerformance)
+      .where(
+        and(
+          gte(vcPerformance.date, monthStart),
+          lt(vcPerformance.date, monthEnd),
+          ne(vcPerformance.id, id) // Exclude current record
+        )
+      );
+
+    if (conflictingRecords.length > 0) {
+      const monthName = monthStart.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+      });
+      return {
+        success: false,
+        message: `Another VC performance record already exists for ${monthName}. Each month should have only one record.`,
+      };
+    }
+
+    // Update the record
+    const [updatedRecord] = await db
+      .update(vcPerformance)
+      .set({
+        date,
+        aum: aum.toString(),
+        profitTaken: profitTaken.toString(),
+        updated_at: new Date(),
+      })
+      .where(eq(vcPerformance.id, id))
+      .returning({
+        id: vcPerformance.id,
+        date: vcPerformance.date,
+        aum: vcPerformance.aum,
+        profitTaken: vcPerformance.profitTaken,
+      });
+
+    return {
+      success: true,
+      data: {
+        id: updatedRecord.id,
+        date: updatedRecord.date,
+        aum: Number(updatedRecord.aum),
+        profitTaken: Number(updatedRecord.profitTaken),
+      },
+      message: `Successfully updated VC performance record for ${monthStart.toLocaleDateString(
+        "en-US",
+        { year: "numeric", month: "long" }
+      )}`,
+    };
+  } catch (error) {
+    console.error("Error updating VC performance record:", error);
+    return {
+      success: false,
+      message: "Failed to update VC performance record",
+    };
+  }
+}

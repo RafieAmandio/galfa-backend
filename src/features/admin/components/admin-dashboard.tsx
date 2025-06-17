@@ -21,6 +21,7 @@ import { getFixRatePrincipleByMonth } from "../../flat-rate/actions/get-fix-rate
 import { getFixRateCoFByMonth } from "../../flat-rate/actions/get-fix-rate-cof-by-month";
 import { getInflowByMonth } from "../../investments/actions/get-inflow-by-month"; // Note: Now handles all account types, not just fixed rate
 import { getOutflowByMonth } from "../../investments/actions/get-outflow-by-month"; // Note: Handles all account types
+import { getVCPerformanceByMonth } from "../../floating-rate/actions/get-vc-performance-by-month";
 
 interface PrincipleData {
   month: Date;
@@ -105,6 +106,18 @@ interface OutflowData {
   }>;
 }
 
+interface VCPerformanceData {
+  month: Date;
+  totalAUM: number;
+  totalProfitTaken: number;
+  averageAUM: number;
+  averageProfitTaken: number;
+  dataPointsCount: number;
+  latestAUM: number;
+  latestProfitTaken: number;
+  latestDate: Date | null;
+}
+
 export function AdminDashboard() {
   const [selectedMonth, setSelectedMonth] = useState<Date>(
     startOfMonth(new Date())
@@ -115,6 +128,11 @@ export function AdminDashboard() {
   const [cofData, setCoFData] = useState<CoFData | null>(null);
   const [inflowData, setInflowData] = useState<InflowData | null>(null);
   const [outflowData, setOutflowData] = useState<OutflowData | null>(null);
+  const [vcPerformanceData, setVcPerformanceData] =
+    useState<VCPerformanceData | null>(null);
+  const [vcPerformanceWarning, setVcPerformanceWarning] = useState<
+    string | null
+  >(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -125,13 +143,19 @@ export function AdminDashboard() {
       setError(null);
 
       try {
-        const [principleResult, cofResult, inflowResult, outflowResult] =
-          await Promise.all([
-            getFixRatePrincipleByMonth(selectedMonth),
-            getFixRateCoFByMonth(selectedMonth),
-            getInflowByMonth(selectedMonth),
-            getOutflowByMonth(selectedMonth),
-          ]);
+        const [
+          principleResult,
+          cofResult,
+          inflowResult,
+          outflowResult,
+          vcPerformanceResult,
+        ] = await Promise.all([
+          getFixRatePrincipleByMonth(selectedMonth),
+          getFixRateCoFByMonth(selectedMonth),
+          getInflowByMonth(selectedMonth),
+          getOutflowByMonth(selectedMonth),
+          getVCPerformanceByMonth(selectedMonth),
+        ]);
 
         if (principleResult.success && principleResult.data) {
           setPrincipleData(principleResult.data);
@@ -155,6 +179,20 @@ export function AdminDashboard() {
           setOutflowData(outflowResult.data);
         } else {
           setError(outflowResult.message);
+        }
+
+        if (vcPerformanceResult.success) {
+          setVcPerformanceData(vcPerformanceResult.data || null);
+          // Set warning if there's a message but no error
+          if (vcPerformanceResult.message && !vcPerformanceResult.data) {
+            setVcPerformanceWarning(vcPerformanceResult.message);
+          } else if (vcPerformanceResult.message.includes("Warning:")) {
+            setVcPerformanceWarning(vcPerformanceResult.message);
+          } else {
+            setVcPerformanceWarning(null);
+          }
+        } else {
+          setError(vcPerformanceResult.message);
         }
       } catch (err) {
         console.error("Error loading monthly data:", err);
@@ -295,6 +333,76 @@ export function AdminDashboard() {
                 </div>
               </div>
             </div>
+
+            {/* VC Performance Warning */}
+            {vcPerformanceWarning && (
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <div className="p-2 bg-yellow-100 rounded-lg">
+                    <Users className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-yellow-700 text-sm font-medium">
+                      VC Performance Notice
+                    </p>
+                    <p className="text-yellow-600 text-sm mt-1">
+                      {vcPerformanceWarning}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VC Performance Metrics - AUM & Profit Taken */}
+            {vcPerformanceData && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                {/* Assets Under Management */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-emerald-100 rounded-lg">
+                      <PieChart className="h-6 w-6 text-emerald-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">
+                        Assets Under Management
+                      </p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {formatCurrency(vcPerformanceData.latestAUM)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {format(selectedMonth, "MMMM yyyy")} •{" "}
+                        {vcPerformanceData.dataPointsCount > 1
+                          ? `${vcPerformanceData.dataPointsCount} records (warning)`
+                          : "1 record"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profit Taken */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <div className="flex items-center">
+                    <div className="p-2 bg-teal-100 rounded-lg">
+                      <DollarSign className="h-6 w-6 text-teal-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">
+                        Profit Taken
+                      </p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {formatCurrency(vcPerformanceData.latestProfitTaken)}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {format(selectedMonth, "MMMM yyyy")} •{" "}
+                        {vcPerformanceData.latestDate
+                          ? format(vcPerformanceData.latestDate, "MMM dd")
+                          : "No date"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Fix Rate Summary - Complete Section */}
             <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">

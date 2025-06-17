@@ -84,6 +84,12 @@ export function Navigation() {
                       >
                         User Management
                       </Link>
+                      <Link
+                        href="/admin/vc-performance"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        VC Performance
+                      </Link>
                     </>
                   ) : !adminLoading ? (
                     // Regular user navigation
