@@ -101,6 +101,12 @@ export function Navigation() {
                         Dashboard
                       </Link>
                       <Link
+                        href="/investor/floating-rate"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        Floating Rate
+                      </Link>
+                      <Link
                         href="/investor/installments"
                         className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
                       >

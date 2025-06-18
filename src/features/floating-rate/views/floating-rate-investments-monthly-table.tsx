@@ -28,6 +28,8 @@ interface MonthlyPerformance {
   monthLabel: string;
   performancePercentage: number;
   growthPercentage: number;
+  gainedFund: number;
+  totalActivePrinciple: number;
   appliedRule: string;
   hasData: boolean;
 }
@@ -379,24 +381,6 @@ export default function FloatingRateInvestmentsMonthlyTable() {
                                       <div className="space-y-1">
                                         <div className="flex justify-between text-xs">
                                           <span className="text-muted-foreground">
-                                            Performance:
-                                          </span>
-                                          <Badge
-                                            variant={
-                                              monthData.hasData
-                                                ? "secondary"
-                                                : "outline"
-                                            }
-                                            className="text-xs"
-                                          >
-                                            {formatPercentage(
-                                              monthData.performancePercentage
-                                            )}
-                                          </Badge>
-                                        </div>
-
-                                        <div className="flex justify-between text-xs">
-                                          <span className="text-muted-foreground">
                                             Growth Rate:
                                           </span>
                                           <Badge
@@ -411,6 +395,28 @@ export default function FloatingRateInvestmentsMonthlyTable() {
                                               monthData.growthPercentage
                                             )}
                                           </Badge>
+                                        </div>
+
+                                        <div className="flex justify-between text-xs">
+                                          <span className="text-muted-foreground">
+                                            Active Principle:
+                                          </span>
+                                          <span className="text-xs font-medium text-blue-600">
+                                            {formatCurrency(
+                                              monthData.totalActivePrinciple
+                                            )}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex justify-between text-xs">
+                                          <span className="text-muted-foreground">
+                                            This Investment:
+                                          </span>
+                                          <span className="text-xs font-medium text-green-600">
+                                            {formatCurrency(
+                                              monthData.gainedFund
+                                            )}
+                                          </span>
                                         </div>
 
                                         <div className="text-xs text-muted-foreground mt-1">

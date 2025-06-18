@@ -8,7 +8,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { startOfMonth, endOfMonth } from "date-fns";
 
@@ -57,7 +57,7 @@ export async function getFloatingRatePrincipleByMonth(
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
 
-    // Get all floating rate accounts created in the specified month
+    // Get all floating rate accounts that were active during the specified month
     const results = await db
       .select({
         // Account info
@@ -65,6 +65,7 @@ export async function getFloatingRatePrincipleByMonth(
         accountNumber: accounts.account_number,
         grossCapital: accounts.capital,
         transactionDate: accounts.transaction_date,
+        endDate: accounts.end_date,
 
         // Investor info
         investorEmail: authUsers.email,
@@ -83,9 +84,11 @@ export async function getFloatingRatePrincipleByMonth(
       .where(
         and(
           eq(accountTypes.name, "floating"),
-          gte(accounts.transaction_date, monthStart),
+          eq(accounts.status, "active"),
+          // Investment started before or during the month
           lte(accounts.transaction_date, monthEnd),
-          eq(accounts.status, "active")
+          // Investment either has no end date (still active) or ended after the month started
+          or(isNull(accounts.end_date), gte(accounts.end_date, monthStart))
         )
       )
       .orderBy(accounts.transaction_date);
