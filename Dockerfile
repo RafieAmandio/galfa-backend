@@ -2,7 +2,7 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Rebuild the source code only when needed
 FROM node:20-alpine AS builder
@@ -24,6 +24,9 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/next.config.ts ./next.config.ts
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/src ./src
+
+# Remove devDependencies for a smaller production image
+RUN npm prune --omit=dev
 
 # Expose Next.js port
 EXPOSE 3000
