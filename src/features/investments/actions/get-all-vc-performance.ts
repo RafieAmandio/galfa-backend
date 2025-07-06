@@ -50,13 +50,13 @@ export async function getAllVCPerformance(): Promise<AllVCPerformanceResponse> {
     return {
       success: true,
       data: vcPerformanceRecords,
-      message: `Successfully retrieved ${vcPerformanceRecords.length} VC performance records`,
+      message: `Successfully retrieved ${vcPerformanceRecords.length} performance records`,
     };
   } catch (error) {
-    console.error("Error fetching all VC performance records:", error);
+    console.error("Error fetching all performance records:", error);
     return {
       success: false,
-      message: "Failed to fetch VC performance records",
+      message: "Failed to fetch performance records",
     };
   }
 }

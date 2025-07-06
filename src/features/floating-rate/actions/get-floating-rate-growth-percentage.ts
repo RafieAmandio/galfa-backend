@@ -5,7 +5,7 @@ import {
   getFloatingRateAllocatedProfit,
   getFloatingRateAllocatedProfitPublic,
 } from "./get-floating-rate-allocated-profit";
-// Add direct database import for simple VC performance query
+// Add direct database import for simple performance query
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { and, gte, lt } from "drizzle-orm";
@@ -171,10 +171,10 @@ export async function getFloatingRateGrowthPercentagePublic(
     const hasPreviousData = previousMonthResult.length > 0;
 
     if (!hasCurrentData || !hasPreviousData) {
-      // If no VC performance data, return clear message about unavailable data
+      // If no performance data, return clear message about unavailable data
       return {
         success: false,
-        message: "VC performance data not available for the selected month",
+        message: "Performance data not available for the selected month",
         data: {
           month,
           performancePercentage: 0,
@@ -182,7 +182,7 @@ export async function getFloatingRateGrowthPercentagePublic(
           calculation: {
             rule: "No data available",
             formula: "N/A",
-            breakdown: "VC performance data is not available for this month",
+            breakdown: "Performance data is not available for this month",
           },
           hasPerformanceData: false,
         },
@@ -248,7 +248,7 @@ export async function getFloatingRateGrowthPercentagePublic(
     // Return error message instead of defaults
     return {
       success: false,
-      message: "Error accessing VC performance data",
+      message: "Error accessing performance data",
       data: {
         month,
         performancePercentage: 0,
@@ -256,7 +256,7 @@ export async function getFloatingRateGrowthPercentagePublic(
         calculation: {
           rule: "Error occurred",
           formula: "N/A",
-          breakdown: "Unable to access VC performance data due to an error",
+          breakdown: "Unable to access performance data due to an error",
         },
         hasPerformanceData: false,
       },

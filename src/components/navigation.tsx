@@ -5,11 +5,12 @@ import { useState, useEffect } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 export function Navigation() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-
+  const router = useRouter();
   const supabase = createBrowserClient();
   const { isAdmin, loading: adminLoading } = useAdminCheck(user);
 
@@ -36,6 +37,7 @@ export function Navigation() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    router.push("/");
   };
 
   return (
@@ -85,10 +87,10 @@ export function Navigation() {
                         User Management
                       </Link>
                       <Link
-                        href="/admin/vc-performance"
+                        href="/admin/performance"
                         className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
                       >
-                        VC Performance
+                        Performance
                       </Link>
                     </>
                   ) : !adminLoading ? (

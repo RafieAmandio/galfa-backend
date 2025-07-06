@@ -129,8 +129,8 @@ export function EditVCPerformanceModal({
         setError(result.message);
       }
     } catch (err) {
-      console.error("Error updating VC performance record:", err);
-      setError("Failed to update VC performance record");
+      console.error("Error updating performance record:", err);
+      setError("Failed to update performance record");
     } finally {
       setLoading(false);
     }
@@ -151,7 +151,7 @@ export function EditVCPerformanceModal({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <Edit className="h-5 w-5 text-blue-600" />
-            <span>Edit VC Performance Record</span>
+            <span>Edit Performance Record</span>
           </DialogTitle>
         </DialogHeader>
 

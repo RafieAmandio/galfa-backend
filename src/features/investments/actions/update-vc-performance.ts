@@ -65,7 +65,7 @@ export async function updateVCPerformance(
     if (existingRecord.length === 0) {
       return {
         success: false,
-        message: "VC performance record not found",
+        message: "Performance record not found",
       };
     }
 
@@ -94,7 +94,7 @@ export async function updateVCPerformance(
       });
       return {
         success: false,
-        message: `Another VC performance record already exists for ${monthName}. Each month should have only one record.`,
+        message: `Another performance record already exists for ${monthName}. Each month should have only one record.`,
       };
     }
 
@@ -123,16 +123,16 @@ export async function updateVCPerformance(
         aum: Number(updatedRecord.aum),
         profitTaken: Number(updatedRecord.profitTaken),
       },
-      message: `Successfully updated VC performance record for ${monthStart.toLocaleDateString(
+      message: `Successfully updated performance record for ${monthStart.toLocaleDateString(
         "en-US",
         { year: "numeric", month: "long" }
       )}`,
     };
   } catch (error) {
-    console.error("Error updating VC performance record:", error);
+    console.error("Error updating performance record:", error);
     return {
       success: false,
-      message: "Failed to update VC performance record",
+      message: "Failed to update performance record",
     };
   }
 }

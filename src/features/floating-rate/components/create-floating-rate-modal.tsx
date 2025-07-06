@@ -471,8 +471,8 @@ export function CreateFloatingRateModal({
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    Returns will be calculated based on VC performance and
-                    applied to the net capital
+                    Returns will be calculated based on performance and applied
+                    to the net capital
                   </p>
                 </div>
               )}

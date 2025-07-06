@@ -129,7 +129,7 @@ export const installmentAccounts = pgTable("installment_accounts", {
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
-// VC Performance table
+// Performance table
 export const vcPerformance = pgTable("vc_performance", {
   id: serial("id").primaryKey(),
   date: timestamp("date", { withTimezone: true }).notNull(),

@@ -75,7 +75,7 @@ export async function createVCPerformance(
       });
       return {
         success: false,
-        message: `A VC performance record already exists for ${monthName}. Each month should have only one record.`,
+        message: `A performance record already exists for ${monthName}. Each month should have only one record.`,
       };
     }
 
@@ -104,16 +104,16 @@ export async function createVCPerformance(
         aum: Number(newRecord.aum),
         profitTaken: Number(newRecord.profitTaken),
       },
-      message: `Successfully created VC performance record for ${monthStart.toLocaleDateString(
+      message: `Successfully created performance record for ${monthStart.toLocaleDateString(
         "en-US",
         { year: "numeric", month: "long" }
       )}`,
     };
   } catch (error) {
-    console.error("Error creating VC performance record:", error);
+    console.error("Error creating performance record:", error);
     return {
       success: false,
-      message: "Failed to create VC performance record",
+      message: "Failed to create performance record",
     };
   }
 }

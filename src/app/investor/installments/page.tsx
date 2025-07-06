@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { InvestorInstallmentTable } from "@/features/installment/views/investor-installment-table";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
+import { NoUserError } from "@/components/NoUserError";
 
 export default function InvestorInstallmentsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -40,18 +41,7 @@ export default function InvestorInstallmentsPage() {
   }
 
   if (!user) {
-    return (
-      <div className="container mx-auto p-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">
-            Authentication Required
-          </h1>
-          <p className="text-gray-600">
-            Please log in to view your installment investments.
-          </p>
-        </div>
-      </div>
-    );
+    return <NoUserError />;
   }
 
   return (

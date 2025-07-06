@@ -2,6 +2,16 @@
 
 import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
@@ -36,64 +46,59 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow-xl rounded-lg sm:px-10">
-          <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="text-center space-y-4">
+            <CardTitle className="text-3xl font-bold text-gray-900">
               Welcome to Galfa
-            </h2>
-            <p className="text-gray-600">
+            </CardTitle>
+            <CardDescription className="text-base text-gray-600">
               Sign in to access your investment portfolio
-            </p>
-          </div>
+            </CardDescription>
+          </CardHeader>
 
-          <form className="space-y-6" onSubmit={handleAuth}>
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email address
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Enter your email address"
-              />
-            </div>
+          <CardContent className="space-y-6">
+            <form className="space-y-6" onSubmit={handleAuth}>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700">
+                  Email address
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter your email address"
+                  className="h-11"
+                />
+              </div>
 
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Password
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Enter your password"
-              />
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-700">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="h-11"
+                />
+              </div>
 
-            <div>
-              <button
+              <Button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors duration-200"
+                size="lg"
               >
                 {loading ? (
                   <span className="flex items-center">
@@ -122,32 +127,32 @@ export default function Auth() {
                 ) : (
                   "Sign In"
                 )}
-              </button>
-            </div>
-          </form>
+              </Button>
+            </form>
 
-          {message && (
-            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-green-700 text-sm font-medium text-center">
-                {message}
+            {message && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-700 text-sm font-medium text-center">
+                  {message}
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm font-medium text-center">
+                  {error}
+                </p>
+              </div>
+            )}
+
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account? Contact your administrator to get access.
               </p>
             </div>
-          )}
-
-          {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-700 text-sm font-medium text-center">
-                {error}
-              </p>
-            </div>
-          )}
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account? Contact your administrator to get access.
-            </p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

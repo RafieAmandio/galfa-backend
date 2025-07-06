@@ -107,8 +107,8 @@ export function CreateVCPerformanceModal({
         setError(result.message);
       }
     } catch (err) {
-      console.error("Error creating VC performance record:", err);
-      setError("Failed to create VC performance record");
+      console.error("Error creating performance record:", err);
+      setError("Failed to create performance record");
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,7 @@ export function CreateVCPerformanceModal({
   const defaultTrigger = (
     <Button className="flex items-center space-x-2">
       <Plus className="h-4 w-4" />
-      <span>Add VC Performance</span>
+      <span>Add Performance</span>
     </Button>
   );
 
@@ -129,7 +129,7 @@ export function CreateVCPerformanceModal({
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <TrendingUp className="h-5 w-5 text-blue-600" />
-            <span>Create VC Performance Record</span>
+            <span>Create Performance Record</span>
           </DialogTitle>
         </DialogHeader>
 

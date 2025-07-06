@@ -603,7 +603,7 @@ export function AdminDashboard() {
                   </div>
                   <div className="ml-3">
                     <p className="text-yellow-700 text-sm font-medium">
-                      VC Performance Notice
+                      Performance Notice
                     </p>
                     <p className="text-yellow-600 text-sm mt-1">
                       {vcPerformanceWarning}

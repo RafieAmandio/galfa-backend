@@ -16,7 +16,7 @@ import { EditVCPerformanceModal } from "../components/edit-vc-performance-modal"
 import { format } from "date-fns";
 import { TrendingUp, DollarSign, Calendar, RefreshCw } from "lucide-react";
 
-interface VCPerformanceRecord {
+interface PerformanceRecord {
   id: number;
   date: Date;
   aum: number;
@@ -25,8 +25,8 @@ interface VCPerformanceRecord {
   updatedAt: Date;
 }
 
-export function VCPerformanceTable() {
-  const [records, setRecords] = useState<VCPerformanceRecord[]>([]);
+export function PerformanceTable() {
+  const [records, setRecords] = useState<PerformanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +43,8 @@ export function VCPerformanceTable() {
         setError(result.message);
       }
     } catch (err) {
-      console.error("Error loading VC performance records:", err);
-      setError("Failed to load VC performance records");
+      console.error("Error loading performance records:", err);
+      setError("Failed to load performance records");
     } finally {
       setLoading(false);
     }
@@ -59,10 +59,6 @@ export function VCPerformanceTable() {
       style: "currency",
       currency: "IDR",
     }).format(amount);
-  };
-
-  const formatDate = (date: Date) => {
-    return format(new Date(date), "MMM dd, yyyy");
   };
 
   const formatDateTime = (date: Date) => {
@@ -81,7 +77,7 @@ export function VCPerformanceTable() {
     }
     acc[monthKey].push(record);
     return acc;
-  }, {} as Record<string, VCPerformanceRecord[]>);
+  }, {} as Record<string, PerformanceRecord[]>);
 
   const getDuplicateMonths = () => {
     return Object.entries(groupedByMonth)
@@ -98,7 +94,7 @@ export function VCPerformanceTable() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              VC Performance Records
+              Performance Records
             </h1>
             <p className="text-gray-600">
               Manage and view all Assets Under Management (AUM) and Profit Taken
@@ -200,7 +196,7 @@ export function VCPerformanceTable() {
       {loading && (
         <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading VC performance records...</p>
+          <p className="text-gray-600">Loading performance records...</p>
         </div>
       )}
 
@@ -303,7 +299,7 @@ export function VCPerformanceTable() {
             <TrendingUp className="h-8 w-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No VC Performance Records
+            No Performance Records
           </h3>
           <p className="text-gray-500 mb-4">
             No performance records have been created yet. Add your first record

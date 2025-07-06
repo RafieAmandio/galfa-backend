@@ -55,14 +55,14 @@ export async function getVCPerformanceByMonth(
       return {
         success: true,
         data: null,
-        message: `No VC performance data found for ${monthName}. This is expected if performance data hasn't been entered yet.`,
+        message: `No performance data found for ${monthName}. This is expected if performance data hasn't been entered yet.`,
       };
     }
 
     // Handle multiple records - still return data but with warning
     let warningMessage = "";
     if (recordCount > 1) {
-      warningMessage = `Warning: Found ${recordCount} VC performance records for ${monthName}. Expected only 1 record per month.`;
+      warningMessage = `Warning: Found ${recordCount} performance records for ${monthName}. Expected only 1 record per month.`;
     }
 
     // Use the single record (first one if multiple)
@@ -85,13 +85,13 @@ export async function getVCPerformanceByMonth(
       data: vcPerformanceData,
       message:
         warningMessage ||
-        `Successfully retrieved VC performance data for ${monthName}`,
+        `Successfully retrieved performance data for ${monthName}`,
     };
   } catch (error) {
-    console.error("Error fetching VC performance data:", error);
+    console.error("Error fetching performance data:", error);
     return {
       success: false,
-      message: "Failed to fetch VC performance data",
+      message: "Failed to fetch performance data",
     };
   }
 }
