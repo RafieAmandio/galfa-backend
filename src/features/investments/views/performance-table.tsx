@@ -40,11 +40,11 @@ export function PerformanceTable() {
       if (result.success && result.data) {
         setRecords(result.data);
       } else {
-        setError(result.message);
+        setError(result.message || "Failed to fetch records");
       }
     } catch (err) {
-      console.error("Error loading performance records:", err);
-      setError("Failed to load performance records");
+      setError("An unexpected error occurred");
+      console.error("Error loading VC performance records:", err);
     } finally {
       setLoading(false);
     }
@@ -62,30 +62,45 @@ export function PerformanceTable() {
   };
 
   const formatDateTime = (date: Date) => {
-    return format(new Date(date), "MMM dd, yyyy HH:mm");
+    return format(new Date(date), "PPP 'at' p");
   };
 
   const getMonthYear = (date: Date) => {
     return format(new Date(date), "MMMM yyyy");
   };
 
-  // Group records by month to identify duplicates
-  const groupedByMonth = records.reduce((acc, record) => {
-    const monthKey = format(new Date(record.date), "yyyy-MM");
-    if (!acc[monthKey]) {
-      acc[monthKey] = [];
-    }
-    acc[monthKey].push(record);
-    return acc;
-  }, {} as Record<string, PerformanceRecord[]>);
+  // Group records by month-year to detect duplicates
+  const groupedByMonth = records.reduce<Record<string, PerformanceRecord[]>>(
+    (acc, record) => {
+      const monthKey = format(new Date(record.date), "yyyy-MM");
+      if (!acc[monthKey]) {
+        acc[monthKey] = [];
+      }
+      acc[monthKey].push(record);
+      return acc;
+    },
+    {}
+  );
 
   const getDuplicateMonths = () => {
-    return Object.entries(groupedByMonth)
-      .filter(([_, records]) => records.length > 1)
-      .map(([monthKey, _]) => monthKey);
+    return Object.keys(groupedByMonth).filter(
+      (month) => groupedByMonth[month].length > 1
+    );
   };
 
   const duplicateMonths = getDuplicateMonths();
+
+  // Calculate totals for summable columns
+  const totals = records.reduce(
+    (acc, record) => ({
+      totalAum: acc.totalAum + record.aum,
+      totalProfitTaken: acc.totalProfitTaken + record.profitTaken,
+    }),
+    {
+      totalAum: 0,
+      totalProfitTaken: 0,
+    }
+  );
 
   return (
     <div className="space-y-6">
@@ -286,6 +301,22 @@ export function PerformanceTable() {
                     </TableRow>
                   );
                 })}
+
+                {/* Totals Row */}
+                <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                  <TableCell className="font-bold">TOTAL</TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
+                  <TableCell className="text-right font-mono font-bold text-blue-600">
+                    {formatCurrency(totals.totalAum)}
+                  </TableCell>
+                  <TableCell className="text-right font-mono font-bold text-green-600">
+                    {formatCurrency(totals.totalProfitTaken)}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </div>

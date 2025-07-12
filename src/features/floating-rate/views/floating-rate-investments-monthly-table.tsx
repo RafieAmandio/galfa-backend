@@ -437,6 +437,27 @@ export default function FloatingRateInvestmentsMonthlyTable() {
                     </React.Fragment>
                   ))
                 )}
+
+                {/* Totals Row */}
+                {data.investments.length > 0 && (
+                  <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                    <TableCell className="font-bold">TOTAL</TableCell>
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                    <TableCell className="text-right font-bold">
+                      {formatCurrency(data.totalGrossCapital)}
+                    </TableCell>
+                    <TableCell className="text-right font-bold text-blue-600">
+                      {formatCurrency(data.totalNetCapital)}
+                    </TableCell>
+                    <TableCell className="text-center text-muted-foreground">
+                      -
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                    <TableCell className="text-muted-foreground">-</TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

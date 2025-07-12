@@ -58,6 +58,24 @@ export function AdminInstallmentTable() {
   // Get unique months for the monthly gains table
   const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort();
 
+  // Calculate totals for summable columns (for the table footer)
+  const totals = summary.investments.reduce(
+    (acc, investment) => ({
+      totalNetCapital: acc.totalNetCapital + investment.netCapital,
+      totalPresentValueFund:
+        acc.totalPresentValueFund + investment.presentValueFund,
+      totalNetPresentValueFund:
+        acc.totalNetPresentValueFund + investment.netPresentValueFund,
+      totalGainedFunds: acc.totalGainedFunds + investment.totalGainedFunds,
+    }),
+    {
+      totalNetCapital: 0,
+      totalPresentValueFund: 0,
+      totalNetPresentValueFund: 0,
+      totalGainedFunds: 0,
+    }
+  );
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -318,6 +336,52 @@ export function AdminInstallmentTable() {
                   )}
                 </React.Fragment>
               ))}
+
+              {/* Totals Row */}
+              <tr className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                  TOTAL
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
+                  {new Intl.NumberFormat("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  }).format(totals.totalNetCapital)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold">
+                  {new Intl.NumberFormat("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  }).format(totals.totalPresentValueFund)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-bold">
+                  {new Intl.NumberFormat("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  }).format(totals.totalNetPresentValueFund)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">
+                  {new Intl.NumberFormat("id-ID", {
+                    style: "currency",
+                    currency: "IDR",
+                  }).format(totals.totalGainedFunds)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  -
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
