@@ -2,6 +2,7 @@ import { getMonthlyCompoundRate } from "./rate-calculations";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import { format } from "date-fns";
 
 const ADMIN_FEE_PERCENTAGE = 0.05;
 
@@ -176,10 +177,7 @@ export async function calculateNetPresentValueWithRedemptions(
 
     currentValue = balanceAfterRedemptions + interestEarned;
 
-    const monthKey = calculationDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
+    const monthKey = format(calculationDate, "MMMM yyyy");
 
     monthlyBreakdown.push({
       monthYear: monthKey,
@@ -328,10 +326,7 @@ export function calculateNetPresentValueWithKnownRedemptions(
 
     currentValue = balanceAfterRedemptions + interestEarned;
 
-    const monthKey = calculationDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
+    const monthKey = format(calculationDate, "MMMM yyyy");
 
     monthlyBreakdown.push({
       monthYear: monthKey,

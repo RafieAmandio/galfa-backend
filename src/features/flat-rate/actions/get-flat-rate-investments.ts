@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
+import { format } from "date-fns";
 
 interface MonthlyData {
   monthYear: string;
@@ -196,10 +197,7 @@ function calculateMonthlyData(params: {
 
     const endingBalance = beginningBalance + periodInterest;
 
-    const monthKey = currentDate.toLocaleDateString("en-US", {
-      month: "short",
-      year: "numeric",
-    });
+    const monthKey = format(currentDate, "MMMM yyyy");
 
     console.log(`Month ${monthCounter}: ${monthKey}`);
     console.log("- Period Start:", currentDate.toISOString().split("T")[0]);

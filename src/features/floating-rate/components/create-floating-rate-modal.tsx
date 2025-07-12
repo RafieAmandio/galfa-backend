@@ -367,9 +367,9 @@ export function CreateFloatingRateModal({
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {transactionDate ? (
-                        format(transactionDate, "PPP")
+                        format(transactionDate, "d MMMM yyyy")
                       ) : (
-                        <span>Pick transaction date</span>
+                        <span>Pick a date</span>
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -401,7 +401,7 @@ export function CreateFloatingRateModal({
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {endDate ? (
-                        format(endDate, "PPP")
+                        format(endDate, "d MMMM yyyy")
                       ) : (
                         <span>Pick end date</span>
                       )}

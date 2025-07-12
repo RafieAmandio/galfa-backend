@@ -2,6 +2,7 @@ import {
   getMonthlyCompoundRate,
   calculateCompoundInterest,
 } from "./rate-calculations";
+import { format } from "date-fns";
 
 interface MonthlyGrowth {
   month: string;
@@ -67,10 +68,7 @@ export function calculateInvestmentGrowth(
     const currentDate = new Date(startDate);
     currentDate.setMonth(startDate.getMonth() + month - 1);
 
-    const monthString = currentDate.toLocaleDateString("en-US", {
-      month: "long",
-      year: "numeric",
-    });
+    const monthString = format(currentDate, "MMMM yyyy");
 
     monthlyGrowth.push({
       month: monthString,
@@ -98,16 +96,8 @@ export function calculateInvestmentGrowth(
     netInvestorFund,
     annualRate,
     monthlyRate,
-    startDate: startDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
-    endDate: endDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    }),
+    startDate: format(startDate, "d MMMM yyyy"),
+    endDate: format(endDate, "d MMMM yyyy"),
     totalMonths,
     finalValue,
     totalInterestEarned,

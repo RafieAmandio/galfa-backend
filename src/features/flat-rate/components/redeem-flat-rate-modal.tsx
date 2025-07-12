@@ -360,7 +360,7 @@ export function RedeemFlatRateModal({
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {redemptionDate ? (
-                        format(redemptionDate, "PPP")
+                        format(redemptionDate, "d MMMM yyyy")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -397,8 +397,13 @@ export function RedeemFlatRateModal({
                   <option value="">Select an account...</option>
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>
-                      {account.name} - Value on {format(redemptionDate, "PP")}:{" "}
-                      {formatCurrency(account.currentValue)}
+                      <p className="font-semibold">
+                        {account.name} - Value on{" "}
+                        {format(redemptionDate, "d MMMM yyyy")}:{" "}
+                        <span className="text-green-600">
+                          {formatCurrency(account.currentValue)}
+                        </span>
+                      </p>
                     </option>
                   ))}
                 </select>
@@ -407,9 +412,10 @@ export function RedeemFlatRateModal({
               {/* Account Details */}
               {selectedAccount && (
                 <div className="bg-gray-50 p-4 rounded-md">
-                  <h3 className="font-medium text-gray-900 mb-3">
-                    Account Details (as of {format(redemptionDate, "PPP")})
-                  </h3>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-3">
+                    Account Details (as of{" "}
+                    {format(redemptionDate, "d MMMM yyyy")})
+                  </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">Gross Capital:</span>
@@ -571,9 +577,10 @@ export function RedeemFlatRateModal({
                     {redemptionHistory.map((redemption) => (
                       <tr key={redemption.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(
-                            redemption.transactionDate
-                          ).toLocaleDateString("id-ID")}
+                          {format(
+                            new Date(redemption.transactionDate),
+                            "d MMMM yyyy"
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
                           {formatCurrency(redemption.amount)}

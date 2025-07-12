@@ -62,7 +62,7 @@ export function PerformanceTable() {
   };
 
   const formatDateTime = (date: Date) => {
-    return format(new Date(date), "PPP 'at' p");
+    return format(new Date(date), "d MMMM yyyy 'at' HH:mm");
   };
 
   const getMonthYear = (date: Date) => {

@@ -100,7 +100,7 @@ export default function InvestorFloatingRateInvestmentsTable({
   };
 
   const formatDate = (date: Date) => {
-    return format(new Date(date), "dd MMM yyyy");
+    return format(new Date(date), "d MMMM yyyy");
   };
 
   const formatPercentage = (percentage: number) => {

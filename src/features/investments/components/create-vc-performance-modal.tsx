@@ -148,7 +148,7 @@ export function CreateVCPerformanceModal({
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {selectedDate ? (
-                    format(selectedDate, "MMMM dd, yyyy")
+                    format(selectedDate, "d MMMM yyyy")
                   ) : (
                     <span>Pick a date</span>
                   )}

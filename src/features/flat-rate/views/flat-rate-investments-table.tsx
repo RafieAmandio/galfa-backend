@@ -24,6 +24,7 @@ import {
   DollarSign,
   Calendar,
 } from "lucide-react";
+import { format } from "date-fns";
 
 export function FlatRateInvestmentsTable() {
   const [investments, setInvestments] = useState<
@@ -90,7 +91,9 @@ export function FlatRateInvestmentsTable() {
       currency: "IDR",
     }).format(amount);
 
-  const formatDate = (date: Date) => new Date(date).toLocaleDateString("id-ID");
+  const formatDate = (date: Date) => {
+    return format(new Date(date), "d MMMM yyyy");
+  };
 
   const getStatusBadge = (status: string) => {
     const variants = {

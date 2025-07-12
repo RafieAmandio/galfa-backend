@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getAdminInstallmentInvestments } from "../actions/get-installments";
+import { parse } from "date-fns";
 
 interface AdminInstallmentSummary {
   totalGainedFunds: number;
@@ -55,8 +56,13 @@ export function AdminInstallmentTable() {
     );
   }
 
-  // Get unique months for the monthly gains table
-  const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort();
+  // Get unique months for the monthly gains table - sort chronologically
+  const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort((a, b) => {
+    // Parse the month strings (e.g., "Jan 2024") into dates for proper sorting
+    const dateA = parse(a, "MMM yyyy", new Date());
+    const dateB = parse(b, "MMM yyyy", new Date());
+    return dateA.getTime() - dateB.getTime();
+  });
 
   // Calculate totals for summable columns (for the table footer)
   const totals = summary.investments.reduce(

@@ -441,7 +441,7 @@ export function CreateFlatRateModal({
                               {account.endDate &&
                                 ` | Ended: ${format(
                                   new Date(account.endDate),
-                                  "PP"
+                                  "d MMMM yyyy"
                                 )}`}
                             </span>
                           </div>
@@ -575,7 +575,7 @@ export function CreateFlatRateModal({
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {transactionDate ? (
-                        format(transactionDate, "PPP")
+                        format(transactionDate, "d MMMM yyyy")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -620,7 +620,7 @@ export function CreateFlatRateModal({
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {endDate ? (
-                        format(endDate, "PPP")
+                        format(endDate, "d MMMM yyyy")
                       ) : (
                         <span>Pick a date</span>
                       )}
@@ -692,9 +692,16 @@ export function CreateFlatRateModal({
                         <div className="flex justify-between">
                           <span className="text-blue-700">Growth Period:</span>
                           <span className="font-medium">
-                            {format(selectedAccount.transactionDate, "PP")} →{" "}
+                            {format(
+                              selectedAccount.transactionDate,
+                              "d MMMM yyyy"
+                            )}{" "}
+                            →{" "}
                             {selectedAccount.endDate
-                              ? format(new Date(selectedAccount.endDate), "PP")
+                              ? format(
+                                  new Date(selectedAccount.endDate),
+                                  "d MMMM yyyy"
+                                )
                               : "N/A"}
                           </span>
                         </div>

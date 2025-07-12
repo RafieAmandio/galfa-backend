@@ -14,6 +14,7 @@ import {
   endOfMonth,
   differenceInMonths,
   addMonths,
+  format,
 } from "date-fns";
 
 interface MonthlyInstallmentCoFResult {
@@ -248,12 +249,12 @@ export async function getInstallmentCoFByMonth(
 
     return {
       success: true,
-      message: `Successfully retrieved installment CoF for ${monthStart.toLocaleDateString(
-        "en-US",
-        { month: "long", year: "numeric" }
-      )} (showing gained interest for ${cofCalculationMonth.toLocaleDateString(
-        "en-US",
-        { month: "long", year: "numeric" }
+      message: `Successfully retrieved installment CoF for ${format(
+        monthStart,
+        "MMMM yyyy"
+      )} (showing gained interest for ${format(
+        cofCalculationMonth,
+        "MMMM yyyy"
       )})`,
       data: {
         month: monthStart, // Still return the original target month for reference

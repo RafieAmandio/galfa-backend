@@ -1,43 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 
-export function Navigation() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+interface NavigationProps {
+  user: User | null;
+  isAdmin: boolean;
+  authError?: string;
+}
+
+export function Navigation({ user, isAdmin, authError }: NavigationProps) {
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createBrowserClient();
-  const { isAdmin, loading: adminLoading } = useAdminCheck(user);
-
-  useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      setLoading(false);
-    };
-
-    getUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/");
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+      router.push("/");
+      router.refresh(); // Refresh to update server-side auth state
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -51,9 +41,9 @@ export function Navigation() {
               </Link>
 
               {/* Navigation Links - Left side */}
-              {user && !loading && (
+              {user && (
                 <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  {!adminLoading && isAdmin ? (
+                  {isAdmin ? (
                     // Admin navigation links
                     <>
                       <Link
@@ -93,7 +83,7 @@ export function Navigation() {
                         Performance
                       </Link>
                     </>
-                  ) : !adminLoading ? (
+                  ) : (
                     // Regular user navigation
                     <>
                       <Link
@@ -101,6 +91,12 @@ export function Navigation() {
                         className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
                       >
                         Dashboard
+                      </Link>
+                      <Link
+                        href="/investor/flat-rate"
+                        className="text-sm font-medium text-gray-900 hover:text-gray-500 px-3 py-2 rounded-md"
+                      >
+                        Flat Rate
                       </Link>
                       <Link
                         href="/investor/floating-rate"
@@ -115,7 +111,7 @@ export function Navigation() {
                         Installments
                       </Link>
                     </>
-                  ) : null}
+                  )}
                 </div>
               )}
             </div>
@@ -123,24 +119,23 @@ export function Navigation() {
 
           {/* Right side - User menu */}
           <div className="flex items-center">
-            {loading ? (
-              <div className="animate-pulse">
-                <div className="h-4 w-20 bg-gray-200 rounded"></div>
-              </div>
-            ) : user ? (
+            {authError && (
+              <div className="text-sm text-red-600 mr-4">Auth Error</div>
+            )}
+
+            {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-gray-500">{user.email}</span>
                 <button
                   onClick={handleSignOut}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm font-medium py-1 px-3 rounded transition-colors duration-200"
+                  disabled={loading}
+                  className="bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-800 text-sm font-medium py-1 px-3 rounded transition-colors duration-200"
                 >
-                  Sign Out
+                  {loading ? "Signing Out..." : "Sign Out"}
                 </button>
               </div>
             ) : (
-              <div className="animate-pulse">
-                <div className="h-4 w-20 bg-gray-200 rounded"></div>
-              </div>
+              <div className="text-sm text-gray-500">Not authenticated</div>
             )}
           </div>
         </div>

@@ -3,7 +3,7 @@
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { and, gte, lt } from "drizzle-orm";
-import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { startOfMonth, endOfMonth, subMonths, format } from "date-fns";
 import { getInflowByMonth } from "./get-inflow-by-month";
 import { getOutflowByMonth } from "./get-outflow-by-month";
 
@@ -112,15 +112,9 @@ export async function getGrossProfitByMonth(
     const grossProfitPercentage =
       denominator !== 0 ? (grossProfit / denominator) * 100 : 0;
 
-    const monthName = monthStart.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-    });
+    const monthName = format(monthStart, "MMMM yyyy");
 
-    const previousMonthName = previousMonthStart.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-    });
+    const previousMonthName = format(previousMonthStart, "MMMM yyyy");
 
     const hasCurrentMonthData = currentMonthAUMResult.length > 0;
     const hasPreviousMonthData = previousMonthAUMResult.length > 0;

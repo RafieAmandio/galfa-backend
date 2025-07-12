@@ -1,14 +1,10 @@
-import { redirect } from "next/navigation";
-import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 import FloatingRateInvestmentsMonthlyTable from "@/features/floating-rate/views/floating-rate-investments-monthly-table";
 import { CreateFloatingRateModal } from "@/features/floating-rate/components/create-floating-rate-modal";
 
 export default async function FloatingRatePage() {
-  // Check admin access on server side
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    redirect("/");
-  }
+  // Authenticate admin user on server side
+  const user = await requireAdminOrRedirectToSummary();
 
   return (
     <div className="container mx-auto p-6">

@@ -162,9 +162,9 @@ export function EditVCPerformanceModal({
               Editing record ID:{" "}
               <span className="font-medium">{record.id}</span>
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Created:{" "}
-              {format(new Date(record.createdAt), "MMM dd, yyyy HH:mm")}
+            <p className="text-xs text-gray-500 mb-4">
+              Last updated:{" "}
+              {format(new Date(record.createdAt), "d MMMM yyyy 'at' HH:mm")}
             </p>
           </div>
 
@@ -182,7 +182,7 @@ export function EditVCPerformanceModal({
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {selectedDate ? (
-                    format(selectedDate, "MMMM dd, yyyy")
+                    format(selectedDate, "d MMMM yyyy")
                   ) : (
                     <span>Pick a date</span>
                   )}

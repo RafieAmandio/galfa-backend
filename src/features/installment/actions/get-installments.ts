@@ -5,6 +5,7 @@ import { accounts, installmentAccounts, profiles } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
+import { authUsers } from "@/db/drizzle/schema";
 
 interface MonthlyInstallmentData {
   monthYear: string;
@@ -287,10 +288,12 @@ export async function getInvestorInstallmentInvestments(
 ): Promise<InvestorInstallmentSummary | null> {
   const db = createDrizzleConnection();
 
-  // First get the user profile by email (would need auth.users join in real implementation)
+  // First get the user profile by email - properly join with auth.users
   const userProfile = await db
     .select({ id: profiles.id })
     .from(profiles)
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+    .where(eq(authUsers.email, investorEmail))
     .limit(1);
 
   if (userProfile.length === 0) {
@@ -317,7 +320,7 @@ export async function getInvestorInstallmentInvestments(
       installmentAccounts,
       eq(accounts.id, installmentAccounts.account_id)
     )
-    .where(eq(accounts.user_id, userId));
+    .where(and(eq(accounts.user_id, userId), eq(accounts.status, "active")));
 
   if (results.length === 0) {
     return {

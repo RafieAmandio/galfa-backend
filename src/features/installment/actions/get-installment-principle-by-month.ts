@@ -9,7 +9,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface MonthlyInstallmentPrincipleResult {
   success: boolean;
@@ -126,9 +126,9 @@ export async function getInstallmentPrincipleByMonth(
 
     return {
       success: true,
-      message: `Successfully retrieved installment net capital (after admin fees) for ${monthStart.toLocaleDateString(
-        "en-US",
-        { month: "long", year: "numeric" }
+      message: `Successfully retrieved installment net capital (after admin fees) for ${format(
+        monthStart,
+        "MMMM yyyy"
       )}`,
       data: {
         month: monthStart,

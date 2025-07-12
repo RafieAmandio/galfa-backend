@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { getInvestorInstallmentInvestments } from "../actions/get-installments";
+import { parse } from "date-fns";
 
 interface InvestorInstallmentSummary {
   investorEmail: string;
@@ -75,7 +76,13 @@ export function InvestorInstallmentTable({
     });
   });
 
-  const uniqueMonths = Object.keys(monthlyNetFunds).sort();
+  // Sort months chronologically instead of alphabetically
+  const uniqueMonths = Object.keys(monthlyNetFunds).sort((a, b) => {
+    // Parse the month strings (e.g., "Jan 2024") into dates for proper sorting
+    const dateA = parse(a, "MMM yyyy", new Date());
+    const dateB = parse(b, "MMM yyyy", new Date());
+    return dateA.getTime() - dateB.getTime();
+  });
 
   return (
     <div className="space-y-6">
@@ -96,7 +103,7 @@ export function InvestorInstallmentTable({
 
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">
-            Total Redeemed Amount
+            Projected Amount
           </h3>
           <p className="mt-2 text-3xl font-bold text-green-600">
             {new Intl.NumberFormat("id-ID", {
@@ -104,7 +111,9 @@ export function InvestorInstallmentTable({
               currency: "IDR",
             }).format(summary.totalRedeemedAmount)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">Amount received back</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Amount received back after redemption
+          </p>
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { format } from "date-fns";
 
 interface UsersTableProps {
   onRefresh?: () => void;
@@ -53,13 +54,7 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
 
   const formatDate = (date: Date | null) => {
     if (!date) return "Never";
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(date));
+    return format(new Date(date), "d MMMM yyyy 'at' HH:mm");
   };
 
   const getRoleBadgeColor = (role: string) => {

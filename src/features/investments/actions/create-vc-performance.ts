@@ -3,7 +3,7 @@
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { and, gte, lt } from "drizzle-orm";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface CreateVCPerformanceRequest {
   date: Date;
@@ -69,10 +69,7 @@ export async function createVCPerformance(
       );
 
     if (existingRecords.length > 0) {
-      const monthName = monthStart.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      });
+      const monthName = format(monthStart, "MMMM yyyy");
       return {
         success: false,
         message: `A performance record already exists for ${monthName}. Each month should have only one record.`,
@@ -104,9 +101,9 @@ export async function createVCPerformance(
         aum: Number(newRecord.aum),
         profitTaken: Number(newRecord.profitTaken),
       },
-      message: `Successfully created performance record for ${monthStart.toLocaleDateString(
-        "en-US",
-        { year: "numeric", month: "long" }
+      message: `Successfully created performance record for ${format(
+        monthStart,
+        "MMMM yyyy"
       )}`,
     };
   } catch (error) {

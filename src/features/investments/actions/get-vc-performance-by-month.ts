@@ -4,7 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { eq, and, gte, lt } from "drizzle-orm";
 import { sum, avg } from "drizzle-orm";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface VCPerformanceData {
   month: Date;
@@ -45,10 +45,7 @@ export async function getVCPerformanceByMonth(
       .orderBy(vcPerformance.date);
 
     const recordCount = monthlyData.length;
-    const monthName = monthStart.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-    });
+    const monthName = format(monthStart, "MMMM yyyy");
 
     // Handle no records found - return success with null data and warning message
     if (recordCount === 0) {

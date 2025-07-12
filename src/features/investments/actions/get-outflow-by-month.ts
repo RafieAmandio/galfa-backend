@@ -12,7 +12,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, gte, lte, or } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface MonthlyOutflowResult {
   success: boolean;
@@ -177,9 +177,9 @@ export async function getOutflowByMonth(
 
     return {
       success: true,
-      message: `Successfully retrieved outflow data for ${monthStart.toLocaleDateString(
-        "id-ID",
-        { year: "numeric", month: "long" }
+      message: `Successfully retrieved outflow data for ${format(
+        monthStart,
+        "MMMM yyyy"
       )}`,
       data: {
         month: monthStart,

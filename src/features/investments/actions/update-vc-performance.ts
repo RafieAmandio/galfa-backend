@@ -3,7 +3,7 @@
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { eq, and, gte, lt, ne } from "drizzle-orm";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface UpdateVCPerformanceRequest {
   id: number;
@@ -88,10 +88,7 @@ export async function updateVCPerformance(
       );
 
     if (conflictingRecords.length > 0) {
-      const monthName = monthStart.toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-      });
+      const monthName = format(monthStart, "MMMM yyyy");
       return {
         success: false,
         message: `Another performance record already exists for ${monthName}. Each month should have only one record.`,
@@ -123,9 +120,9 @@ export async function updateVCPerformance(
         aum: Number(updatedRecord.aum),
         profitTaken: Number(updatedRecord.profitTaken),
       },
-      message: `Successfully updated performance record for ${monthStart.toLocaleDateString(
-        "en-US",
-        { year: "numeric", month: "long" }
+      message: `Successfully updated performance record for ${format(
+        monthStart,
+        "MMMM yyyy"
       )}`,
     };
   } catch (error) {

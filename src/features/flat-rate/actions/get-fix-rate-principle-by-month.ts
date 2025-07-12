@@ -10,7 +10,7 @@ import {
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
-import { startOfMonth, endOfMonth } from "date-fns";
+import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface MonthlyPrincipleResult {
   success: boolean;
@@ -142,9 +142,9 @@ export async function getFixRatePrincipleByMonth(
 
     return {
       success: true,
-      message: `Successfully retrieved net capital (after admin fees) for ${monthStart.toLocaleDateString(
-        "en-US",
-        { month: "long", year: "numeric" }
+      message: `Successfully retrieved net capital (after admin fees) for ${format(
+        monthStart,
+        "MMMM yyyy"
       )}`,
       data: {
         month: monthStart,

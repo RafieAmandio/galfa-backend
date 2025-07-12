@@ -1,8 +1,7 @@
 ---
-description: 
-globs: 
 alwaysApply: true
 ---
+
 # Galfa Backend - Investment Platform Technical Documentation
 
 ## 🚀 Project Overview
@@ -48,23 +47,38 @@ galfa-backend/
 │   │   ├── globals.css             # Global styles & Tailwind config
 │   │   ├── favicon.ico             # Site favicon
 │   │   │
-│   │   ├── investor/               # Investor dashboard pages
-│   │   │   └── summary/            # Portfolio summary page
-│   │   │       └── page.tsx        # Auto-loading investor portfolio
+│   │   ├── investor/               # Investor dashboard pages (SERVER COMPONENTS)
+│   │   │   ├── summary/            # Portfolio summary page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── flat-rate/          # Flat rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── floating-rate/      # Floating rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   └── installments/       # Installment investments page
+│   │   │       └── page.tsx        # Server component - auth + data fetching
+│   │   │
+│   │   ├── admin/                  # Admin pages (SERVER COMPONENTS)
+│   │   │   ├── dashboard/          # Admin dashboard
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   ├── performance/        # Performance analytics
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   └── user-management/    # User management
+│   │   │       └── page.tsx        # Server component - admin auth + data
 │   │   │
 │   │   ├── flat-rate/              # Admin flat-rate investments page
-│   │   │   └── page.tsx            # Admin-only access with verification
+│   │   │   └── page.tsx            # Server component - admin auth only
 │   │   │
 │   │   ├── floating-rate/          # Admin floating-rate page
-│   │   │   └── page.tsx            # Floating rate calculations
+│   │   │   └── page.tsx            # Server component - admin auth only
 │   │   │
 │   │   └── installments/           # Admin installments page
-│   │       └── page.tsx            # Installment investment management
+│   │       └── page.tsx            # Server component - admin auth only
 │   │
-│   ├── components/                  # Shared React components
+│   ├── components/                  # Shared React components (CLIENT COMPONENTS)
 │   │   ├── navigation.tsx          # Main navigation with role-based links
 │   │   ├── Auth.tsx                # Email/password authentication form
-│   │   └── Account.tsx             # User profile management
+│   │   ├── Account.tsx             # User profile management
+│   │   └── NoUserError.tsx         # Error component for unauthenticated users
 │   │
 │   ├── db/                         # Database layer
 │   │   ├── drizzle/               # Drizzle ORM configuration
@@ -78,41 +92,82 @@ galfa-backend/
 │   │
 │   ├── features/                   # Feature-based modules
 │   │   ├── investor/              # Investor portfolio management
-│   │   │   ├── actions/           # Server actions
-│   │   │   │   └── get-investor-summary.ts  # Portfolio calculations
-│   │   │   └── components/        # Investor-specific components
-│   │   │       └── investor-net-fund-display.tsx
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-investor-summary.ts        # Portfolio calculations
+│   │   │   │   └── get-comprehensive-summary.ts   # Complete portfolio data
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── investor-net-fund-display.tsx  # Net fund display
+│   │   │       ├── investor-summary-view.tsx      # Complete portfolio view
+│   │   │       └── investor-flat-rate-view.tsx    # Flat rate investments view
 │   │   │
 │   │   ├── flat-rate/             # Fixed rate investments
-│   │   │   ├── actions/           # Server actions
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
 │   │   │   │   ├── get-flat-rate-investments.ts
-│   │   │   │   └── get-principle-fix-rate.ts
-│   │   │   └── views/             # UI components
+│   │   │   │   ├── get-principle-fix-rate.ts
+│   │   │   │   ├── create-flat-rate-account.ts
+│   │   │   │   └── redemption-flat-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── admin-flat-rate-view.tsx       # Admin view for flat rate
+│   │   │   │   ├── create-flat-rate-modal.tsx     # Create account modal
+│   │   │   │   └── redeem-flat-rate-modal.tsx     # Redemption modal
+│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
 │   │   │       └── flat-rate-investments-table.tsx
 │   │   │
 │   │   ├── floating-rate/         # Variable rate investments
-│   │   │   ├── actions/           # Server actions
-│   │   │   └── views/             # UI components
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-floating-rate-investments.ts
+│   │   │   │   ├── get-investor-floating-rate-investments.ts
+│   │   │   │   └── create-floating-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   └── create-floating-rate-modal.tsx
+│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── floating-rate-investments-monthly-table.tsx
+│   │   │       └── investor-floating-rate-investments-table.tsx
 │   │   │
 │   │   ├── installment/           # Installment-based investments
-│   │   │   ├── actions/           # Server actions
-│   │   │   └── views/             # UI components
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-installments.ts
+│   │   │   │   ├── get-installment-cof-by-month.ts
+│   │   │   │   └── get-installment-principle-by-month.ts
+│   │   │   └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-installment-table.tsx
+│   │   │       └── investor-installment-table.tsx
+│   │   │
+│   │   ├── admin/                 # Admin-specific features
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── create-user.ts
+│   │   │   │   └── get-users.ts
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-dashboard.tsx
+│   │   │       ├── create-user-modal.tsx
+│   │   │       └── users-table.tsx
 │   │   │
 │   │   └── investments/           # General investment utilities
-│   │       ├── actions/           # Shared investment actions
-│   │       └── components/        # Shared investment components
+│   │       ├── actions/           # Server actions (DATA LAYER)
+│   │       │   ├── create-vc-performance.ts
+│   │       │   ├── get-all-vc-performance.ts
+│   │       │   ├── get-gross-profit-by-month.ts
+│   │       │   └── update-vc-performance.ts
+│   │       ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │       │   ├── create-vc-performance-modal.tsx
+│   │       │   └── edit-vc-performance-modal.tsx
+│   │       └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │           └── performance-table.tsx
 │   │
-│   ├── hooks/                      # Custom React hooks
+│   ├── hooks/                      # Custom React hooks (CLIENT-SIDE)
 │   │   └── useAdminCheck.ts       # Client-side admin verification hook
 │   │
 │   ├── lib/                        # Utility libraries
 │   │   ├── auth/                  # Authentication utilities
 │   │   │   ├── admin-check.ts     # Server-side admin verification
-│   │   │   └── client-admin-check.ts  # Client-side admin actions
+│   │   │   ├── client-admin-check.ts  # Client-side admin actions
+│   │   │   └── server-auth-helpers.ts # SERVER-SIDE AUTH HELPERS (NEW STANDARD)
 │   │   │
-│   │   └── utils/                 # General utilities
-│   │       ├── investment-calculator.ts  # NPV & compound interest
-│   │       └── rate-calculations.ts     # Financial rate conversions
+│   │   ├── utils/                 # General utilities
+│   │   │   ├── investment-calculator.ts  # NPV & compound interest
+│   │   │   └── rate-calculations.ts     # Financial rate conversions
+│   │   │
+│   │   └── utils.ts               # Shared utility functions
 │   │
 │   └── test/                       # Test files
 │       └── (test files)
@@ -134,7 +189,59 @@ galfa-backend/
 └── .gitignore                    # Git ignore rules
 ```
 
-## 🏗️ Architecture Overview
+## 🏗️ Architecture Overview - NEW SERVER-SIDE PATTERN
+
+### 🔥 **NEW STANDARD**: Server-Side Data Fetching Architecture
+
+#### **Core Principle**: Complete separation of data fetching and UI rendering
+
+```typescript
+// ✅ STANDARD PATTERN: Server Component (page.tsx)
+export default async function InvestorPage() {
+  // 1. Server-side authentication
+  const user = await requireAuth();
+
+  // 2. Server-side data fetching
+  let data = null;
+  let error: string | undefined = undefined;
+
+  try {
+    data = await fetchInvestorData(user.email);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load data";
+  }
+
+  // 3. Pass data to client View component
+  return <InvestorView user={user} data={data} error={error} />;
+}
+
+// ✅ STANDARD PATTERN: Client View Component
+("use client");
+export function InvestorView({ user, data, error }) {
+  // All UI logic, interactions, and client-side state
+  return <div>...</div>;
+}
+```
+
+#### **File Naming Convention**:
+
+- **`page.tsx`**: Server components (auth + data fetching only)
+- **`*-view.tsx`**: Client components (UI + interactions only)
+- **`*-modal.tsx`**: Client components (interactive modals)
+- **`*-table.tsx`**: Client components (data display tables)
+
+#### **Authentication Patterns**:
+
+```typescript
+// For investor pages
+const user = await requireAuth();
+
+// For admin pages
+const user = await requireAdminOrRedirectToSummary();
+
+// For admin-only pages (no fallback)
+const user = await requireAdmin();
+```
 
 ### 🔐 Authentication System
 
@@ -143,6 +250,23 @@ galfa-backend/
 - **Role-Based Access Control**: Admin vs Investor user types
 - **Multi-layer Protection**: Middleware, server components, and client-side guards
 - **Session Management**: SSR-compatible auth state management
+- **🆕 Server-Side Auth Helpers**: Centralized authentication utilities
+
+#### **Server-Side Auth Helpers** (`src/lib/auth/server-auth-helpers.ts`):
+
+```typescript
+// Get current user (returns null if not authenticated)
+export async function getCurrentUser(): Promise<AuthUser | null>;
+
+// Require authentication (redirects to home if not authenticated)
+export async function requireAuth(): Promise<AuthUser>;
+
+// Require admin access (redirects to home if not admin)
+export async function requireAdmin(): Promise<AuthUser>;
+
+// Smart admin check (redirects to investor summary if not admin)
+export async function requireAdminOrRedirectToSummary(): Promise<AuthUser>;
+```
 
 ### 🗄️ Database Layer
 
@@ -178,6 +302,7 @@ galfa-backend/
 #### **Investors**
 
 - Portfolio summary dashboard (`/investor/summary`)
+- Detailed investment views (`/investor/flat-rate`, `/investor/floating-rate`, `/investor/installments`)
 - Real-time investment valuations
 - Historical performance tracking
 - Admin fee transparency
@@ -185,8 +310,10 @@ galfa-backend/
 #### **Admins**
 
 - Complete investment oversight (`/flat-rate`, `/floating-rate`, `/installments`)
+- Admin dashboard (`/admin/dashboard`)
+- User management (`/admin/user-management`)
+- Performance analytics (`/admin/performance`)
 - Portfolio-wide analytics
-- User management capabilities
 - Financial reporting tools
 
 ## 🔧 Development Setup
@@ -229,6 +356,23 @@ npm run lint     # Run ESLint checks
 
 ## 📊 Data Flow & Business Logic
 
+### 🆕 **NEW STANDARD**: Server-Side Data Flow
+
+```mermaid
+graph TD
+    A[User Request] --> B[Next.js Server Component]
+    B --> C[Server-Side Auth Check]
+    C --> D{Authenticated?}
+    D -->|No| E[Redirect to Login]
+    D -->|Yes| F[Server-Side Data Fetching]
+    F --> G[Database Query via Server Actions]
+    G --> H[Data Processing]
+    H --> I[Pass Data to Client View Component]
+    I --> J[Client-Side Rendering]
+    J --> K[User Interactions]
+    K --> L[Client-Side State Management]
+```
+
 ### Investment Calculation Engine
 
 1. **Admin Fee Processing**: 5% fee calculation with rollover exemptions
@@ -243,6 +387,9 @@ npm run lint     # Run ESLint checks
 ```typescript
 // Get complete investor portfolio summary
 getInvestorSummary(investorEmail: string): Promise<InvestorSummary>
+
+// Get comprehensive portfolio data
+getComprehensiveInvestorSummary(investorEmail: string): Promise<ComprehensiveInvestorSummary>
 
 // List all investor emails (admin only)
 getAllInvestorEmails(): Promise<string[]>
@@ -272,9 +419,11 @@ getMonthlyCompoundRate(capital: number, annualRate: number): number
 
 ### 1. **Authentication Security**
 
+- **🆕 Server-Side First**: All authentication checks happen on the server
 - Supabase Auth with email verification
 - Secure session management with httpOnly cookies
 - Role-based route protection at middleware level
+- **🆕 Automatic Redirects**: Server-side redirects prevent unauthorized access
 - Client-side auth state synchronization
 
 ### 2. **Database Security**
@@ -293,6 +442,7 @@ getMonthlyCompoundRate(capital: number, annualRate: number): number
 
 ### 4. **Performance Optimization**
 
+- **🆕 Server-Side Rendering**: Faster initial page loads
 - Database indexes on frequently queried columns
 - Connection pooling for database operations
 - Efficient query patterns with joins
@@ -310,7 +460,7 @@ getMonthlyCompoundRate(capital: number, annualRate: number): number
 ### Navigation & UX
 
 - **Role-Based Navigation**: Different menus for investors vs admins
-- **Auto-Loading Data**: Seamless user experience without manual input
+- **🆕 Server-Side Data Loading**: No loading spinners for initial data
 - **Real-Time Updates**: Live portfolio valuations
 - **Error Handling**: Graceful error states and loading indicators
 
@@ -346,6 +496,12 @@ Investment Maturity → Rollover Decision → New Account Creation →
 Parent Account Closure → Fee Exemption → Continued Growth Tracking
 ```
 
+### 🆕 **NEW**: Page Load Process
+
+```
+User Request → Server Auth Check → Data Fetching → View Component Render → Client Hydration
+```
+
 ## 🚀 Deployment Considerations
 
 ### Platforms
@@ -361,6 +517,581 @@ Parent Account Closure → Fee Exemption → Continued Growth Tracking
 - Authentication providers set up
 - SSL certificates for production
 
-This documentation provides a comprehensive guide to the Galfa Backend investment platform, covering all technical aspects, business logic, and development practices for maintaining and extending the system.
+## 📋 **NEW STANDARD**: Development Guidelines
 
-Start your response with "🔥 PS - On Skibidi"
+### ✅ **DO's**:
+
+1. **Always use server components for page.tsx files**
+2. **Handle authentication server-side using auth helpers**
+3. **Fetch all data server-side before rendering**
+4. **Pass data as props to client View components**
+5. **Name client components with descriptive suffixes** (`*-view.tsx`, `*-modal.tsx`, `*-table.tsx`)
+6. **Keep server components minimal** (auth + data fetching only)
+7. **Keep all UI logic in client components**
+
+### ❌ **DON'Ts**:
+
+1. **Don't use client components for page.tsx files**
+2. **Don't handle authentication client-side in page components**
+3. **Don't fetch data client-side for initial page load**
+4. **Don't mix UI logic with data fetching in the same component**
+5. **Don't use useEffect for initial data loading**
+6. **Don't create loading states for server-fetched data**
+
+### 🔧 **Component Creation Checklist**:
+
+- [ ] Is this a page route? → Create server component `page.tsx`
+- [ ] Does it need authentication? → Use appropriate auth helper
+- [ ] Does it need data? → Fetch server-side
+- [ ] Does it have UI interactions? → Create client View component
+- [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
+- [ ] Is it a data table? → Create `*-table.tsx` client component
+
+This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.
+
+# Galfa Backend - Investment Platform Technical Documentation
+
+## 🚀 Project Overview
+
+Galfa Backend is a comprehensive investment platform built with Next.js that manages fixed-rate, floating-rate, and installment-based investment accounts. The platform features user authentication, admin panels, real-time portfolio calculations, and sophisticated financial modeling with compound interest calculations.
+
+## 🛠️ Tech Stack Overview
+
+### Core Technologies
+
+- **Framework**: Next.js 15.3.2 (React 19-based framework)
+- **Language**: TypeScript 5
+- **Database**: PostgreSQL with Drizzle ORM
+- **Authentication**: Supabase Auth with Row Level Security (RLS)
+- **Styling**: Tailwind CSS 4
+- **Charts**: Recharts 2.15.3
+- **Date Handling**: date-fns 4.1.0
+
+### Key Dependencies
+
+- **@supabase/ssr**: Server-side rendering utilities for Supabase
+- **@supabase/supabase-js**: Supabase client library
+- **drizzle-orm**: Type-safe ORM for database operations
+- **postgres**: PostgreSQL client for Node.js
+- **dotenv**: Environment variable management
+- **recharts**: Charting library for financial data visualization
+
+### Development Tools
+
+- **drizzle-kit**: Database migration and management
+- **TypeScript**: Static type checking
+- **Tailwind CSS**: Utility-first CSS framework
+- **Turbopack**: Next.js development server (dev mode)
+
+## 📁 Project Structure
+
+```
+galfa-backend/
+├── src/
+│   ├── app/                         # Next.js 15 app directory
+│   │   ├── layout.tsx              # Root layout with navigation
+│   │   ├── page.tsx                # Homepage with role-based access
+│   │   ├── globals.css             # Global styles & Tailwind config
+│   │   ├── favicon.ico             # Site favicon
+│   │   │
+│   │   ├── investor/               # Investor dashboard pages (SERVER COMPONENTS)
+│   │   │   ├── summary/            # Portfolio summary page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── flat-rate/          # Flat rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── floating-rate/      # Floating rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   └── installments/       # Installment investments page
+│   │   │       └── page.tsx        # Server component - auth + data fetching
+│   │   │
+│   │   ├── admin/                  # Admin pages (SERVER COMPONENTS)
+│   │   │   ├── dashboard/          # Admin dashboard
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   ├── performance/        # Performance analytics
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   └── user-management/    # User management
+│   │   │       └── page.tsx        # Server component - admin auth + data
+│   │   │
+│   │   ├── flat-rate/              # Admin flat-rate investments page
+│   │   │   └── page.tsx            # Server component - admin auth only
+│   │   │
+│   │   ├── floating-rate/          # Admin floating-rate page
+│   │   │   └── page.tsx            # Server component - admin auth only
+│   │   │
+│   │   └── installments/           # Admin installments page
+│   │       └── page.tsx            # Server component - admin auth only
+│   │
+│   ├── components/                  # Shared React components (CLIENT COMPONENTS)
+│   │   ├── navigation.tsx          # Main navigation with role-based links
+│   │   ├── Auth.tsx                # Email/password authentication form
+│   │   ├── Account.tsx             # User profile management
+│   │   └── NoUserError.tsx         # Error component for unauthenticated users
+│   │
+│   ├── db/                         # Database layer
+│   │   ├── drizzle/               # Drizzle ORM configuration
+│   │   │   ├── connection.ts      # Database connection management
+│   │   │   └── schema.ts          # Complete schema with auth integration
+│   │   │
+│   │   └── supabase/              # Supabase client configuration
+│   │       ├── browser.ts         # Browser client setup
+│   │       ├── server.ts          # Server client setup
+│   │       └── middleware.ts      # Auth middleware
+│   │
+│   ├── features/                   # Feature-based modules
+│   │   ├── investor/              # Investor portfolio management
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-investor-summary.ts        # Portfolio calculations
+│   │   │   │   └── get-comprehensive-summary.ts   # Complete portfolio data
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── investor-net-fund-display.tsx  # Net fund display
+│   │   │       ├── investor-summary-view.tsx      # Complete portfolio view
+│   │   │       └── investor-flat-rate-view.tsx    # Flat rate investments view
+│   │   │
+│   │   ├── flat-rate/             # Fixed rate investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-flat-rate-investments.ts
+│   │   │   │   ├── get-principle-fix-rate.ts
+│   │   │   │   ├── create-flat-rate-account.ts
+│   │   │   │   └── redemption-flat-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── admin-flat-rate-view.tsx       # Admin view for flat rate
+│   │   │   │   ├── create-flat-rate-modal.tsx     # Create account modal
+│   │   │   │   └── redeem-flat-rate-modal.tsx     # Redemption modal
+│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       └── flat-rate-investments-table.tsx
+│   │   │
+│   │   ├── floating-rate/         # Variable rate investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-floating-rate-investments.ts
+│   │   │   │   ├── get-investor-floating-rate-investments.ts
+│   │   │   │   └── create-floating-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   └── create-floating-rate-modal.tsx
+│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── floating-rate-investments-monthly-table.tsx
+│   │   │       └── investor-floating-rate-investments-table.tsx
+│   │   │
+│   │   ├── installment/           # Installment-based investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-installments.ts
+│   │   │   │   ├── get-installment-cof-by-month.ts
+│   │   │   │   └── get-installment-principle-by-month.ts
+│   │   │   └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-installment-table.tsx
+│   │   │       └── investor-installment-table.tsx
+│   │   │
+│   │   ├── admin/                 # Admin-specific features
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── create-user.ts
+│   │   │   │   └── get-users.ts
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-dashboard.tsx
+│   │   │       ├── create-user-modal.tsx
+│   │   │       └── users-table.tsx
+│   │   │
+│   │   └── investments/           # General investment utilities
+│   │       ├── actions/           # Server actions (DATA LAYER)
+│   │       │   ├── create-vc-performance.ts
+│   │       │   ├── get-all-vc-performance.ts
+│   │       │   ├── get-gross-profit-by-month.ts
+│   │       │   └── update-vc-performance.ts
+│   │       ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │       │   ├── create-vc-performance-modal.tsx
+│   │       │   └── edit-vc-performance-modal.tsx
+│   │       └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │           └── performance-table.tsx
+│   │
+│   ├── hooks/                      # Custom React hooks (CLIENT-SIDE)
+│   │   └── useAdminCheck.ts       # Client-side admin verification hook
+│   │
+│   ├── lib/                        # Utility libraries
+│   │   ├── auth/                  # Authentication utilities
+│   │   │   ├── admin-check.ts     # Server-side admin verification
+│   │   │   ├── client-admin-check.ts  # Client-side admin actions
+│   │   │   └── server-auth-helpers.ts # SERVER-SIDE AUTH HELPERS (NEW STANDARD)
+│   │   │
+│   │   ├── utils/                 # General utilities
+│   │   │   ├── investment-calculator.ts  # NPV & compound interest
+│   │   │   └── rate-calculations.ts     # Financial rate conversions
+│   │   │
+│   │   └── utils.ts               # Shared utility functions
+│   │
+│   └── test/                       # Test files
+│       └── (test files)
+│
+├── middleware.ts                   # Next.js middleware for auth protection
+├── public/                        # Static assets
+├── .cursor/                       # Cursor IDE configuration
+├── .git/                          # Git repository
+├── .next/                         # Next.js build output
+├── node_modules/                  # Dependencies
+│
+├── package.json                   # Project dependencies and scripts
+├── package-lock.json             # Lock file for dependencies
+├── tsconfig.json                 # TypeScript configuration
+├── next.config.ts                # Next.js configuration
+├── postcss.config.mjs            # PostCSS configuration for Tailwind
+├── README.md                     # Project documentation
+├── next-env.d.ts                 # Next.js TypeScript declarations
+└── .gitignore                    # Git ignore rules
+```
+
+## 🏗️ Architecture Overview - NEW SERVER-SIDE PATTERN
+
+### 🔥 **NEW STANDARD**: Server-Side Data Fetching Architecture
+
+#### **Core Principle**: Complete separation of data fetching and UI rendering
+
+```typescript
+// ✅ STANDARD PATTERN: Server Component (page.tsx)
+export default async function InvestorPage() {
+  // 1. Server-side authentication
+  const user = await requireAuth();
+
+  // 2. Server-side data fetching
+  let data = null;
+  let error: string | undefined = undefined;
+
+  try {
+    data = await fetchInvestorData(user.email);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load data";
+  }
+
+  // 3. Pass data to client View component
+  return <InvestorView user={user} data={data} error={error} />;
+}
+
+// ✅ STANDARD PATTERN: Client View Component
+("use client");
+export function InvestorView({ user, data, error }) {
+  // All UI logic, interactions, and client-side state
+  return <div>...</div>;
+}
+```
+
+#### **File Naming Convention**:
+
+- **`page.tsx`**: Server components (auth + data fetching only)
+- **`*-view.tsx`**: Client components (UI + interactions only)
+- **`*-modal.tsx`**: Client components (interactive modals)
+- **`*-table.tsx`**: Client components (data display tables)
+
+#### **Authentication Patterns**:
+
+```typescript
+// For investor pages
+const user = await requireAuth();
+
+// For admin pages
+const user = await requireAdminOrRedirectToSummary();
+
+// For admin-only pages (no fallback)
+const user = await requireAdmin();
+```
+
+### 🔐 Authentication System
+
+- **Supabase Auth Integration**: Complete email/password authentication
+- **Row Level Security (RLS)**: Database-level security policies
+- **Role-Based Access Control**: Admin vs Investor user types
+- **Multi-layer Protection**: Middleware, server components, and client-side guards
+- **Session Management**: SSR-compatible auth state management
+- **🆕 Server-Side Auth Helpers**: Centralized authentication utilities
+
+#### **Server-Side Auth Helpers** (`src/lib/auth/server-auth-helpers.ts`):
+
+```typescript
+// Get current user (returns null if not authenticated)
+export async function getCurrentUser(): Promise<AuthUser | null>;
+
+// Require authentication (redirects to home if not authenticated)
+export async function requireAuth(): Promise<AuthUser>;
+
+// Require admin access (redirects to home if not admin)
+export async function requireAdmin(): Promise<AuthUser>;
+
+// Smart admin check (redirects to investor summary if not admin)
+export async function requireAdminOrRedirectToSummary(): Promise<AuthUser>;
+```
+
+### 🗄️ Database Layer
+
+- **PostgreSQL with Supabase**: Hosted database with real-time capabilities
+- **Drizzle ORM**: Type-safe database operations with relations
+- **Schema Integration**: Auth schema linked to profiles and role assignments
+- **Timestamptz Support**: Timezone-aware timestamp handling
+- **Foreign Key Integrity**: Enforced relationships between tables
+
+### 💼 Investment Management Features
+
+#### 1. **Fixed Rate Investments**
+
+- Monthly compound interest calculations
+- 5% admin fee on original investments only
+- Rollover capabilities without additional fees
+- Real-time Net Present Value (NPV) calculations
+
+#### 2. **Floating Rate Investments**
+
+- Variable rates based on performance metrics
+- Hurdle rate calculations
+- Market-responsive interest adjustments
+
+#### 3. **Installment Investments**
+
+- Monthly payment structures
+- Principal and interest breakdowns
+- Cost of funds (CoF) calculations
+
+### 🎯 User Roles & Access
+
+#### **Investors**
+
+- Portfolio summary dashboard (`/investor/summary`)
+- Detailed investment views (`/investor/flat-rate`, `/investor/floating-rate`, `/investor/installments`)
+- Real-time investment valuations
+- Historical performance tracking
+- Admin fee transparency
+
+#### **Admins**
+
+- Complete investment oversight (`/flat-rate`, `/floating-rate`, `/installments`)
+- Admin dashboard (`/admin/dashboard`)
+- User management (`/admin/user-management`)
+- Performance analytics (`/admin/performance`)
+- Portfolio-wide analytics
+- Financial reporting tools
+
+## 🔧 Development Setup
+
+### Prerequisites
+
+- **Node.js**: Latest LTS version (20+)
+- **PostgreSQL**: Database server or Supabase account
+- **Supabase Project**: With authentication enabled
+
+### Environment Variables
+
+```env
+# Database Configuration
+SUPABASE_CONNECTION_STRING=postgresql://...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+
+# Authentication
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
+```
+
+### Available Scripts
+
+```bash
+npm run dev      # Start development server with Turbopack
+npm run build    # Build production application
+npm run start    # Start production server
+npm run lint     # Run ESLint checks
+```
+
+### Database Setup
+
+1. **Schema Migration**: Use Drizzle Kit for database migrations
+2. **Seed Data**: Populate with initial investment types and test accounts
+3. **RLS Policies**: Configure Supabase Row Level Security
+4. **Indexes**: Set up performance indexes for user queries
+
+## 📊 Data Flow & Business Logic
+
+### 🆕 **NEW STANDARD**: Server-Side Data Flow
+
+```mermaid
+graph TD
+    A[User Request] --> B[Next.js Server Component]
+    B --> C[Server-Side Auth Check]
+    C --> D{Authenticated?}
+    D -->|No| E[Redirect to Login]
+    D -->|Yes| F[Server-Side Data Fetching]
+    F --> G[Database Query via Server Actions]
+    G --> H[Data Processing]
+    H --> I[Pass Data to Client View Component]
+    I --> J[Client-Side Rendering]
+    J --> K[User Interactions]
+    K --> L[Client-Side State Management]
+```
+
+### Investment Calculation Engine
+
+1. **Admin Fee Processing**: 5% fee calculation with rollover exemptions
+2. **Compound Interest**: Monthly compounding with daily proportioning
+3. **NPV Calculations**: Real-time portfolio valuations
+4. **Rollover Logic**: Seamless investment renewals without fee duplication
+
+### Key Server Actions
+
+#### **Investor Portfolio Management**
+
+```typescript
+// Get complete investor portfolio summary
+getInvestorSummary(investorEmail: string): Promise<InvestorSummary>
+
+// Get comprehensive portfolio data
+getComprehensiveInvestorSummary(investorEmail: string): Promise<ComprehensiveInvestorSummary>
+
+// List all investor emails (admin only)
+getAllInvestorEmails(): Promise<string[]>
+```
+
+#### **Admin Investment Analytics**
+
+```typescript
+// Get all flat rate investment details
+getFlatRateInvestments(): Promise<FlatRateInvestment[]>
+
+// Get portfolio-wide statistics
+getPrincipleFixRate(): Promise<PrincipleFixRateResult>
+```
+
+#### **Financial Calculations**
+
+```typescript
+// Generic investment growth calculator
+calculateInvestmentGrowth(grossCapital, annualRate, startDate, endDate)
+
+// Convert annual to monthly compound rates
+getMonthlyCompoundRate(capital: number, annualRate: number): number
+```
+
+## 🛡️ Security & Best Practices
+
+### 1. **Authentication Security**
+
+- **🆕 Server-Side First**: All authentication checks happen on the server
+- Supabase Auth with email verification
+- Secure session management with httpOnly cookies
+- Role-based route protection at middleware level
+- **🆕 Automatic Redirects**: Server-side redirects prevent unauthorized access
+- Client-side auth state synchronization
+
+### 2. **Database Security**
+
+- Row Level Security (RLS) policies
+- Foreign key constraints for data integrity
+- Prepared statements via Drizzle ORM
+- Environment variable protection for credentials
+
+### 3. **Type Safety**
+
+- Comprehensive TypeScript coverage
+- Drizzle ORM type inference
+- Interface definitions for all data structures
+- Strict type checking enabled
+
+### 4. **Performance Optimization**
+
+- **🆕 Server-Side Rendering**: Faster initial page loads
+- Database indexes on frequently queried columns
+- Connection pooling for database operations
+- Efficient query patterns with joins
+- Real-time calculations with caching strategies
+
+## 🎨 UI/UX Features
+
+### Design System
+
+- **Tailwind CSS 4**: Modern utility-first styling
+- **Responsive Design**: Mobile-first approach
+- **Component Library**: Reusable UI components
+- **Consistent Styling**: Centralized design tokens
+
+### Navigation & UX
+
+- **Role-Based Navigation**: Different menus for investors vs admins
+- **🆕 Server-Side Data Loading**: No loading spinners for initial data
+- **Real-Time Updates**: Live portfolio valuations
+- **Error Handling**: Graceful error states and loading indicators
+
+## 📈 Financial Modeling
+
+### Mathematical Precision
+
+- **Decimal Precision**: PostgreSQL DECIMAL types for monetary values
+- **Compound Interest**: Accurate monthly compounding formulas
+- **Time-Weighted Returns**: Proper handling of investment periods
+- **Currency Formatting**: Indonesian Rupiah (IDR) formatting
+
+### Investment Rules
+
+1. **Admin Fee Logic**: Single 5% fee per investment chain
+2. **Rollover Processing**: No additional fees on renewals
+3. **Portfolio Calculation**: Proper exclusion of parent accounts
+4. **NPV Accuracy**: Real-time value calculations with compound growth
+
+## 🔄 Data Flow Examples
+
+### New Investment Process
+
+```
+User Registration → Profile Creation → Investment → Admin Fee Calculation →
+Portfolio Addition → NPV Tracking → Compound Interest Application
+```
+
+### Rollover Process
+
+```
+Investment Maturity → Rollover Decision → New Account Creation →
+Parent Account Closure → Fee Exemption → Continued Growth Tracking
+```
+
+### 🆕 **NEW**: Page Load Process
+
+```
+User Request → Server Auth Check → Data Fetching → View Component Render → Client Hydration
+```
+
+## 🚀 Deployment Considerations
+
+### Platforms
+
+- **Vercel**: Recommended for Next.js applications
+- **AWS/Digital Ocean**: Custom server deployments
+- **Supabase**: Database hosting and authentication
+
+### Configuration
+
+- Environment variables properly configured
+- Database migrations applied
+- Authentication providers set up
+- SSL certificates for production
+
+## 📋 **NEW STANDARD**: Development Guidelines
+
+### ✅ **DO's**:
+
+1. **Always use server components for page.tsx files**
+2. **Handle authentication server-side using auth helpers**
+3. **Fetch all data server-side before rendering**
+4. **Pass data as props to client View components**
+5. **Name client components with descriptive suffixes** (`*-view.tsx`, `*-modal.tsx`, `*-table.tsx`)
+6. **Keep server components minimal** (auth + data fetching only)
+7. **Keep all UI logic in client components**
+
+### ❌ **DON'Ts**:
+
+1. **Don't use client components for page.tsx files**
+2. **Don't handle authentication client-side in page components**
+3. **Don't fetch data client-side for initial page load**
+4. **Don't mix UI logic with data fetching in the same component**
+5. **Don't use useEffect for initial data loading**
+6. **Don't create loading states for server-fetched data**
+
+### 🔧 **Component Creation Checklist**:
+
+- [ ] Is this a page route? → Create server component `page.tsx`
+- [ ] Does it need authentication? → Use appropriate auth helper
+- [ ] Does it need data? → Fetch server-side
+- [ ] Does it have UI interactions? → Create client View component
+- [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
+- [ ] Is it a data table? → Create `*-table.tsx` client component
+
+This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.

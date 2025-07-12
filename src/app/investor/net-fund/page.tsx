@@ -1,9 +1,15 @@
+import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 import { InvestorNetFundDisplay } from "@/features/investor/components/investor-net-fund-display";
 
-export default function InvestorNetFundPage() {
+export default async function InvestorNetFundPage() {
+  // Authenticate admin user since this is a debug page that can access any investor's data
+  const user = await requireAdminOrRedirectToSummary();
+
   return (
     <div className="container mx-auto p-6 max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6">Investor Net Fund</h1>
+      <h1 className="text-3xl font-bold mb-6">
+        Investor Net Fund - Debug Tool
+      </h1>
       <p className="text-gray-600 mb-6">
         Enter an investor email to see their total net invested fund (amount
         working for them after admin fees). Check the browser console for
