@@ -36,7 +36,7 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 
 interface CreateFlatRateModalProps {
   onAccountCreated?: () => void;

@@ -28,19 +28,3 @@ export function calculateCompoundInterest(
   const monthlyRate = getMonthlyCompoundRate(principal, annualRate);
   return principal * Math.pow(1 + monthlyRate, months);
 }
-
-/**
- * Calculate the interest earned over a period using compound interest
- *
- * @param {number} principal - Initial amount
- * @param {number} annualRate - Annual rate as decimal
- * @param {number} months - Number of months
- * @returns {number} - Interest earned
- */
-export function calculateInterestEarned(
-  principal: number,
-  annualRate: number,
-  months: number
-): number {
-  return calculateCompoundInterest(principal, annualRate, months) - principal;
-}

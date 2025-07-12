@@ -49,24 +49,12 @@ export interface ComprehensiveInvestorSummary {
 export async function getComprehensiveInvestorSummary(
   investorEmail: string
 ): Promise<ComprehensiveInvestorSummary | null> {
-  console.log("=".repeat(80));
-  console.log("COMPREHENSIVE INVESTOR SUMMARY - START");
-  console.log("=".repeat(80));
-  console.log("Requested investor email:", investorEmail);
-
   // Get data from all investment types in parallel
   const [flatRateData, floatingRateData, installmentData] = await Promise.all([
     getInvestorSummary(investorEmail),
     getInvestorFloatingRateInvestments(investorEmail),
     getInvestorInstallmentInvestments(investorEmail),
   ]);
-
-  console.log("Flat rate data:", flatRateData ? "Found" : "None");
-  console.log(
-    "Floating rate data:",
-    floatingRateData?.success ? "Found" : "None"
-  );
-  console.log("Installment data:", installmentData ? "Found" : "None");
 
   // Check if we have any data at all
   const hasFlatRateData = flatRateData !== null;
@@ -78,7 +66,6 @@ export async function getComprehensiveInvestorSummary(
     installmentData !== null && installmentData.investments.length > 0;
 
   if (!hasFlatRateData && !hasFloatingRateData && !hasInstallmentData) {
-    console.log("❌ No investments found for investor:", investorEmail);
     return null;
   }
 
@@ -189,16 +176,6 @@ export async function getComprehensiveInvestorSummary(
   // Calculate combined gain/loss percentage
   const totalGainLossPercentage =
     totalNetInvestedFund > 0 ? (totalGainLoss / totalNetInvestedFund) * 100 : 0;
-
-  console.log("COMPREHENSIVE SUMMARY CALCULATED:");
-  console.log("- Total Net Invested Fund:", totalNetInvestedFund);
-  console.log("- Total Gross Invested Fund:", totalGrossInvestedFund);
-  console.log("- Total Admin Fees:", totalAdminFees);
-  console.log("- Total Net Present Value:", totalNetPresentValue);
-  console.log("- Total Gain/Loss:", totalGainLoss);
-  console.log("- Total Gain/Loss %:", totalGainLossPercentage);
-  console.log("- Active Investments:", activeInvestments);
-  console.log("=".repeat(80));
 
   return {
     email: investorEmail,

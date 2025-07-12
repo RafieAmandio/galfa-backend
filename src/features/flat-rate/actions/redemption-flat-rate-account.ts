@@ -3,7 +3,7 @@
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts, mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 

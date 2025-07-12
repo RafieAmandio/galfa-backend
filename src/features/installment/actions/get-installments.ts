@@ -3,7 +3,6 @@
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, installmentAccounts, profiles } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
 import { authUsers } from "@/db/drizzle/schema";
 

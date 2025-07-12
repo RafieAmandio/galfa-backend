@@ -9,7 +9,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 
@@ -194,28 +194,7 @@ export async function getFixRateCoFByMonth(
           returnPercentage =
             netCapital > 0 ? (presentValue / netCapital - 1) * 100 : 0;
 
-          // Debug logging for negative gains in rollover accounts
-          if (totalGain < 0) {
-            console.log(
-              `⚠️ Negative gain for rollover account ${account.accountNumber}:`,
-              {
-                accountId: account.id,
-                grossCapital: grossAmount,
-                netCapital,
-                presentValue,
-                totalGain,
-                transactionDate: account.transactionDate,
-                targetMonthEnd: monthEnd,
-                daysSinceStart: Math.floor(
-                  (monthEnd.getTime() - account.transactionDate.getTime()) /
-                    (1000 * 60 * 60 * 24)
-                ),
-                annualRate,
-                isRollover: account.isRollover,
-                adminFeeApplied: account.adminFeeApplied,
-              }
-            );
-          }
+          // Note: Negative gains in rollover accounts are handled but not logged
         } else {
           // For original accounts, gain is total accumulated interest
           totalGain = presentValue - netCapital;

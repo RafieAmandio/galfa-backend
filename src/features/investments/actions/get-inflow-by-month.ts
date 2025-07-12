@@ -11,7 +11,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 
 interface MonthlyInflowResult {

@@ -4,7 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/investment-calculator";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { format } from "date-fns";
 
@@ -131,23 +131,6 @@ function calculateMonthlyData(params: {
     params.annualRate
   );
 
-  console.log("=".repeat(80));
-  console.log("INVESTMENT CALCULATION DEBUG");
-  console.log("=".repeat(80));
-  console.log("Input Parameters:");
-  console.log("- Start Date:", startDate.toISOString().split("T")[0]);
-  console.log("- End Date:", endDate.toISOString().split("T")[0]);
-  console.log("- Annual Rate:", (params.annualRate * 100).toFixed(4) + "%");
-  console.log(
-    "- Net Capital:",
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(params.netCapital)
-  );
-  console.log("- Monthly Rate:", (monthlyRate * 100).toFixed(6) + "%");
-  console.log("");
-
   let currentBalance = params.netCapital;
   let currentDate = new Date(startDate);
   let monthCounter = 0;
@@ -199,61 +182,6 @@ function calculateMonthlyData(params: {
 
     const monthKey = format(currentDate, "MMMM yyyy");
 
-    console.log(`Month ${monthCounter}: ${monthKey}`);
-    console.log("- Period Start:", currentDate.toISOString().split("T")[0]);
-    console.log("- Period End:", actualEndDate.toISOString().split("T")[0]);
-    console.log("- Days in Period:", daysInPeriod);
-    console.log("- Is Partial Month:", isStartMonth || isEndMonth);
-    console.log(
-      "- Beginning Balance:",
-      new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(beginningBalance)
-    );
-    console.log(
-      "- Effective Rate for Period:",
-      (effectiveRate * 100).toFixed(6) + "%"
-    );
-    if (isStartMonth || isEndMonth) {
-      console.log(
-        "- Rate Calculation: (" +
-          daysInPeriod +
-          "/30) * " +
-          (monthlyRate * 100).toFixed(6) +
-          "% = " +
-          (effectiveRate * 100).toFixed(6) +
-          "%"
-      );
-    } else {
-      console.log(
-        "- Rate Calculation: Full monthly rate = " +
-          (effectiveRate * 100).toFixed(6) +
-          "%"
-      );
-    }
-    console.log(
-      "- Interest Calculation:",
-      beginningBalance.toFixed(2),
-      "* " + (effectiveRate * 100).toFixed(6) + "% = ",
-      periodInterest.toFixed(2)
-    );
-    console.log(
-      "- Interest Earned:",
-      new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(periodInterest)
-    );
-    console.log(
-      "- Ending Balance:",
-      new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-      }).format(endingBalance)
-    );
-    console.log("");
-
     monthlyData.push({
       monthYear: monthKey,
       daysInPeriod,
@@ -272,37 +200,6 @@ function calculateMonthlyData(params: {
       1
     );
   }
-
-  console.log("=".repeat(80));
-  console.log("CALCULATION SUMMARY");
-  console.log("=".repeat(80));
-  console.log(
-    "- Initial Investment:",
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(params.netCapital)
-  );
-  console.log(
-    "- Final Balance:",
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(currentBalance)
-  );
-  console.log(
-    "- Total Interest Earned:",
-    new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(currentBalance - params.netCapital)
-  );
-  console.log(
-    "- Total Return Percentage:",
-    ((currentBalance / params.netCapital - 1) * 100).toFixed(4) + "%"
-  );
-  console.log("- Total Months:", monthCounter);
-  console.log("=".repeat(80));
 
   return monthlyData;
 }
