@@ -83,7 +83,7 @@ export function InvestorFlatRateView({
               Flat Rate Investments
             </h1>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Track your fixed-rate investment portfolio with compound interest
+              Track your flat rate investment portfolio with compound interest
               calculations and detailed performance metrics.
             </p>
           </div>
@@ -384,7 +384,7 @@ export function InvestorFlatRateView({
               </div>
             </div>
 
-            {/* Navigation */}
+            {/* Navigation
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
               <div className="text-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -415,7 +415,7 @@ export function InvestorFlatRateView({
                   Installments
                 </a>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
       </div>

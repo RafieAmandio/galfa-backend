@@ -28,6 +28,7 @@ Galfa Backend is a comprehensive investment platform built with Next.js that man
 - **postgres**: PostgreSQL client for Node.js
 - **dotenv**: Environment variable management
 - **recharts**: Charting library for financial data visualization
+- **🆕 @tanstack/react-table**: Advanced table management with filtering, sorting, and pagination
 
 ### Development Tools
 
@@ -110,8 +111,8 @@ galfa-backend/
 │   │   │   │   ├── admin-flat-rate-view.tsx       # Admin view for flat rate
 │   │   │   │   ├── create-flat-rate-modal.tsx     # Create account modal
 │   │   │   │   └── redeem-flat-rate-modal.tsx     # Redemption modal
-│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
-│   │   │       └── flat-rate-investments-table.tsx
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       └── flat-rate-investments-table.tsx  # Tanstack React Table with comprehensive filtering
 │   │   │
 │   │   ├── floating-rate/         # Variable rate investments
 │   │   │   ├── actions/           # Server actions (DATA LAYER)
@@ -119,9 +120,10 @@ galfa-backend/
 │   │   │   │   ├── get-investor-floating-rate-investments.ts
 │   │   │   │   └── create-floating-rate-account.ts
 │   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │   │   └── create-floating-rate-modal.tsx
-│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── floating-rate-investments-monthly-table.tsx
+│   │   │   │   ├── create-floating-rate-modal.tsx
+│   │   │   │   └── investor-floating-rate-view.tsx
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── floating-rate-investments-monthly-table.tsx  # Tanstack React Table with comprehensive filtering
 │   │   │       └── investor-floating-rate-investments-table.tsx
 │   │   │
 │   │   ├── installment/           # Installment-based investments
@@ -129,8 +131,11 @@ galfa-backend/
 │   │   │   │   ├── get-installments.ts
 │   │   │   │   ├── get-installment-cof-by-month.ts
 │   │   │   │   └── get-installment-principle-by-month.ts
-│   │   │   └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── admin-installment-table.tsx
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── admin-installment-view.tsx
+│   │   │   │   └── investor-installment-view.tsx
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-installment-table.tsx    # Tanstack React Table with comprehensive filtering
 │   │   │       └── investor-installment-table.tsx
 │   │   │
 │   │   ├── admin/                 # Admin-specific features
@@ -1011,6 +1016,74 @@ getMonthlyCompoundRate(capital: number, annualRate: number): number
 - **Real-Time Updates**: Live portfolio valuations
 - **Error Handling**: Graceful error states and loading indicators
 
+### 🆕 **Advanced Table System**: Tanstack React Table with Comprehensive Filtering
+
+#### **Core Table Features:**
+
+- **🔍 Column-Specific Filtering**: Every column has its own filter type
+  - **Text Filters**: Search account numbers, emails, names
+  - **Number Range Filters**: Min/max values for amounts, percentages, durations
+  - **Date Range Filters**: From/to date selections
+  - **Type/Status Filters**: Dropdown selections with predefined options
+- **🔍 Global Search**: Search across all columns simultaneously
+- **↕️ Advanced Sorting**: Click headers to sort ascending/descending/none
+- **📄 Pagination**: Configurable page sizes (10, 20, 30, 40, 50 rows)
+- **📊 Expandable Rows**: Click to view detailed monthly data
+- **🎯 Real-time Totals**: Summary cards update based on filtered data
+
+#### **Filter UI Components:**
+
+```typescript
+// Standardized filter components used across all tables
+const TextFilter = ({ column }: { column: any }) => {
+  /* Text search with popover */
+};
+const NumberRangeFilter = ({ column }: { column: any }) => {
+  /* Min/max inputs */
+};
+const DateRangeFilter = ({ column }: { column: any }) => {
+  /* Date range picker */
+};
+const TypeFilter = ({
+  column,
+  uniqueTypes,
+}: {
+  column: any;
+  uniqueTypes: string[];
+}) => {
+  /* Dropdown select */
+};
+```
+
+#### **Active Filter Management:**
+
+- **Visual Feedback**: Blue filter icons indicate active filters
+- **Filter Badges**: Show all active filters with readable labels
+- **Individual Removal**: Click X on any filter badge to remove
+- **Bulk Reset**: "Reset All Filters" button clears everything
+- **Smart Labeling**: User-friendly column names in filter displays
+
+#### **Table File Structure:**
+
+```typescript
+// All investment tables follow this standardized pattern:
+// 1. Tanstack React Table imports
+// 2. Custom filter functions (numberRangeFilter, dateRangeFilter)
+// 3. Filter components (TextFilter, NumberRangeFilter, etc.)
+// 4. Column definitions with sorting + filtering
+// 5. Table state management
+// 6. Summary cards with filtered data
+// 7. Comprehensive UI with pagination
+```
+
+#### **Enhanced User Experience:**
+
+- **Instant Feedback**: Filters apply immediately as you type
+- **Smart Formatting**: Currency, percentages, and dates properly formatted
+- **Responsive Design**: Tables work perfectly on all screen sizes
+- **Performance Optimized**: Client-side filtering for fast interactions
+- **Consistent Styling**: shadcn/ui components throughout
+
 ## 📈 Financial Modeling
 
 ### Mathematical Precision
@@ -1093,5 +1166,92 @@ User Request → Server Auth Check → Data Fetching → View Component Render �
 - [ ] Does it have UI interactions? → Create client View component
 - [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
 - [ ] Is it a data table? → Create `*-table.tsx` client component
+
+### 🆕 **Advanced Table Development Guidelines**:
+
+#### **✅ Table Component Requirements:**
+
+1. **Always use Tanstack React Table** for all data tables
+2. **Include comprehensive filtering** on every relevant column
+3. **Implement all filter types**: Text, NumberRange, DateRange, Type/Status
+4. **Add global search** functionality
+5. **Include sorting** on all sortable columns with visual indicators
+6. **Add pagination** with configurable page sizes
+7. **Implement expandable rows** for detailed data when applicable
+8. **Update summary cards** to reflect filtered data in real-time
+9. **Use standardized filter components** (TextFilter, NumberRangeFilter, etc.)
+10. **Include active filter management** with badges and reset functionality
+
+#### **🎯 Required Table Features:**
+
+```typescript
+// Standard table imports and setup
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  Row,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
+
+// Required state management
+const [sorting, setSorting] = useState<SortingState>([]);
+const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+const [globalFilter, setGlobalFilter] = useState("");
+const [expanded, setExpanded] = useState({});
+
+// Required table features
+const table = useReactTable({
+  data,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getExpandedRowModel: getExpandedRowModel(),
+  // ... other required configurations
+});
+```
+
+#### **📊 Column Definition Pattern:**
+
+```typescript
+// Standard column with full functionality
+{
+  accessorKey: "columnName",
+  header: ({ column }) => (
+    <div className="flex items-center">
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="h-auto p-0 font-semibold"
+      >
+        Column Title
+        {/* Sorting icons */}
+      </Button>
+      <FilterComponent column={column} />
+    </div>
+  ),
+  cell: ({ getValue }) => <FormattedValue value={getValue()} />,
+  filterFn: "appropriateFilterFunction",
+}
+```
+
+#### **🚫 Table Development DON'Ts:**
+
+1. **Don't use basic HTML tables** - Always use Tanstack React Table
+2. **Don't skip filtering** - Every column should be filterable when relevant
+3. **Don't forget global search** - Always include cross-column search
+4. **Don't omit summary updates** - Filtered data must update totals
+5. **Don't use inconsistent filter UI** - Stick to standardized components
+6. **Don't skip pagination** - Always include configurable pagination
+7. **Don't forget loading states** - Include proper loading and error handling
 
 This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.

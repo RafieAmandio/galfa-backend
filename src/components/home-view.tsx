@@ -210,9 +210,9 @@ export function HomeView({ user, isAdmin }: HomeViewProps) {
                       <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zM14 6a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2h6zM4 14a2 2 0 002 2h8a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2z" />
                     </svg>
                   </div>
-                  <CardTitle className="text-lg">Fixed Rate</CardTitle>
+                  <CardTitle className="text-lg">Flat Rate</CardTitle>
                   <CardDescription>
-                    Manage fixed-rate investments
+                    Manage flat rate investments
                   </CardDescription>
                 </CardHeader>
               </Card>

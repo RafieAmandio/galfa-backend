@@ -22,14 +22,23 @@ import {
   min,
   max,
 } from "date-fns";
+import {
+  calculateFloatingRateMonthlyValues,
+  FloatingRateCalculationInput,
+  MonthlyValueResult,
+} from "@/lib/utils/floating-rate-calculator";
 
 interface MonthlyPerformance {
   month: Date;
   monthLabel: string;
-  performancePercentage: number;
-  growthPercentage: number;
+  performanceRate: number;
+  growthRate: number;
+  previousMonthValue: number;
+  presentValueFund: number;
   gainedFund: number;
-  totalActivePrinciple: number;
+  isFirstMonth: boolean;
+  daysActive: number;
+  totalDaysInMonth: number;
   appliedRule: string;
   hasData: boolean;
 }
@@ -40,7 +49,7 @@ interface FloatingRateInvestmentWithMonthly {
   investorEmail: string;
   grossCapital: number;
   adminFee: number;
-  netCapital: number;
+  netInvestorFund: number;
   transactionDate: Date;
   endDate: Date | null;
   status: string;
@@ -49,6 +58,8 @@ interface FloatingRateInvestmentWithMonthly {
   createdAt: Date;
   monthlyPerformance: MonthlyPerformance[];
   totalMonthsActive: number;
+  presentValueFund: number;
+  totalGainedFund: number;
 }
 
 interface FloatingRateInvestmentsWithMonthlyResult {
@@ -57,15 +68,17 @@ interface FloatingRateInvestmentsWithMonthlyResult {
   data?: {
     investments: FloatingRateInvestmentWithMonthly[];
     totalGrossCapital: number;
-    totalNetCapital: number;
+    totalNetInvestorFund: number;
     totalAdminFees: number;
+    totalPresentValueFund: number;
+    totalGainedFund: number;
     activeAccountsCount: number;
     availableMonths: string[];
   };
 }
 
 /**
- * Get all floating rate investments with monthly performance data
+ * Get all floating rate investments with monthly performance data using compound growth calculation
  */
 export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promise<FloatingRateInvestmentsWithMonthlyResult> {
   // Check admin access
@@ -106,7 +119,7 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
       .orderBy(accounts.transaction_date);
 
     let totalGrossCapital = 0;
-    let totalNetCapital = 0;
+    let totalNetInvestorFund = 0;
     let totalAdminFees = 0;
     const availableMonthsSet = new Set<string>();
 
@@ -114,21 +127,21 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
     const investmentData = results.map((result) => {
       const grossCapital = parseFloat(result.grossCapital);
       const adminFeeAmount = parseFloat(result.adminFee);
-      const netCapital = grossCapital - adminFeeAmount;
+      const netInvestorFund = grossCapital - adminFeeAmount;
 
       totalGrossCapital += grossCapital;
-      totalNetCapital += netCapital;
+      totalNetInvestorFund += netInvestorFund;
       totalAdminFees += adminFeeAmount;
 
       return {
         ...result,
         grossCapital,
         adminFeeAmount,
-        netCapital,
+        netInvestorFund,
       };
     });
 
-    // Instead of getting months from investments, get all months from earliest investment to current
+    // Get all months from earliest investment to current
     const earliestDate = results.reduce((earliest, result) => {
       return result.transactionDate < earliest
         ? result.transactionDate
@@ -144,8 +157,7 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
       monthToCheck = addMonths(monthToCheck, 1);
     }
 
-    // Get all available months and calculate monthly performance for each
-    // Sort months chronologically, not alphabetically
+    // Sort months chronologically
     const sortedAvailableMonths = Array.from(availableMonthsSet).sort(
       (a, b) => {
         const dateA = new Date(a);
@@ -153,130 +165,115 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
         return dateA.getTime() - dateB.getTime();
       }
     );
-    const monthlyPerformanceByMonth = new Map<
-      string,
-      {
-        month: Date;
-        monthLabel: string;
-        performancePercentage: number;
-        growthPercentage: number;
-        totalActivePrinciple: number;
-        appliedRule: string;
-        hasData: boolean;
-      }
-    >();
 
-    // Calculate performance for each month
+    // Get growth rates for all months
+    const monthlyGrowthRates: Array<{
+      month: Date;
+      monthLabel: string;
+      growthPercentage: number;
+      performancePercentage: number;
+      appliedRule: string;
+      hasData: boolean;
+    }> = [];
+
     for (const monthLabel of sortedAvailableMonths) {
       const monthDate = new Date(monthLabel);
       const monthStart = startOfMonth(monthDate);
 
-      // Find all investments active during this month
-      let totalActivePrinciple = 0;
-
-      for (const investment of investmentData) {
-        const investmentStart = startOfMonth(investment.transactionDate);
-        const investmentEnd = investment.endDate
-          ? startOfMonth(investment.endDate)
-          : null; // No end date means still active
-
-        const isActiveInMonth =
-          !isAfter(investmentStart, monthStart) &&
-          (investmentEnd === null || !isBefore(investmentEnd, monthStart));
-
-        if (isActiveInMonth) {
-          totalActivePrinciple += investment.netCapital;
-        }
-      }
-
       try {
-        // Get performance data for this month
         const growthResult = await getFloatingRateGrowthPercentage(monthStart);
 
         if (growthResult.success && growthResult.data) {
-          monthlyPerformanceByMonth.set(monthLabel, {
+          monthlyGrowthRates.push({
             month: monthStart,
             monthLabel,
-            performancePercentage: growthResult.data.performancePercentage,
             growthPercentage: growthResult.data.growthPercentage,
-            totalActivePrinciple,
+            performancePercentage: growthResult.data.performancePercentage,
             appliedRule: growthResult.data.calculation.rule,
             hasData: true,
           });
         } else {
-          monthlyPerformanceByMonth.set(monthLabel, {
+          monthlyGrowthRates.push({
             month: monthStart,
             monthLabel,
-            performancePercentage: 0,
             growthPercentage: 0,
-            totalActivePrinciple,
+            performancePercentage: 0,
             appliedRule: "No data",
             hasData: false,
           });
         }
       } catch (error) {
         console.error(`Error getting performance for ${monthLabel}:`, error);
-        monthlyPerformanceByMonth.set(monthLabel, {
+        monthlyGrowthRates.push({
           month: monthStart,
           monthLabel,
-          performancePercentage: 0,
           growthPercentage: 0,
-          totalActivePrinciple,
+          performancePercentage: 0,
           appliedRule: "Error",
           hasData: false,
         });
       }
     }
 
-    // Now create the final investment objects with their individual monthly performance
+    let totalPresentValueFund = 0;
+    let totalGainedFund = 0;
+
+    // Calculate monthly performance for each investment using the new compound growth logic
     const investments: FloatingRateInvestmentWithMonthly[] = investmentData.map(
       (investment) => {
-        const monthlyPerformance: MonthlyPerformance[] = [];
+        // Prepare input for the compound calculation
+        const calculationInput: FloatingRateCalculationInput = {
+          netInvestorFund: investment.netInvestorFund,
+          transactionDate: investment.transactionDate,
+          endDate: investment.endDate,
+          monthlyGrowthRates: monthlyGrowthRates.map((rate) => ({
+            month: rate.month,
+            growthPercentage: rate.growthPercentage,
+            performancePercentage: rate.performancePercentage,
+            hasData: rate.hasData,
+          })),
+        };
 
-        // Generate monthly performance data for each available month where this investment was active
-        for (const monthLabel of sortedAvailableMonths) {
-          const monthStart = startOfMonth(new Date(monthLabel));
-          const investmentStart = startOfMonth(investment.transactionDate);
-          const investmentEnd = investment.endDate
-            ? startOfMonth(investment.endDate)
-            : null; // No end date means still active
+        // Calculate monthly values using the new compound growth function
+        const monthlyValues =
+          calculateFloatingRateMonthlyValues(calculationInput);
 
-          const isActiveInMonth =
-            !isAfter(investmentStart, monthStart) &&
-            (investmentEnd === null || !isBefore(investmentEnd, monthStart));
+        // Convert to the expected MonthlyPerformance format
+        const monthlyPerformance: MonthlyPerformance[] = monthlyValues.map(
+          (monthValue) => {
+            // Find the corresponding growth rate data for additional info
+            const growthRateData = monthlyGrowthRates.find(
+              (rate) => rate.month.getTime() === monthValue.month.getTime()
+            );
 
-          if (isActiveInMonth) {
-            const monthData = monthlyPerformanceByMonth.get(monthLabel);
-
-            if (monthData) {
-              // Calculate this investment's share of the gained fund
-              const investmentShare =
-                monthData.totalActivePrinciple > 0
-                  ? investment.netCapital / monthData.totalActivePrinciple
-                  : 0;
-
-              // Calculate total gained fund for the month (applying growth to total active principle)
-              const totalGainedFund = monthData.hasData
-                ? monthData.totalActivePrinciple *
-                  (1 + monthData.growthPercentage / 100)
-                : monthData.totalActivePrinciple;
-
-              // Calculate this investment's gained fund
-              const gainedFund = totalGainedFund * investmentShare;
-
-              monthlyPerformance.push({
-                month: monthData.month,
-                monthLabel,
-                performancePercentage: monthData.performancePercentage,
-                growthPercentage: monthData.growthPercentage,
-                gainedFund,
-                totalActivePrinciple: monthData.totalActivePrinciple,
-                appliedRule: monthData.appliedRule,
-                hasData: monthData.hasData,
-              });
-            }
+            return {
+              month: monthValue.month,
+              monthLabel: monthValue.monthLabel,
+              performanceRate: monthValue.performanceRate,
+              growthRate: monthValue.growthRate,
+              previousMonthValue: monthValue.previousMonthValue,
+              presentValueFund: monthValue.presentValueFund,
+              gainedFund: monthValue.gainedFund,
+              isFirstMonth: monthValue.isFirstMonth,
+              daysActive: monthValue.daysActive,
+              totalDaysInMonth: monthValue.totalDaysInMonth,
+              appliedRule: growthRateData?.appliedRule || "Unknown",
+              hasData: monthValue.hasData,
+            };
           }
-        }
+        );
+
+        // Calculate current value and total gained fund
+        const presentValueFund =
+          monthlyValues.length > 0
+            ? monthlyValues[monthlyValues.length - 1].presentValueFund
+            : investment.netInvestorFund;
+
+        const investmentGainedFund =
+          presentValueFund - investment.netInvestorFund;
+
+        totalPresentValueFund += presentValueFund;
+        totalGainedFund += investmentGainedFund;
 
         return {
           id: investment.id,
@@ -284,7 +281,7 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
           investorEmail: investment.investorEmail || "N/A",
           grossCapital: investment.grossCapital,
           adminFee: investment.adminFeeAmount,
-          netCapital: investment.netCapital,
+          netInvestorFund: investment.netInvestorFund,
           transactionDate: investment.transactionDate,
           endDate: investment.endDate,
           status: investment.status,
@@ -293,18 +290,22 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
           createdAt: investment.createdAt,
           monthlyPerformance,
           totalMonthsActive: monthlyPerformance.length,
+          presentValueFund,
+          totalGainedFund: investmentGainedFund,
         };
       }
     );
 
     return {
       success: true,
-      message: `Successfully retrieved ${investments.length} floating rate investments with monthly performance data`,
+      message: `Successfully retrieved ${investments.length} floating rate investments with compound monthly performance data`,
       data: {
         investments,
         totalGrossCapital,
-        totalNetCapital,
+        totalNetInvestorFund,
         totalAdminFees,
+        totalPresentValueFund,
+        totalGainedFund,
         activeAccountsCount: investments.filter(
           (inv) => inv.status === "active"
         ).length,

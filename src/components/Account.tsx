@@ -77,13 +77,6 @@ export default function Account({ user }: AccountProps) {
     setLoading(false);
   }
 
-  async function signOut() {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      setError("Error signing out");
-    }
-  }
-
   return (
     <div className="space-y-6">
       {/* User Info Header */}
@@ -135,11 +128,11 @@ export default function Account({ user }: AccountProps) {
           />
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+        <div className="pt-4">
           <Button
             type="submit"
             disabled={loading}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
+            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
           >
             {loading ? (
               <>
@@ -177,26 +170,6 @@ export default function Account({ user }: AccountProps) {
                 Update Profile
               </>
             )}
-          </Button>
-
-          <Button
-            type="button"
-            variant="outline"
-            onClick={signOut}
-            className="flex-1 border-2 border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
-          >
-            <svg
-              className="w-4 h-4 mr-2"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Sign Out
           </Button>
         </div>
       </form>

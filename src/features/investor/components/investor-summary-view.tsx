@@ -624,8 +624,8 @@ export function InvestorSummaryView({
                       </svg>
                     </div>
                     <p className="text-sm text-blue-700">
-                      View detailed breakdown of your fixed-rate investments
-                      with compound interest calculations
+                      View detailed breakdown of your flat rate investments with
+                      compound interest calculations
                     </p>
                   </a>
                 ) : (

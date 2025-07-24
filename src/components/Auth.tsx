@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/db/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,7 @@ export default function Auth() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const router = useRouter();
   const supabase = createBrowserClient();
 
   const handleAuth = async (event: React.FormEvent) => {
@@ -36,8 +38,11 @@ export default function Auth() {
 
       if (error) {
         setError(error.message);
+      } else {
+        // Sign-in successful, refresh the page to update server-side auth state
+        router.refresh();
+        return; // Don't set loading to false since we're refreshing
       }
-      // No success message needed for login - user will be redirected
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     }

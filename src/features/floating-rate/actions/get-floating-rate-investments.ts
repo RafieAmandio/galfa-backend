@@ -10,7 +10,12 @@ import {
 import { eq } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { getFloatingRateGrowthPercentage } from "./get-floating-rate-growth-percentage";
-import { startOfMonth } from "date-fns";
+import { startOfMonth, addMonths, isAfter } from "date-fns";
+import {
+  getCurrentFloatingRateValue,
+  getTotalGainedFund,
+  FloatingRateCalculationInput,
+} from "@/lib/utils/floating-rate-calculator";
 
 interface FloatingRateInvestment {
   id: number;
@@ -18,15 +23,17 @@ interface FloatingRateInvestment {
   investorEmail: string;
   grossCapital: number;
   adminFee: number;
-  netCapital: number;
+  netInvestorFund: number;
+  presentValueFund: number;
+  totalGainedFund: number;
   transactionDate: Date;
   endDate: Date | null;
   status: string;
   isRollover: boolean;
   rolloverSequence: number;
   createdAt: Date;
-  growthPercentage: number;
-  performancePercentage: number;
+  growthRate: number;
+  performanceRate: number;
   appliedRule: string;
 }
 
@@ -36,14 +43,16 @@ interface FloatingRateInvestmentsResult {
   data?: {
     investments: FloatingRateInvestment[];
     totalGrossCapital: number;
-    totalNetCapital: number;
+    totalNetInvestorFund: number;
     totalAdminFees: number;
+    totalPresentValueFund: number;
+    totalGainedFund: number;
     activeAccountsCount: number;
   };
 }
 
 /**
- * Get all floating rate investments for admin view
+ * Get all floating rate investments for admin view using compound growth calculation
  */
 export async function getFloatingRateInvestments(): Promise<FloatingRateInvestmentsResult> {
   // Check admin access
@@ -83,6 +92,22 @@ export async function getFloatingRateInvestments(): Promise<FloatingRateInvestme
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .orderBy(accounts.transaction_date);
 
+    if (results.length === 0) {
+      return {
+        success: true,
+        message: "No floating rate investments found",
+        data: {
+          investments: [],
+          totalGrossCapital: 0,
+          totalNetInvestorFund: 0,
+          totalAdminFees: 0,
+          totalPresentValueFund: 0,
+          totalGainedFund: 0,
+          activeAccountsCount: 0,
+        },
+      };
+    }
+
     // Get current growth rate data for current month
     const currentMonth = startOfMonth(new Date());
     const growthRateResult = await getFloatingRateGrowthPercentage(
@@ -103,46 +128,121 @@ export async function getFloatingRateInvestments(): Promise<FloatingRateInvestme
       : defaultGrowthData;
 
     let totalGrossCapital = 0;
-    let totalNetCapital = 0;
+    let totalNetInvestorFund = 0;
     let totalAdminFees = 0;
 
-    // Process and calculate totals
-    const investments: FloatingRateInvestment[] = results.map((result) => {
+    // Process basic investment data and calculate totals
+    const investmentData = results.map((result) => {
       const grossCapital = parseFloat(result.grossCapital);
       const adminFeeAmount = parseFloat(result.adminFee);
-      const netCapital = grossCapital - adminFeeAmount;
+      const netInvestorFund = grossCapital - adminFeeAmount;
 
       totalGrossCapital += grossCapital;
-      totalNetCapital += netCapital;
+      totalNetInvestorFund += netInvestorFund;
       totalAdminFees += adminFeeAmount;
 
       return {
-        id: result.id,
-        accountNumber: result.accountNumber,
-        investorEmail: result.investorEmail || "N/A",
+        ...result,
         grossCapital,
-        adminFee: adminFeeAmount,
-        netCapital,
-        transactionDate: result.transactionDate,
-        endDate: result.endDate,
-        status: result.status,
-        isRollover: result.isRollover || false,
-        rolloverSequence: result.rolloverSequence || 0,
-        createdAt: result.createdAt,
-        growthPercentage: growthData.growthPercentage,
-        performancePercentage: growthData.performancePercentage,
-        appliedRule: growthData.appliedRule,
+        adminFeeAmount,
+        netInvestorFund,
       };
     });
 
+    // Find the earliest investment date to determine month range
+    const earliestDate = investmentData.reduce((earliest, investment) => {
+      return investment.transactionDate < earliest
+        ? investment.transactionDate
+        : earliest;
+    }, investmentData[0].transactionDate);
+
+    // Generate all months from earliest investment to current month
+    const monthlyGrowthRates: Array<{
+      month: Date;
+      growthPercentage: number;
+      performancePercentage: number;
+      hasData: boolean;
+    }> = [];
+
+    let monthToCheck = startOfMonth(earliestDate);
+    while (!isAfter(monthToCheck, currentMonth)) {
+      try {
+        const growthResult = await getFloatingRateGrowthPercentage(
+          monthToCheck
+        );
+
+        monthlyGrowthRates.push({
+          month: monthToCheck,
+          growthPercentage: growthResult.data?.growthPercentage || 0,
+          performancePercentage: growthResult.data?.performancePercentage || 0,
+          hasData: growthResult.success,
+        });
+      } catch (error) {
+        console.error(`Error getting growth rate for ${monthToCheck}:`, error);
+        monthlyGrowthRates.push({
+          month: monthToCheck,
+          growthPercentage: 0,
+          performancePercentage: 0,
+          hasData: false,
+        });
+      }
+
+      monthToCheck = addMonths(monthToCheck, 1);
+    }
+
+    let totalPresentValueFund = 0;
+    let totalGainedFund = 0;
+
+    // Calculate compound growth for each investment
+    const investments: FloatingRateInvestment[] = investmentData.map(
+      (investment) => {
+        // Prepare input for compound calculation
+        const calculationInput: FloatingRateCalculationInput = {
+          netInvestorFund: investment.netInvestorFund,
+          transactionDate: investment.transactionDate,
+          endDate: investment.endDate,
+          monthlyGrowthRates,
+        };
+
+        // Calculate current value and gained fund using compound growth
+        const presentValueFund = getCurrentFloatingRateValue(calculationInput);
+        const investmentGainedFund = getTotalGainedFund(calculationInput);
+
+        totalPresentValueFund += presentValueFund;
+        totalGainedFund += investmentGainedFund;
+
+        return {
+          id: investment.id,
+          accountNumber: investment.accountNumber,
+          investorEmail: investment.investorEmail || "N/A",
+          grossCapital: investment.grossCapital,
+          adminFee: investment.adminFeeAmount,
+          netInvestorFund: investment.netInvestorFund,
+          presentValueFund,
+          totalGainedFund: investmentGainedFund,
+          transactionDate: investment.transactionDate,
+          endDate: investment.endDate,
+          status: investment.status,
+          isRollover: investment.isRollover || false,
+          rolloverSequence: investment.rolloverSequence || 0,
+          createdAt: investment.createdAt,
+          growthRate: growthData.growthPercentage,
+          performanceRate: growthData.performancePercentage,
+          appliedRule: growthData.appliedRule,
+        };
+      }
+    );
+
     return {
       success: true,
-      message: `Successfully retrieved ${investments.length} floating rate investments`,
+      message: `Successfully retrieved ${investments.length} floating rate investments with compound growth calculations`,
       data: {
         investments,
         totalGrossCapital,
-        totalNetCapital,
+        totalNetInvestorFund,
         totalAdminFees,
+        totalPresentValueFund,
+        totalGainedFund,
         activeAccountsCount: investments.filter(
           (inv) => inv.status === "active"
         ).length,

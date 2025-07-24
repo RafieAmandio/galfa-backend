@@ -375,7 +375,6 @@ export function RedeemFlatRateModal({
                           setRedemptionDate(date);
                         }
                       }}
-                      initialFocus
                     />
                   </PopoverContent>
                 </Popover>
@@ -397,13 +396,10 @@ export function RedeemFlatRateModal({
                   <option value="">Select an account...</option>
                   {accounts.map((account) => (
                     <option key={account.id} value={account.id}>
-                      <p className="font-semibold">
-                        {account.name} - Value on{" "}
-                        {format(redemptionDate, "d MMMM yyyy")}:{" "}
-                        <span className="text-green-600">
-                          {formatCurrency(account.currentValue)}
-                        </span>
-                      </p>
+                      {`${account.name} - Value on ${format(
+                        redemptionDate,
+                        "d MMMM yyyy"
+                      )}: ${formatCurrency(account.currentValue)}`}
                     </option>
                   ))}
                 </select>

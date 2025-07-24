@@ -1,7 +1,65 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  Row,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
 import { getAdminInstallmentInvestments } from "../actions/get-installments";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Label } from "@/components/ui/label";
+import {
+  Loader2,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  ChevronLeft,
+  ChevronFirst,
+  ChevronLast,
+  TrendingUp,
+  DollarSign,
+  Calendar,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+  X,
+  Clock,
+} from "lucide-react";
 import { parse } from "date-fns";
 
 interface AdminInstallmentSummary {
@@ -12,386 +70,1035 @@ interface AdminInstallmentSummary {
   monthlyGainedFunds: { [monthYear: string]: number };
 }
 
+// Custom filter functions
+const numberRangeFilter = (
+  row: Row<any>,
+  columnId: string,
+  value: [number?, number?]
+) => {
+  const [min, max] = value;
+  const cellValue = row.getValue(columnId) as number;
+
+  if (min !== undefined && max !== undefined) {
+    return cellValue >= min && cellValue <= max;
+  }
+  if (min !== undefined) {
+    return cellValue >= min;
+  }
+  if (max !== undefined) {
+    return cellValue <= max;
+  }
+  return true;
+};
+
 export function AdminInstallmentTable() {
   const [summary, setSummary] = useState<AdminInstallmentSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [rowSelection, setRowSelection] = useState({});
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [expanded, setExpanded] = useState({});
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+    }).format(amount);
+
+  // Helper function to get column display name
+  const getColumnDisplayName = (columnId: string) => {
+    const displayNames: Record<string, string> = {
+      accountNumber: "Account Number",
+      investorEmail: "Investor Email",
+      investmentType: "Investment Type",
+      netCapital: "Net Capital",
+      durationMonths: "Duration (Months)",
+      monthlyCof: "Monthly CoF",
+      presentValueFund: "Present Value Fund",
+      totalGainedFunds: "Total Gained",
+    };
+    return displayNames[columnId] || columnId;
+  };
+
+  // Filter Components
+  const TextFilter = ({ column }: { column: any }) => {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-6 w-6 p-0 ml-1 ${
+              column.getFilterValue()
+                ? "text-blue-600"
+                : "text-muted-foreground"
+            }`}
+          >
+            <Filter className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56" align="start">
+          <div className="space-y-2">
+            <Label>Filter {getColumnDisplayName(column.id)}</Label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Search..."
+                value={(column.getFilterValue() as string) ?? ""}
+                onChange={(e) => column.setFilterValue(e.target.value)}
+              />
+              {column.getFilterValue() && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => column.setFilterValue("")}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const NumberRangeFilter = ({ column }: { column: any }) => {
+    const filterValue = column.getFilterValue() as
+      | [number?, number?]
+      | undefined;
+    const [min, max] = filterValue || [undefined, undefined];
+
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-6 w-6 p-0 ml-1 ${
+              filterValue ? "text-blue-600" : "text-muted-foreground"
+            }`}
+          >
+            <Filter className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-64" align="start">
+          <div className="space-y-2">
+            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Min"
+                type="number"
+                value={min ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  column.setFilterValue([
+                    value ? parseFloat(value) : undefined,
+                    max,
+                  ]);
+                }}
+              />
+              <Input
+                placeholder="Max"
+                type="number"
+                value={max ?? ""}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  column.setFilterValue([
+                    min,
+                    value ? parseFloat(value) : undefined,
+                  ]);
+                }}
+              />
+            </div>
+            {filterValue && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => column.setFilterValue(undefined)}
+                className="w-full"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear Filter
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const TypeFilter = ({
+    column,
+    uniqueTypes,
+  }: {
+    column: any;
+    uniqueTypes: string[];
+  }) => {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-6 w-6 p-0 ml-1 ${
+              column.getFilterValue()
+                ? "text-blue-600"
+                : "text-muted-foreground"
+            }`}
+          >
+            <Filter className="h-3 w-3" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48" align="start">
+          <div className="space-y-2">
+            <Label>Filter by {getColumnDisplayName(column.id)}</Label>
+            <Select
+              value={(column.getFilterValue() as string) ?? "all"}
+              onValueChange={(value) =>
+                column.setFilterValue(value === "all" ? undefined : value)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="All types" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All types</SelectItem>
+                {uniqueTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type === "principle" ? "Principal" : "Interest Only"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {column.getFilterValue() && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => column.setFilterValue(undefined)}
+                className="w-full"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Clear Filter
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const getTypeBadge = (type: string) => {
+    return (
+      <Badge
+        variant={type === "principle" ? "default" : "secondary"}
+        className={
+          type === "principle"
+            ? "bg-blue-100 text-blue-800 border-blue-200"
+            : "bg-green-100 text-green-800 border-green-200"
+        }
+      >
+        {type === "principle" ? "Principal" : "Interest Only"}
+      </Badge>
+    );
+  };
+
+  // Get unique investment types for filter dropdown
+  const uniqueTypes = useMemo(() => {
+    if (!summary) return [];
+    return Array.from(
+      new Set(summary.investments.map((inv) => inv.investmentType))
+    );
+  }, [summary]);
+
+  // Column definitions
+  const columns = useMemo<ColumnDef<any>[]>(
+    () => [
+      {
+        id: "expander",
+        header: "",
+        cell: ({ row }) => {
+          return row.getCanExpand() ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={row.getToggleExpandedHandler()}
+            >
+              {row.getIsExpanded() ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </Button>
+          ) : null;
+        },
+        size: 50,
+      },
+      {
+        accessorKey: "accountNumber",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Account Number
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <TextFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-medium">{getValue() as string}</div>
+        ),
+        filterFn: "includesString",
+      },
+      {
+        accessorKey: "investorEmail",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Investor Email
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <TextFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => <div>{getValue() as string}</div>,
+        filterFn: "includesString",
+      },
+      {
+        accessorKey: "investmentType",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <span className="font-semibold">Type</span>
+              <TypeFilter column={column} uniqueTypes={uniqueTypes} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => getTypeBadge(getValue() as string),
+        filterFn: "equals",
+      },
+      {
+        accessorKey: "netCapital",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Net Capital
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-mono text-right">
+            {formatCurrency(getValue() as number)}
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+      {
+        accessorKey: "durationMonths",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Duration
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="text-center">
+            <Badge variant="outline">{getValue() as number} months</Badge>
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+      {
+        accessorKey: "monthlyCof",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Monthly CoF
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="text-center">
+            {((getValue() as number) * 100).toFixed(2)}%
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+      {
+        accessorKey: "presentValueFund",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Present Value Fund
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-mono text-blue-600 font-medium text-right">
+            {formatCurrency(getValue() as number)}
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+      {
+        accessorKey: "totalGainedFunds",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Total Gained
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-mono text-green-600 font-medium text-right">
+            {formatCurrency(getValue() as number)}
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+    ],
+    [uniqueTypes]
+  );
+
+  const tableData = useMemo(() => summary?.investments || [], [summary]);
+
+  const table = useReactTable({
+    data: tableData,
+    columns,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    onColumnVisibilityChange: setColumnVisibility,
+    onRowSelectionChange: setRowSelection,
+    onGlobalFilterChange: setGlobalFilter,
+    getExpandedRowModel: getExpandedRowModel(),
+    getRowCanExpand: () => true,
+    state: {
+      sorting,
+      columnFilters,
+      columnVisibility,
+      rowSelection,
+      globalFilter,
+      expanded,
+    },
+    onExpandedChange: setExpanded,
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const data = await getAdminInstallmentInvestments();
+      setSummary(data);
+    } catch (error) {
+      console.error("Error fetching installment data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getAdminInstallmentInvestments();
-        setSummary(data);
-      } catch (error) {
-        console.error("Error fetching installment data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchData();
   }, []);
 
-  const toggleExpansion = (index: number) => {
-    const newExpanded = new Set(expandedRows);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedRows(newExpanded);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">Loading...</div>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <div className="text-center text-gray-500">
-        No installment investments found.
-      </div>
-    );
-  }
-
-  // Get unique months for the monthly gains table - sort chronologically
-  const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort((a, b) => {
-    // Parse the month strings (e.g., "Jan 2024") into dates for proper sorting
-    const dateA = parse(a, "MMM yyyy", new Date());
-    const dateB = parse(b, "MMM yyyy", new Date());
-    return dateA.getTime() - dateB.getTime();
-  });
-
-  // Calculate totals for summable columns (for the table footer)
-  const totals = summary.investments.reduce(
+  // Calculate totals from filtered data
+  const filteredData = table
+    .getFilteredRowModel()
+    .rows.map((row) => row.original);
+  const totals = filteredData.reduce(
     (acc, investment) => ({
       totalNetCapital: acc.totalNetCapital + investment.netCapital,
       totalPresentValueFund:
         acc.totalPresentValueFund + investment.presentValueFund,
-      totalNetPresentValueFund:
-        acc.totalNetPresentValueFund + investment.netPresentValueFund,
       totalGainedFunds: acc.totalGainedFunds + investment.totalGainedFunds,
     }),
     {
       totalNetCapital: 0,
       totalPresentValueFund: 0,
-      totalNetPresentValueFund: 0,
       totalGainedFunds: 0,
     }
   );
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center py-12">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="text-muted-foreground">
+              Loading installment investments...
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+          <p className="text-muted-foreground">
+            No installment investments found.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Get unique months for the monthly gains table - sort chronologically
+  const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort((a, b) => {
+    const dateA = parse(a, "MMM yyyy", new Date());
+    const dateB = parse(b, "MMM yyyy", new Date());
+    return dateA.getTime() - dateB.getTime();
+  });
 
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
-            Total Gained Funds
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-green-600">
-            {new Intl.NumberFormat("id-ID", {
-              style: "currency",
-              currency: "IDR",
-            }).format(summary.totalGainedFunds)}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Interest from all accounts
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Investments
+                </p>
+                <p className="text-lg font-bold">
+                  {filteredData.length}
+                  {filteredData.length !== summary.investments.length && (
+                    <span className="text-sm text-muted-foreground ml-1">
+                      of {summary.investments.length}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
-            Total Present Value Fund
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-blue-600">
-            {new Intl.NumberFormat("id-ID", {
-              style: "currency",
-              currency: "IDR",
-            }).format(summary.totalPresentValueFund)}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">
-            Current value of all investments
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <DollarSign className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Gained Funds
+                </p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(totals.totalGainedFunds)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
-            Net Present Value Fund
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-purple-600">
-            {new Intl.NumberFormat("id-ID", {
-              style: "currency",
-              currency: "IDR",
-            }).format(summary.totalNetPresentValueFund)}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">Present value - redeemed</p>
-        </div>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total Present Value Fund
+                </p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(totals.totalPresentValueFund)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Monthly Gained Funds */}
       {uniqueMonths.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Monthly Gained Funds
-          </h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {uniqueMonths.map((month) => (
-                    <th
-                      key={month}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                    >
-                      {month}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="bg-white">
-                <tr>
-                  {uniqueMonths.map((month) => (
-                    <td
-                      key={month}
-                      className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                    >
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(summary.monthlyGainedFunds[month])}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg font-medium flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Monthly Gained Funds
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {uniqueMonths.map((month) => (
+                      <TableHead key={month} className="text-center">
+                        {month}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    {uniqueMonths.map((month) => (
+                      <TableCell key={month} className="text-center font-mono">
+                        {formatCurrency(summary.monthlyGainedFunds[month])}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Investments Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            Installment Investments
-          </h3>
-        </div>
+      {/* Main Table */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-semibold">
+                Installment Investments
+              </CardTitle>
+              <div className="flex items-center space-x-2">
+                <Button onClick={fetchData} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Account
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Investor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Net Capital
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Monthly CoF
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Present Value Fund
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Net PV Fund
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Gained
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Details
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {summary.investments.map((investment, index) => (
-                <React.Fragment key={investment.id}>
-                  {/* Main Investment Row */}
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {investment.accountNumber}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {investment.investorEmail}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          investment.investmentType === "principle"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
-                      >
-                        {investment.investmentType === "principle"
-                          ? "Principal"
-                          : "Interest Only"}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(investment.netCapital)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {investment.durationMonths} months
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {(investment.monthlyCof * 100).toFixed(2)}%
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(investment.presentValueFund)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-medium">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(investment.netPresentValueFund)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                      {new Intl.NumberFormat("id-ID", {
-                        style: "currency",
-                        currency: "IDR",
-                      }).format(investment.totalGainedFunds)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600">
-                      <button
-                        onClick={() => toggleExpansion(index)}
-                        className="hover:text-indigo-900"
-                      >
-                        {expandedRows.has(index) ? "Hide" : "Show"} Details
-                      </button>
-                    </td>
-                  </tr>
+            {/* Global Search and Filter Controls */}
+            <div className="flex flex-col space-y-4">
+              {/* Global Search */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search all columns..."
+                    value={globalFilter}
+                    onChange={(event) => setGlobalFilter(event.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
 
-                  {/* Expanded Monthly Details */}
-                  {expandedRows.has(index) && (
-                    <>
-                      <tr className="bg-blue-50">
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Monthly Details for {investment.accountNumber}
-                        </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Month
-                        </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Principal
-                        </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Interest
-                        </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Total Payment
-                        </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
-                          Net Present Value
-                        </td>
-                        <td colSpan={4}></td>
-                      </tr>
-                      {investment.monthlyData.map((monthData: any) => (
-                        <tr
-                          key={monthData.monthYear}
-                          className="bg-blue-25 border-l-4 border-blue-200"
+                {/* Reset All Filters */}
+                {(globalFilter || columnFilters.length > 0) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setGlobalFilter("");
+                      table.resetColumnFilters();
+                    }}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Reset All Filters
+                  </Button>
+                )}
+              </div>
+
+              {/* Active Filters Display */}
+              {columnFilters.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Active filters:
+                  </span>
+                  {columnFilters.map((filter) => {
+                    const formatFilterValue = (value: any) => {
+                      if (Array.isArray(value)) {
+                        const [min, max] = value;
+                        if (min !== undefined && max !== undefined) {
+                          return `${min} - ${max}`;
+                        } else if (min !== undefined) {
+                          return `≥ ${min}`;
+                        } else if (max !== undefined) {
+                          return `≤ ${max}`;
+                        }
+                        return "";
+                      }
+                      return String(value);
+                    };
+
+                    return (
+                      <Badge
+                        key={filter.id}
+                        variant="secondary"
+                        className="text-xs"
+                      >
+                        {getColumnDisplayName(filter.id)}:{" "}
+                        {formatFilterValue(filter.value)}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-3 w-3 p-0 ml-1"
+                          onClick={() => {
+                            table
+                              .getColumn(filter.id)
+                              ?.setFilterValue(undefined);
+                          }}
                         >
-                          <td className="px-6 py-1"></td>
-                          <td className="px-6 py-1 text-sm text-gray-700">
-                            {monthData.monthYear}
-                          </td>
-                          <td className="px-6 py-1 text-sm text-gray-900">
-                            {new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                            }).format(monthData.principalPayment)}
-                          </td>
-                          <td className="px-6 py-1 text-sm text-green-600 font-medium">
-                            {new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                            }).format(monthData.interestPayment)}
-                          </td>
-                          <td className="px-6 py-1 text-sm text-blue-600 font-medium">
-                            {new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                            }).format(monthData.totalPayment)}
-                          </td>
-                          <td className="px-6 py-1 text-sm text-gray-900">
-                            {new Intl.NumberFormat("id-ID", {
-                              style: "currency",
-                              currency: "IDR",
-                            }).format(monthData.netPresentValue)}
-                          </td>
-                          <td colSpan={4}></td>
-                        </tr>
-                      ))}
-                    </>
-                  )}
-                </React.Fragment>
-              ))}
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </Badge>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => {
+                      return (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  <>
+                    {table.getRowModel().rows.map((row) => (
+                      <React.Fragment key={row.id}>
+                        <TableRow
+                          data-state={row.getIsSelected() && "selected"}
+                        >
+                          {row.getVisibleCells().map((cell) => (
+                            <TableCell key={cell.id}>
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          ))}
+                        </TableRow>
 
-              {/* Totals Row */}
-              <tr className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                  TOTAL
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  -
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  -
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">
-                  {new Intl.NumberFormat("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  }).format(totals.totalNetCapital)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  -
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  -
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-bold">
-                  {new Intl.NumberFormat("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  }).format(totals.totalPresentValueFund)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-600 font-bold">
-                  {new Intl.NumberFormat("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  }).format(totals.totalNetPresentValueFund)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">
-                  {new Intl.NumberFormat("id-ID", {
-                    style: "currency",
-                    currency: "IDR",
-                  }).format(totals.totalGainedFunds)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  -
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+                        {/* Expanded Row for Monthly Details */}
+                        {row.getIsExpanded() && (
+                          <TableRow>
+                            <TableCell colSpan={columns.length} className="p-0">
+                              <div className="bg-muted/30 p-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                  <Clock className="h-4 w-4" />
+                                  <span className="font-medium">
+                                    Monthly Details for{" "}
+                                    {row.original.accountNumber}
+                                  </span>
+                                  <Badge variant="outline">
+                                    {row.original.monthlyData.length} months
+                                  </Badge>
+                                </div>
+
+                                <div className="rounded-md border bg-background">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Month</TableHead>
+                                        <TableHead className="text-right">
+                                          Principal
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                          Interest
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                          Total Payment
+                                        </TableHead>
+                                        <TableHead className="text-right">
+                                          Net Present Value
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {row.original.monthlyData.map(
+                                        (monthData: any) => (
+                                          <TableRow key={monthData.monthYear}>
+                                            <TableCell className="font-medium">
+                                              {monthData.monthYear}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-right">
+                                              {formatCurrency(
+                                                monthData.principalPayment
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-green-600 text-right">
+                                              {formatCurrency(
+                                                monthData.interestPayment
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-blue-600 font-medium text-right">
+                                              {formatCurrency(
+                                                monthData.totalPayment
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-right">
+                                              {formatCurrency(
+                                                monthData.netPresentValue
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        )
+                                      )}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
+                    ))}
+
+                    {/* Totals Row */}
+                    {filteredData.length > 0 && (
+                      <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                        <TableCell></TableCell>
+                        <TableCell className="font-bold">TOTAL</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-right">
+                          {formatCurrency(totals.totalNetCapital)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-blue-600 text-right">
+                          {formatCurrency(totals.totalPresentValueFund)}
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-green-600 text-right">
+                          {formatCurrency(totals.totalGainedFunds)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between space-x-2 py-4">
+            <div className="flex-1 text-sm text-muted-foreground">
+              {table.getFilteredSelectedRowModel().rows.length} of{" "}
+              {table.getFilteredRowModel().rows.length} row(s) selected.
+            </div>
+            <div className="flex items-center space-x-6 lg:space-x-8">
+              <div className="flex items-center space-x-2">
+                <p className="text-sm font-medium">Rows per page</p>
+                <Select
+                  value={`${table.getState().pagination.pageSize}`}
+                  onValueChange={(value) => {
+                    table.setPageSize(Number(value));
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue
+                      placeholder={table.getState().pagination.pageSize}
+                    />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                      <SelectItem key={pageSize} value={`${pageSize}`}>
+                        {pageSize}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page {table.getState().pagination.pageIndex + 1} of{" "}
+                {table.getPageCount()}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronFirst />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronLast />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

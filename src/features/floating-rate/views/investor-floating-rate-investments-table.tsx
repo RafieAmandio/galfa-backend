@@ -21,7 +21,8 @@ interface FloatingRateInvestment {
   accountNumber: string;
   grossCapital: number;
   adminFee: number;
-  netCapital: number;
+  netInvestorFund: number;
+  presentValueFund: number;
   gainedFund: number;
   transactionDate: Date;
   endDate: Date | null;
@@ -29,21 +30,22 @@ interface FloatingRateInvestment {
   isRollover: boolean;
   rolloverSequence: number;
   createdAt: Date;
-  growthPercentage: number;
-  performancePercentage: number;
+  growthRate: number;
+  performanceRate: number;
   appliedRule: string;
 }
 
 interface FloatingRateData {
   investments: FloatingRateInvestment[];
   totalGrossCapital: number;
-  totalNetCapital: number;
+  totalNetInvestorFund: number;
   totalAdminFees: number;
+  totalPresentValueFund: number;
   totalGainedFund: number;
   activeAccountsCount: number;
   currentMonthPerformance: {
-    growthPercentage: number;
-    performancePercentage: number;
+    growthRate: number;
+    performanceRate: number;
     appliedRule: string;
     hasPerformanceData: boolean;
     message: string;
@@ -103,7 +105,10 @@ export default function InvestorFloatingRateInvestmentsTable({
     return format(new Date(date), "d MMMM yyyy");
   };
 
-  const formatPercentage = (percentage: number) => {
+  const formatPercentage = (percentage: number | undefined) => {
+    if (percentage === undefined || percentage === null) {
+      return "0.00%";
+    }
     return `${percentage.toFixed(2)}%`;
   };
 
@@ -164,7 +169,7 @@ export default function InvestorFloatingRateInvestmentsTable({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -182,14 +187,30 @@ export default function InvestorFloatingRateInvestmentsTable({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Total Invested Capital
+              Total Net Investor Fund
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {formatCurrency(data.totalNetCapital)}
+              {formatCurrency(data.totalNetInvestorFund)}
             </div>
             <p className="text-xs text-muted-foreground">After admin fees</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Present Value Fund
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatCurrency(data.totalPresentValueFund)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Current compound value
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -207,9 +228,7 @@ export default function InvestorFloatingRateInvestmentsTable({
                   Monthly Growth Rate
                 </p>
                 <p className="text-3xl font-bold text-green-600">
-                  {formatPercentage(
-                    data.currentMonthPerformance.growthPercentage
-                  )}
+                  {formatPercentage(data.currentMonthPerformance.growthRate)}
                 </p>
               </div>
             </div>
@@ -249,7 +268,9 @@ export default function InvestorFloatingRateInvestmentsTable({
                   Total Profit This Month
                 </p>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.totalGainedFund - data.totalNetCapital)}
+                  {formatCurrency(
+                    data.totalGainedFund - data.totalNetInvestorFund
+                  )}
                 </p>
               </div>
             </div>
@@ -272,7 +293,8 @@ export default function InvestorFloatingRateInvestmentsTable({
               <TableHeader>
                 <TableRow>
                   <TableHead>Account Number</TableHead>
-                  <TableHead>Invested Capital</TableHead>
+                  <TableHead>Net Investor Fund</TableHead>
+                  <TableHead>Present Value Fund</TableHead>
                   <TableHead>Gained Fund</TableHead>
                   <TableHead>Transaction Date</TableHead>
                   <TableHead>End Date</TableHead>
@@ -287,7 +309,10 @@ export default function InvestorFloatingRateInvestmentsTable({
                       {investment.accountNumber}
                     </TableCell>
                     <TableCell>
-                      {formatCurrency(investment.grossCapital)}
+                      {formatCurrency(investment.netInvestorFund)}
+                    </TableCell>
+                    <TableCell>
+                      {formatCurrency(investment.presentValueFund)}
                     </TableCell>
                     <TableCell>
                       {formatCurrency(investment.gainedFund)}
