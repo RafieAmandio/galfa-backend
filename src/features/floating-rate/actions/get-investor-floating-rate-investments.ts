@@ -8,7 +8,7 @@ import {
   authUsers,
 } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { getFloatingRateGrowthPercentagePublic } from "./get-floating-rate-growth-percentage";
+import { getFloatingRateGrowthPercentageInternal } from "./get-floating-rate-growth-percentage";
 import {
   startOfMonth,
   endOfMonth,
@@ -27,6 +27,23 @@ import {
   getTotalGainedFund,
   FloatingRateCalculationInput,
 } from "@/lib/utils/floating-rate-calculator";
+import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+
+interface MonthlyRedemption {
+  amount: number;
+  transactionDate: Date;
+  description: string | null;
+  status: string;
+}
+
+interface CurrentMonthPerformance {
+  growthRate: number;
+  performanceRate: number;
+  appliedRule: string;
+  hasPerformanceData: boolean;
+  message: string;
+  redemptions: MonthlyRedemption[];
+}
 
 interface FloatingRateInvestment {
   id: number;
@@ -36,15 +53,14 @@ interface FloatingRateInvestment {
   netInvestorFund: number;
   presentValueFund: number;
   gainedFund: number;
+  totalRedemptions: number;
   transactionDate: Date;
   endDate: Date | null;
   status: string;
   isRollover: boolean;
   rolloverSequence: number;
   createdAt: Date;
-  growthRate: number;
-  performanceRate: number;
-  appliedRule: string;
+  currentMonthPerformance: CurrentMonthPerformance;
 }
 
 interface InvestorFloatingRateInvestmentsResult {
@@ -57,6 +73,7 @@ interface InvestorFloatingRateInvestmentsResult {
     totalAdminFees: number;
     totalPresentValueFund: number;
     totalGainedFund: number;
+    totalRedemptions: number;
     activeAccountsCount: number;
     currentMonthPerformance: {
       growthRate: number;
@@ -64,6 +81,7 @@ interface InvestorFloatingRateInvestmentsResult {
       appliedRule: string;
       hasPerformanceData: boolean;
       message: string;
+      redemptions: MonthlyRedemption[];
     };
   };
 }
@@ -120,6 +138,7 @@ export async function getInvestorFloatingRateInvestments(
           totalAdminFees: 0,
           totalPresentValueFund: 0,
           totalGainedFund: 0,
+          totalRedemptions: 0,
           activeAccountsCount: 0,
           currentMonthPerformance: {
             growthRate: 0,
@@ -127,6 +146,7 @@ export async function getInvestorFloatingRateInvestments(
             appliedRule: "No investments found",
             hasPerformanceData: false,
             message: "No floating rate investments found",
+            redemptions: [],
           },
         },
       };
@@ -134,7 +154,7 @@ export async function getInvestorFloatingRateInvestments(
 
     // Get current growth rate data for current month
     const currentMonth = startOfMonth(new Date());
-    const growthRateResult = await getFloatingRateGrowthPercentagePublic(
+    const growthRateResult = await getFloatingRateGrowthPercentageInternal(
       currentMonth
     );
 
@@ -187,7 +207,7 @@ export async function getInvestorFloatingRateInvestments(
     let monthToCheck = startOfMonth(earliestDate);
     while (!isAfter(monthToCheck, currentMonth)) {
       try {
-        const growthResult = await getFloatingRateGrowthPercentagePublic(
+        const growthResult = await getFloatingRateGrowthPercentageInternal(
           monthToCheck
         );
 
@@ -213,23 +233,71 @@ export async function getInvestorFloatingRateInvestments(
     let totalPresentValueFund = 0;
     let totalGainedFund = 0;
 
-    // Calculate compound growth for each investment
-    const investments: FloatingRateInvestment[] = investmentData.map(
-      (investment) => {
-        // Prepare input for compound calculation
-        const calculationInput: FloatingRateCalculationInput = {
-          netInvestorFund: investment.netInvestorFund,
-          transactionDate: investment.transactionDate,
-          endDate: investment.endDate,
-          monthlyGrowthRates,
-        };
+    // Calculate compound growth for each investment using redemption-aware calculations
+    const investments: FloatingRateInvestment[] = await Promise.all(
+      investmentData.map(async (investment) => {
+        // Calculate current value using redemption-aware calculation
+        let presentValueFund: number;
+        let gainedFund: number;
+        let totalRedemptions = 0;
+        let currentMonthRedemptions: MonthlyRedemption[] = [];
 
-        // Calculate current value and gained fund using compound growth
-        const presentValueFund = getCurrentFloatingRateValue(calculationInput);
-        const gainedFund = getTotalGainedFund(calculationInput);
+        try {
+          // Use redemption-aware calculation for accurate current value
+          const valueWithRedemptions =
+            await calculateFloatingRateValueWithRedemptions(
+              investment.id,
+              investment.netInvestorFund,
+              investment.transactionDate,
+              new Date()
+            );
 
-        totalPresentValueFund += presentValueFund;
-        totalGainedFund += gainedFund;
+          presentValueFund = valueWithRedemptions.currentValue;
+          totalRedemptions = valueWithRedemptions.totalRedemptions;
+          gainedFund =
+            presentValueFund - investment.netInvestorFund + totalRedemptions;
+
+          // Get current month redemptions
+          const currentMonthKey = format(currentMonth, "MMM yyyy");
+          const currentMonthBreakdown =
+            valueWithRedemptions.monthlyBreakdown.find(
+              (month) => month.monthYear === currentMonthKey
+            );
+
+          if (currentMonthBreakdown) {
+            currentMonthRedemptions =
+              currentMonthBreakdown.redemptionDetails.map((redemption) => ({
+                amount: redemption.amount,
+                transactionDate: redemption.transactionDate,
+                description:
+                  redemption.status === "completed"
+                    ? `Redemption of ${new Intl.NumberFormat("id-ID", {
+                        style: "currency",
+                        currency: "IDR",
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0,
+                      }).format(redemption.amount)}`
+                    : `Pending redemption`,
+                status: redemption.status,
+              }));
+          }
+        } catch (error) {
+          console.error(
+            `Error calculating redemption-aware value for account ${investment.id}:`,
+            error
+          );
+
+          // Fallback to original calculation if redemption calculation fails
+          const calculationInput: FloatingRateCalculationInput = {
+            netInvestorFund: investment.netInvestorFund,
+            transactionDate: investment.transactionDate,
+            endDate: investment.endDate,
+            monthlyGrowthRates,
+          };
+
+          presentValueFund = getCurrentFloatingRateValue(calculationInput);
+          gainedFund = getTotalGainedFund(calculationInput);
+        }
 
         return {
           id: investment.id,
@@ -239,17 +307,34 @@ export async function getInvestorFloatingRateInvestments(
           netInvestorFund: investment.netInvestorFund,
           presentValueFund,
           gainedFund,
+          totalRedemptions,
           transactionDate: investment.transactionDate,
           endDate: investment.endDate,
           status: investment.status,
           isRollover: investment.isRollover || false,
           rolloverSequence: investment.rolloverSequence || 0,
           createdAt: investment.createdAt,
-          growthRate: growthData.growthPercentage,
-          performanceRate: growthData.performancePercentage,
-          appliedRule: growthData.appliedRule,
+          currentMonthPerformance: {
+            growthRate: growthData.growthPercentage,
+            performanceRate: growthData.performancePercentage,
+            appliedRule: growthData.appliedRule,
+            hasPerformanceData: growthData.hasData,
+            message: growthData.message,
+            redemptions: currentMonthRedemptions,
+          },
         };
-      }
+      })
+    );
+
+    // Calculate totals from the processed investments
+    totalPresentValueFund = investments.reduce(
+      (sum, inv) => sum + inv.presentValueFund,
+      0
+    );
+    totalGainedFund = investments.reduce((sum, inv) => sum + inv.gainedFund, 0);
+    const totalRedemptions = investments.reduce(
+      (sum, inv) => sum + inv.totalRedemptions,
+      0
     );
 
     return {
@@ -262,6 +347,7 @@ export async function getInvestorFloatingRateInvestments(
         totalAdminFees,
         totalPresentValueFund,
         totalGainedFund,
+        totalRedemptions,
         activeAccountsCount: investments.filter(
           (inv) => inv.status === "active"
         ).length,
@@ -271,6 +357,9 @@ export async function getInvestorFloatingRateInvestments(
           appliedRule: growthData.appliedRule,
           hasPerformanceData: growthData.hasData,
           message: growthData.message,
+          redemptions: investments.flatMap(
+            (inv) => inv.currentMonthPerformance.redemptions
+          ),
         },
       },
     };

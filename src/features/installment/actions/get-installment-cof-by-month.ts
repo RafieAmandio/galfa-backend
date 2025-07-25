@@ -144,13 +144,13 @@ export async function getInstallmentCoFByMonth(
   targetMonth: Date
 ): Promise<MonthlyInstallmentCoFResult> {
   // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    return {
-      success: false,
-      message: "Unauthorized: Admin access required",
-    };
-  }
+  // const adminCheck = await checkAdminAccess();
+  // if (!adminCheck.isAdmin) {
+  //   return {
+  //     success: false,
+  //     message: "Unauthorized: Admin access required",
+  //   };
+  // }
 
   const db = createDrizzleConnection();
 

@@ -1,6 +1,5 @@
 "use server";
 
-import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { getGrossProfitByMonth } from "../../investments/actions/get-gross-profit-by-month";
 import { getFixRateCoFByMonth } from "../../flat-rate/actions/get-fix-rate-cof-by-month";
 import { getInstallmentCoFByMonth } from "../../installment/actions/get-installment-cof-by-month";
@@ -39,15 +38,7 @@ interface FloatingRateAllocatedProfitResult {
 export async function getFloatingRateAllocatedProfit(
   month: Date
 ): Promise<FloatingRateAllocatedProfitResult> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    return {
-      success: false,
-      message: "Unauthorized: Admin access required",
-    };
-  }
-
+  // Removed admin check for universal access
   try {
     // Get all required data in parallel
     const [

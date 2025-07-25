@@ -51,13 +51,13 @@ export async function getFixRateCoFByMonth(
   targetMonth: Date
 ): Promise<MonthlyCoFResult> {
   // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    return {
-      success: false,
-      message: "Unauthorized: Admin access required",
-    };
-  }
+  // const adminCheck = await checkAdminAccess();
+  // if (!adminCheck.isAdmin) {
+  //   return {
+  //     success: false,
+  //     message: "Unauthorized: Admin access required",
+  //   };
+  // }
 
   const db = createDrizzleConnection();
 

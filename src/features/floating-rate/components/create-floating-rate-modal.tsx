@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  createFloatingRateAccount,
-  getAllInvestors,
-} from "../actions/create-floating-rate-account";
+import { createFloatingRateAccount } from "../actions/create-floating-rate-account";
 import {
   Dialog,
   DialogContent,
@@ -38,6 +35,7 @@ import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 interface CreateFloatingRateModalProps {
   onAccountCreated?: () => void;
   trigger?: React.ReactNode;
+  investorEmails?: InvestorOption[] | null;
 }
 
 interface InvestorOption {
@@ -49,9 +47,10 @@ interface InvestorOption {
 export function CreateFloatingRateModal({
   onAccountCreated,
   trigger,
+  investorEmails,
 }: CreateFloatingRateModalProps) {
   const [open, setOpen] = useState(false);
-  const [investors, setInvestors] = useState<InvestorOption[]>([]);
+  const investors = investorEmails || [];
   const [selectedInvestorEmail, setSelectedInvestorEmail] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [capital, setCapital] = useState("");
@@ -60,34 +59,13 @@ export function CreateFloatingRateModal({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [loadingInvestors, setLoadingInvestors] = useState(true);
+  const loadingInvestors = false; // Investors come from props
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  // Load investors when modal opens
-  useEffect(() => {
-    if (open) {
-      const loadInvestors = async () => {
-        setLoadingInvestors(true);
-        try {
-          const investorList = await getAllInvestors();
-          setInvestors(investorList);
-        } catch (error) {
-          console.error("Error loading investors:", error);
-          setMessage({
-            type: "error",
-            text: "Failed to load investors",
-          });
-        } finally {
-          setLoadingInvestors(false);
-        }
-      };
-
-      loadInvestors();
-    }
-  }, [open]);
+  // Investors now come from server-side props - no need to fetch
 
   // Reset form when modal closes
   useEffect(() => {

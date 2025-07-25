@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -15,7 +15,7 @@ import {
   Row,
   getExpandedRowModel,
 } from "@tanstack/react-table";
-import { getFloatingRateInvestmentsWithMonthlyPerformance } from "../actions/get-floating-rate-investments-with-monthly-performance";
+// Data fetching moved to server-side - no longer needed here
 import {
   Table,
   TableBody,
@@ -61,54 +61,11 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 
-interface MonthlyPerformance {
-  month: Date;
-  monthLabel: string;
-  performanceRate: number;
-  growthRate: number;
-  previousMonthValue: number;
-  presentValueFund: number;
-  gainedFund: number;
-  isFirstMonth: boolean;
-  daysActive: number;
-  totalDaysInMonth: number;
-  appliedRule: string;
-  hasData: boolean;
-}
-
-interface FloatingRateInvestmentWithMonthly {
-  id: number;
-  accountNumber: string;
-  investorEmail: string;
-  grossCapital: number;
-  adminFee: number;
-  netInvestorFund: number;
-  transactionDate: Date;
-  endDate: Date | null;
-  status: string;
-  isRollover: boolean;
-  rolloverSequence: number;
-  createdAt: Date;
-  monthlyPerformance: MonthlyPerformance[];
-  totalMonthsActive: number;
-  presentValueFund: number;
-  totalGainedFund: number;
-}
-
-interface FloatingRateDataWithMonthly {
-  investments: FloatingRateInvestmentWithMonthly[];
-  totalGrossCapital: number;
-  totalNetInvestorFund: number;
-  totalAdminFees: number;
-  totalPresentValueFund: number;
-  totalGainedFund: number;
-  activeAccountsCount: number;
-  availableMonths: string[];
-}
+// This component receives data from server-side
 
 // Custom filter functions
 const numberRangeFilter = (
-  row: Row<FloatingRateInvestmentWithMonthly>,
+  row: Row<any>,
   columnId: string,
   value: [number?, number?]
 ) => {
@@ -128,7 +85,7 @@ const numberRangeFilter = (
 };
 
 const dateRangeFilter = (
-  row: Row<FloatingRateInvestmentWithMonthly>,
+  row: Row<any>,
   columnId: string,
   value: [string?, string?]
 ) => {
@@ -147,10 +104,16 @@ const dateRangeFilter = (
   return true;
 };
 
-export default function FloatingRateInvestmentsMonthlyTable() {
-  const [data, setData] = useState<FloatingRateDataWithMonthly | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+interface FloatingRateInvestmentsMonthlyTableProps {
+  data: any | null;
+}
+
+export default function FloatingRateInvestmentsMonthlyTable({
+  data,
+}: FloatingRateInvestmentsMonthlyTableProps) {
+  // Remove data fetching state - data comes from props
+  const loading = false;
+  const error = null;
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -441,11 +404,13 @@ export default function FloatingRateInvestmentsMonthlyTable() {
   // Get unique statuses for filter dropdown
   const uniqueStatuses = useMemo(() => {
     if (!data) return [];
-    return Array.from(new Set(data.investments.map((inv) => inv.status)));
+    return Array.from(
+      new Set(data.investments.map((inv: any) => inv.status))
+    ) as string[];
   }, [data]);
 
   // Column definitions
-  const columns = useMemo<ColumnDef<FloatingRateInvestmentWithMonthly>[]>(
+  const columns = useMemo<ColumnDef<any>[]>(
     () => [
       {
         id: "expander",
@@ -765,37 +730,14 @@ export default function FloatingRateInvestmentsMonthlyTable() {
     },
   });
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await getFloatingRateInvestmentsWithMonthlyPerformance();
-
-      if (result.success && result.data) {
-        setData(result.data);
-      } else {
-        setError(result.message);
-      }
-    } catch (err) {
-      setError(
-        "Failed to fetch floating rate investments with monthly performance"
-      );
-      console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  // Data fetching removed - data comes from server-side props
 
   // Calculate totals from filtered data
   const filteredData = table
     .getFilteredRowModel()
     .rows.map((row) => row.original);
   const totals = filteredData.reduce(
-    (acc, investment) => ({
+    (acc: any, investment: any) => ({
       grossCapital: acc.grossCapital + investment.grossCapital,
       adminFee: acc.adminFee + investment.adminFee,
       netInvestorFund: acc.netInvestorFund + investment.netInvestorFund,
@@ -829,7 +771,7 @@ export default function FloatingRateInvestmentsMonthlyTable() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={fetchData} variant="outline">
+          <Button onClick={() => window.location.reload()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -975,7 +917,11 @@ export default function FloatingRateInvestmentsMonthlyTable() {
                 Floating Rate Investments - Monthly Performance
               </CardTitle>
               <div className="flex items-center space-x-2">
-                <Button onClick={fetchData} variant="outline" size="sm">
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
@@ -1120,7 +1066,7 @@ export default function FloatingRateInvestmentsMonthlyTable() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                                   {row.original.monthlyPerformance.map(
-                                    (monthData) => (
+                                    (monthData: any) => (
                                       <div
                                         key={monthData.monthLabel}
                                         className={`p-3 rounded-lg border ${
@@ -1210,6 +1156,64 @@ export default function FloatingRateInvestmentsMonthlyTable() {
                                             </span>{" "}
                                             {monthData.appliedRule}
                                           </div>
+
+                                          {/* Redemptions Section */}
+                                          {monthData.redemptions &&
+                                            monthData.redemptions.length >
+                                              0 && (
+                                              <div className="mt-2 pt-2 border-t border-gray-200">
+                                                <div className="text-xs font-medium text-red-600 mb-1">
+                                                  Redemptions (
+                                                  {monthData.redemptions.length}
+                                                  )
+                                                </div>
+                                                {monthData.redemptions.map(
+                                                  (
+                                                    redemption: any,
+                                                    index: number
+                                                  ) => (
+                                                    <div
+                                                      key={index}
+                                                      className="text-xs bg-red-50 border border-red-200 rounded p-2 mb-1"
+                                                    >
+                                                      <div className="flex justify-between items-start">
+                                                        <span className="font-medium text-red-700">
+                                                          {formatCurrency(
+                                                            redemption.amount
+                                                          )}
+                                                        </span>
+                                                        <Badge
+                                                          variant={
+                                                            redemption.status ===
+                                                            "completed"
+                                                              ? "default"
+                                                              : "secondary"
+                                                          }
+                                                          className="text-xs"
+                                                        >
+                                                          {redemption.status}
+                                                        </Badge>
+                                                      </div>
+                                                      <div className="text-red-600 mt-1">
+                                                        {format(
+                                                          new Date(
+                                                            redemption.transactionDate
+                                                          ),
+                                                          "d MMM yyyy"
+                                                        )}
+                                                      </div>
+                                                      {redemption.description && (
+                                                        <div className="text-red-500 text-xs mt-1">
+                                                          {
+                                                            redemption.description
+                                                          }
+                                                        </div>
+                                                      )}
+                                                    </div>
+                                                  )
+                                                )}
+                                              </div>
+                                            )}
                                         </div>
                                       </div>
                                     )

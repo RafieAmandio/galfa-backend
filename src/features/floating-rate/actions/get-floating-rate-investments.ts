@@ -16,6 +16,7 @@ import {
   getTotalGainedFund,
   FloatingRateCalculationInput,
 } from "@/lib/utils/floating-rate-calculator";
+import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
 
 interface FloatingRateInvestment {
   id: number;
@@ -193,23 +194,45 @@ export async function getFloatingRateInvestments(): Promise<FloatingRateInvestme
     let totalPresentValueFund = 0;
     let totalGainedFund = 0;
 
-    // Calculate compound growth for each investment
-    const investments: FloatingRateInvestment[] = investmentData.map(
-      (investment) => {
-        // Prepare input for compound calculation
-        const calculationInput: FloatingRateCalculationInput = {
-          netInvestorFund: investment.netInvestorFund,
-          transactionDate: investment.transactionDate,
-          endDate: investment.endDate,
-          monthlyGrowthRates,
-        };
+    // Calculate compound growth for each investment using redemption-aware calculations
+    const investments: FloatingRateInvestment[] = await Promise.all(
+      investmentData.map(async (investment) => {
+        // Calculate current value using redemption-aware calculation
+        let presentValueFund: number;
+        let investmentGainedFund: number;
 
-        // Calculate current value and gained fund using compound growth
-        const presentValueFund = getCurrentFloatingRateValue(calculationInput);
-        const investmentGainedFund = getTotalGainedFund(calculationInput);
+        try {
+          // Use redemption-aware calculation for accurate current value
+          const valueWithRedemptions =
+            await calculateFloatingRateValueWithRedemptions(
+              investment.id,
+              investment.netInvestorFund,
+              investment.transactionDate,
+              new Date()
+            );
 
-        totalPresentValueFund += presentValueFund;
-        totalGainedFund += investmentGainedFund;
+          presentValueFund = valueWithRedemptions.currentValue;
+          investmentGainedFund =
+            presentValueFund -
+            investment.netInvestorFund +
+            valueWithRedemptions.totalRedemptions;
+        } catch (error) {
+          console.error(
+            `Error calculating redemption-aware value for account ${investment.id}:`,
+            error
+          );
+
+          // Fallback to original calculation if redemption calculation fails
+          const calculationInput: FloatingRateCalculationInput = {
+            netInvestorFund: investment.netInvestorFund,
+            transactionDate: investment.transactionDate,
+            endDate: investment.endDate,
+            monthlyGrowthRates,
+          };
+
+          presentValueFund = getCurrentFloatingRateValue(calculationInput);
+          investmentGainedFund = getTotalGainedFund(calculationInput);
+        }
 
         return {
           id: investment.id,
@@ -230,7 +253,17 @@ export async function getFloatingRateInvestments(): Promise<FloatingRateInvestme
           performanceRate: growthData.performancePercentage,
           appliedRule: growthData.appliedRule,
         };
-      }
+      })
+    );
+
+    // Calculate totals from the processed investments
+    totalPresentValueFund = investments.reduce(
+      (sum, inv) => sum + inv.presentValueFund,
+      0
+    );
+    totalGainedFund = investments.reduce(
+      (sum, inv) => sum + inv.totalGainedFund,
+      0
     );
 
     return {

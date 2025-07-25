@@ -123,18 +123,18 @@ export async function getComprehensiveInvestorSummary(
 
   if (hasFloatingRateData) {
     const frData = floatingRateData.data!;
-    floatingRateInvestments.totalNetCapital = frData.totalNetCapital;
+    floatingRateInvestments.totalNetCapital = frData.totalNetInvestorFund;
     floatingRateInvestments.totalGrossCapital = frData.totalGrossCapital;
     floatingRateInvestments.totalAdminFees = frData.totalAdminFees;
     floatingRateInvestments.totalGainedFund = frData.totalGainedFund;
     floatingRateInvestments.activeInvestments = frData.activeAccountsCount;
 
     // Add to combined totals
-    totalNetInvestedFund += frData.totalNetCapital;
+    totalNetInvestedFund += frData.totalNetInvestorFund;
     totalGrossInvestedFund += frData.totalGrossCapital;
     totalAdminFees += frData.totalAdminFees;
     totalNetPresentValue += frData.totalGainedFund; // For floating rate, current value is gained fund
-    totalGainLoss += frData.totalGainedFund - frData.totalNetCapital;
+    totalGainLoss += frData.totalGainedFund - frData.totalNetInvestorFund;
     activeInvestments += frData.activeAccountsCount;
   }
 

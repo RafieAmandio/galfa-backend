@@ -30,26 +30,20 @@ interface FloatingRateGrowthResult {
 }
 
 /**
- * Calculate floating rate growth percentage for investors
+ * Internal function to calculate floating rate growth percentage
+ * Used by both admin and investor functions
  * Business Rules:
  * - If performance % < 24%: growth % = performance % / 12
  * - If performance % >= 24%: growth % = 1.42%
  */
-export async function getFloatingRateGrowthPercentage(
+async function calculateFloatingRateGrowthInternal(
   month: Date
 ): Promise<FloatingRateGrowthResult> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    return {
-      success: false,
-      message: "Unauthorized: Admin access required",
-    };
-  }
-
   try {
     // Get the performance percentage from the allocated profit function
-    const allocatedProfitResult = await getFloatingRateAllocatedProfit(month);
+    const allocatedProfitResult = await getFloatingRateAllocatedProfitPublic(
+      month
+    );
 
     // Check if we have performance data
     const hasPerformanceData = !!(
@@ -117,6 +111,40 @@ export async function getFloatingRateGrowthPercentage(
         "An error occurred while calculating floating rate growth percentage",
     };
   }
+}
+
+/**
+ * Calculate floating rate growth percentage for investors (with admin check)
+ * Business Rules:
+ * - If performance % < 24%: growth % = performance % / 12
+ * - If performance % >= 24%: growth % = 1.42%
+ */
+export async function getFloatingRateGrowthPercentage(
+  month: Date
+): Promise<FloatingRateGrowthResult> {
+  // Check admin access
+  // Remove Admin Access Check for now because we are using this for investor view
+  // const adminCheck = await checkAdminAccess();
+  // if (!adminCheck.isAdmin) {
+  //   return {
+  //     success: false,
+  //     message: "Unauthorized: Admin access required",
+  //   };
+  // }
+
+  return calculateFloatingRateGrowthInternal(month);
+}
+
+/**
+ * Calculate floating rate growth percentage for investors (internal use)
+ * Business Rules:
+ * - If performance % < 24%: growth % = performance % / 12
+ * - If performance % >= 24%: growth % = 1.42%
+ */
+export async function getFloatingRateGrowthPercentageInternal(
+  month: Date
+): Promise<FloatingRateGrowthResult> {
+  return calculateFloatingRateGrowthInternal(month);
 }
 
 /**

@@ -28,6 +28,7 @@ import {
   MonthlyValueResult,
 } from "@/lib/utils/floating-rate-calculator";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+import { getCurrentUser } from "@/lib/auth/get-current-user";
 
 interface MonthlyRedemption {
   amount: number;
@@ -89,17 +90,20 @@ interface FloatingRateInvestmentsWithMonthlyResult {
 /**
  * Get all floating rate investments with monthly performance data using compound growth calculation
  */
-export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promise<FloatingRateInvestmentsWithMonthlyResult> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
+export async function getFloatingRateInvestmentsWithMonthlyPerformanceOfCurrentUser(): Promise<FloatingRateInvestmentsWithMonthlyResult> {
+  // Get current User
+  const user = await getCurrentUser();
+  if (!user?.user) {
     return {
       success: false,
-      message: "Unauthorized: Admin access required",
+      message: "Unauthorized: User not found",
     };
   }
 
   const db = createDrizzleConnection();
+
+  // Get user's id
+  const userId = user.user.id;
 
   try {
     // Get all floating rate accounts with related information
@@ -119,6 +123,7 @@ export async function getFloatingRateInvestmentsWithMonthlyPerformance(): Promis
         adminFee: floatingRateAccounts.admin_fee,
       })
       .from(accounts)
+      .where(eq(accounts.user_id, userId))
       .innerJoin(
         floatingRateAccounts,
         eq(accounts.id, floatingRateAccounts.account_id)
