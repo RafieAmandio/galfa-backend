@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   createFlatRateAccount,
-  getAllInvestors,
   validateParentAccount,
   getMaturedAccountsForRollover,
 } from "../actions/create-flat-rate-account";
@@ -15,6 +14,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { getAllInvestors } from "@/features/investor/actions/get-all-investors";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";

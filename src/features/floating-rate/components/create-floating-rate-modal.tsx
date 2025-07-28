@@ -301,7 +301,7 @@ export function CreateFloatingRateModal({
                   step="1"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Total investment amount before admin fees
+                  Total investment amount
                 </p>
               </div>
 

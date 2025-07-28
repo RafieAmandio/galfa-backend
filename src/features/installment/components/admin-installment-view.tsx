@@ -1,13 +1,16 @@
 "use client";
 
+import { CreateInstallmentAccountModal } from "@/features/installment/components/create-installment-account-modal";
 import { AdminInstallmentTable } from "@/features/installment/views/admin-installment-table";
-import type { AuthUser } from "@/lib/auth/server-auth-helpers";
+import { InvestorOption } from "@/features/investor/actions/get-all-investors";
 
 interface AdminInstallmentViewProps {
-  user: AuthUser;
+  investorEmails: InvestorOption[];
 }
 
-export function AdminInstallmentView({ user }: AdminInstallmentViewProps) {
+export function AdminInstallmentView({
+  investorEmails,
+}: AdminInstallmentViewProps) {
   return (
     <div className="container mx-auto p-4">
       <div className="mb-6">
@@ -18,6 +21,10 @@ export function AdminInstallmentView({ user }: AdminInstallmentViewProps) {
           Track gained funds, present value, and net present value for all
           installment investments.
         </p>
+      </div>
+
+      <div className="flex justify-end mb-4">
+        <CreateInstallmentAccountModal investorEmails={investorEmails} />
       </div>
 
       <AdminInstallmentTable />

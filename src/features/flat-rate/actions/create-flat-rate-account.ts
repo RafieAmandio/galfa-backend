@@ -9,9 +9,10 @@ import {
   authUsers,
   mutations,
 } from "@/db/drizzle/schema";
-import { eq, or, and, isNull } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
+import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
 interface CreateFlatRateAccountRequest {
   investorEmail: string;
@@ -32,58 +33,6 @@ interface CreateFlatRateAccountResult {
   accountNumber?: string;
   adminFee?: number;
   netCapital?: number;
-}
-
-interface InvestorOption {
-  id: string;
-  email: string;
-  fullName: string | null;
-}
-
-/**
- * Get list of all investors for admin to select from
- */
-export async function getAllInvestors(): Promise<InvestorOption[]> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
-  }
-
-  const db = createDrizzleConnection();
-
-  const results = await db
-    .select({
-      id: profiles.id,
-      email: authUsers.email,
-      fullName: profiles.full_name,
-    })
-    .from(profiles)
-    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
-    .orderBy(authUsers.email);
-
-  return results
-    .filter((result) => result.email !== null)
-    .map((result) => ({
-      id: result.id,
-      email: result.email!,
-      fullName: result.fullName,
-    }));
-}
-
-/**
- * Check if account number is unique
- */
-async function isAccountNumberUnique(accountNumber: string): Promise<boolean> {
-  const db = createDrizzleConnection();
-
-  const existingAccount = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(eq(accounts.account_number, accountNumber))
-    .limit(1);
-
-  return existingAccount.length === 0;
 }
 
 /**

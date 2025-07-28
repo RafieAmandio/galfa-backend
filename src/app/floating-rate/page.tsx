@@ -1,6 +1,6 @@
 import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 import { getFloatingRateInvestmentsWithMonthlyPerformance } from "@/features/floating-rate/actions/get-floating-rate-investments-with-monthly-performance";
-import { getAllInvestors } from "@/features/floating-rate/actions/create-floating-rate-account";
+import { getAllInvestors } from "@/features/investor/actions/get-all-investors";
 import { getFloatingRateAccountsForRedemption } from "@/features/floating-rate/actions/get-floating-rate-accounts-for-redemption";
 import { AdminFloatingRateView } from "@/features/floating-rate/components/admin-floating-rate-view";
 

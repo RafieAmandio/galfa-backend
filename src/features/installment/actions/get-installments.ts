@@ -172,21 +172,16 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
       monthlyCof: installmentAccounts.monthly_cof,
       adminFee: installmentAccounts.admin_fee,
       investmentType: installmentAccounts.investment_type,
+      // Get email from auth users
+      email: authUsers.email,
     })
     .from(accounts)
     .innerJoin(
       installmentAccounts,
       eq(accounts.id, installmentAccounts.account_id)
     )
-    .leftJoin(profiles, eq(accounts.user_id, profiles.id));
-
-  // Get user emails for investor information
-  const userProfiles = await db
-    .select({
-      userId: profiles.id,
-      email: profiles.id, // Will join with auth.users to get email
-    })
-    .from(profiles);
+    .leftJoin(profiles, eq(accounts.user_id, profiles.id))
+    .leftJoin(authUsers, eq(profiles.id, authUsers.id));
 
   let totalGainedFunds = 0;
   let totalPresentValueFund = 0;
@@ -250,7 +245,7 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
     return {
       id: result.id,
       accountNumber: result.accountNumber,
-      investorEmail: `investor-${result.userId}`, // Placeholder - would need to join with auth.users
+      investorEmail: result.email || `Unknown (${result.userId})`, // Use actual email or fallback
       grossCapital,
       adminFee,
       netCapital,

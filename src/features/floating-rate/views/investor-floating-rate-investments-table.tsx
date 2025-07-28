@@ -795,7 +795,7 @@ export default function InvestorFloatingRateInvestmentsTable({
               {formatCurrency(totals.grossCapital)}
             </div>
             <p className="text-xs text-muted-foreground">
-              Your original capital (before admin fees)
+              Your original capital
             </p>
           </CardContent>
         </Card>
