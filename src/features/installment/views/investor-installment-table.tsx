@@ -8,6 +8,7 @@ interface InvestorInstallmentSummary {
   investorEmail: string;
   totalNetInvestorFund: number;
   totalRedeemedAmount: number;
+  totalRedemptions: number;
   investments: any[];
 }
 
@@ -87,7 +88,7 @@ export function InvestorInstallmentTable({
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-lg shadow">
           <h3 className="text-sm font-medium text-gray-500">
             Total Net Investor Fund
@@ -113,6 +114,21 @@ export function InvestorInstallmentTable({
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Amount received back after redemption
+          </p>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-sm font-medium text-gray-500">
+            Total Redemptions
+          </h3>
+          <p className="mt-2 text-3xl font-bold text-red-600">
+            {new Intl.NumberFormat("id-ID", {
+              style: "currency",
+              currency: "IDR",
+            }).format(summary.totalRedemptions || 0)}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Early redemptions processed
           </p>
         </div>
       </div>

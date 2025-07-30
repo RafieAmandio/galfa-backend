@@ -567,6 +567,38 @@ export function AdminInstallmentTable() {
         ),
         filterFn: numberRangeFilter,
       },
+      {
+        accessorKey: "totalRedemptions",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Total Redemptions
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-mono text-red-600 font-medium text-right">
+            {formatCurrency(getValue() as number)}
+          </div>
+        ),
+        filterFn: numberRangeFilter,
+      },
     ],
     [uniqueTypes]
   );
@@ -629,11 +661,14 @@ export function AdminInstallmentTable() {
       totalPresentValueFund:
         acc.totalPresentValueFund + investment.presentValueFund,
       totalGainedFunds: acc.totalGainedFunds + investment.totalGainedFunds,
+      totalRedemptions:
+        acc.totalRedemptions + (investment.totalRedemptions || 0),
     }),
     {
       totalNetCapital: 0,
       totalPresentValueFund: 0,
       totalGainedFunds: 0,
+      totalRedemptions: 0,
     }
   );
 
@@ -917,9 +952,6 @@ export function AdminInstallmentTable() {
                                     Monthly Details for{" "}
                                     {row.original.accountNumber}
                                   </span>
-                                  <Badge variant="outline">
-                                    {row.original.monthlyData.length} months
-                                  </Badge>
                                 </div>
 
                                 <div className="rounded-md border bg-background">
@@ -1006,6 +1038,9 @@ export function AdminInstallmentTable() {
                         </TableCell>
                         <TableCell className="font-mono font-bold text-green-600 text-right">
                           {formatCurrency(totals.totalGainedFunds)}
+                        </TableCell>
+                        <TableCell className="font-mono font-bold text-red-600 text-right">
+                          {formatCurrency(totals.totalRedemptions)}
                         </TableCell>
                       </TableRow>
                     )}

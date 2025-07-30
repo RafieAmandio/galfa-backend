@@ -5,11 +5,9 @@ import {
   accounts,
   installmentAccounts,
   accountTypes,
-  profiles,
   authUsers,
-  mutations,
 } from "@/db/drizzle/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 import { zfd } from "zod-form-data";

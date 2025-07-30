@@ -5,6 +5,7 @@ import { accounts, installmentAccounts, profiles } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
 import { authUsers } from "@/db/drizzle/schema";
+import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
 
 interface MonthlyInstallmentData {
   monthYear: string;
@@ -36,6 +37,7 @@ interface InstallmentInvestment {
   totalRedeemedAmount: number;
   netPresentValueFund: number;
   totalGainedFunds: number; // Total interest gained by admin
+  totalRedemptions: number; // Total redemptions from mutations table
   // Investor view specific
   totalNetInvestorFund: number; // Running total after redemptions
 }
@@ -52,6 +54,7 @@ interface InvestorInstallmentSummary {
   investorEmail: string;
   totalNetInvestorFund: number;
   totalRedeemedAmount: number;
+  totalRedemptions: number;
   investments: InstallmentInvestment[];
 }
 
@@ -188,82 +191,96 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
   let totalNetPresentValueFund = 0;
   const monthlyGainedFunds: { [monthYear: string]: number } = {};
 
-  const investments = results.map((result) => {
-    const grossCapital = Number(result.grossCapital);
-    const adminFee = Number(result.adminFee);
-    const netCapital = calculateNetCapital(grossCapital, adminFee);
-    const monthlyCof = Number(result.monthlyCof);
-    const durationMonths = calculateDurationMonths(
-      result.startDate,
-      result.endDate!
-    );
-    const investmentType = result.investmentType as
-      | "principle"
-      | "interest_only";
-    const monthlyPrincipalPayment =
-      investmentType === "principle" ? netCapital / durationMonths : null;
+  const investments = await Promise.all(
+    results.map(async (result) => {
+      const grossCapital = Number(result.grossCapital);
+      const adminFee = Number(result.adminFee);
+      const netCapital = calculateNetCapital(grossCapital, adminFee);
+      const monthlyCof = Number(result.monthlyCof);
+      const durationMonths = calculateDurationMonths(
+        result.startDate,
+        result.endDate!
+      );
+      const investmentType = result.investmentType as
+        | "principle"
+        | "interest_only";
+      const monthlyPrincipalPayment =
+        investmentType === "principle" ? netCapital / durationMonths : null;
 
-    // Calculate monthly data
-    const monthlyData = calculateInstallmentData(
-      netCapital,
-      monthlyCof,
-      durationMonths,
-      investmentType,
-      result.startDate
-    );
+      // Calculate current value with redemptions
+      const currentValueWithRedemptions =
+        await calculateInstallmentValueWithRedemptions(
+          result.id,
+          netCapital,
+          monthlyCof,
+          investmentType,
+          result.startDate,
+          new Date()
+        );
 
-    // Calculate metrics for admin view
-    const totalInterestGained = monthlyData.reduce(
-      (sum, month) => sum + month.interestPayment,
-      0
-    );
-    const totalRedeemedAmount = monthlyData.reduce(
-      (sum, month) => sum + month.totalPayment,
-      0
-    );
+      // Calculate monthly data
+      const monthlyData = calculateInstallmentData(
+        netCapital,
+        monthlyCof,
+        durationMonths,
+        investmentType,
+        result.startDate
+      );
 
-    // Present value fund is current value of the investment
-    const presentValueFund = netCapital + totalInterestGained;
-    const netPresentValueFund = presentValueFund - totalRedeemedAmount;
+      // Calculate metrics for admin view
+      const totalInterestGained = monthlyData.reduce(
+        (sum, month) => sum + month.interestPayment,
+        0
+      );
+      const totalRedeemedAmount = monthlyData.reduce(
+        (sum, month) => sum + month.totalPayment,
+        0
+      );
 
-    // Accumulate admin totals
-    totalGainedFunds += totalInterestGained;
-    totalPresentValueFund += presentValueFund;
-    totalNetPresentValueFund += netPresentValueFund;
+      // Present value fund is current value of the investment with redemptions
+      const presentValueFund = currentValueWithRedemptions.currentValue;
+      const netPresentValueFund = presentValueFund;
 
-    // Accumulate monthly gains for admin
-    monthlyData.forEach((month) => {
-      // Safety check to ensure monthYear is valid
-      if (month && month.monthYear && typeof month.monthYear === "string") {
-        if (!monthlyGainedFunds[month.monthYear]) {
-          monthlyGainedFunds[month.monthYear] = 0;
+      // Accumulate admin totals
+      totalGainedFunds += totalInterestGained;
+      totalPresentValueFund += presentValueFund;
+      totalNetPresentValueFund += netPresentValueFund;
+
+      // Accumulate monthly gains for admin
+      monthlyData.forEach((month) => {
+        // Safety check to ensure monthYear is valid
+        if (month && month.monthYear && typeof month.monthYear === "string") {
+          if (!monthlyGainedFunds[month.monthYear]) {
+            monthlyGainedFunds[month.monthYear] = 0;
+          }
+          monthlyGainedFunds[month.monthYear] += month.interestPayment;
         }
-        monthlyGainedFunds[month.monthYear] += month.interestPayment;
-      }
-    });
+      });
 
-    return {
-      id: result.id,
-      accountNumber: result.accountNumber,
-      investorEmail: result.email || `Unknown (${result.userId})`, // Use actual email or fallback
-      grossCapital,
-      adminFee,
-      netCapital,
-      monthlyCof,
-      durationMonths,
-      investmentType,
-      monthlyPrincipalPayment,
-      startDate: result.startDate,
-      endDate: result.endDate,
-      status: result.status,
-      monthlyData,
-      presentValueFund,
-      totalRedeemedAmount,
-      netPresentValueFund,
-      totalGainedFunds: totalInterestGained,
-      totalNetInvestorFund: netCapital,
-    } as InstallmentInvestment;
-  });
+      return {
+        id: result.id,
+        accountNumber: result.accountNumber,
+        investorEmail: result.email || `Unknown (${result.userId})`, // Use actual email or fallback
+        grossCapital,
+        adminFee,
+        netCapital,
+        monthlyCof,
+        durationMonths,
+        investmentType,
+        monthlyPrincipalPayment,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        status: result.status,
+        monthlyData,
+        presentValueFund,
+        totalRedeemedAmount,
+        netPresentValueFund,
+        totalGainedFunds: totalInterestGained,
+        totalRedemptions: currentValueWithRedemptions.totalRedemptions,
+        totalNetInvestorFund: netCapital,
+      } as InstallmentInvestment;
+    })
+  );
 
   return {
     totalGainedFunds,
@@ -321,77 +338,95 @@ export async function getInvestorInstallmentInvestments(
       investorEmail,
       totalNetInvestorFund: 0,
       totalRedeemedAmount: 0,
+      totalRedemptions: 0,
       investments: [],
     };
   }
 
   let totalNetInvestorFund = 0;
   let totalRedeemedAmount = 0;
+  let totalRedemptions = 0;
 
-  const investments = results.map((result) => {
-    const grossCapital = Number(result.grossCapital);
-    const adminFeePercentage = Number(result.adminFee);
-    const netCapital = calculateNetCapital(grossCapital, adminFeePercentage);
-    const monthlyCof = Number(result.monthlyCof);
-    const durationMonths = calculateDurationMonths(
-      result.startDate,
-      result.endDate!
-    );
-    const investmentType = result.investmentType as
-      | "principle"
-      | "interest_only";
-    const monthlyPrincipalPayment =
-      investmentType === "principle" ? netCapital / durationMonths : null;
+  const investments = await Promise.all(
+    results.map(async (result) => {
+      const grossCapital = Number(result.grossCapital);
+      const adminFeePercentage = Number(result.adminFee);
+      const netCapital = calculateNetCapital(grossCapital, adminFeePercentage);
+      const monthlyCof = Number(result.monthlyCof);
+      const durationMonths = calculateDurationMonths(
+        result.startDate,
+        result.endDate!
+      );
+      const investmentType = result.investmentType as
+        | "principle"
+        | "interest_only";
+      const monthlyPrincipalPayment =
+        investmentType === "principle" ? netCapital / durationMonths : null;
 
-    // Calculate monthly data
-    const monthlyData = calculateInstallmentData(
-      netCapital,
-      monthlyCof,
-      durationMonths,
-      investmentType,
-      result.startDate
-    );
+      // Calculate current value with redemptions
+      const currentValueWithRedemptions =
+        await calculateInstallmentValueWithRedemptions(
+          result.id,
+          netCapital,
+          monthlyCof,
+          investmentType,
+          result.startDate,
+          new Date()
+        );
 
-    // Calculate metrics for investor view
-    const totalRedeemedForAccount = monthlyData.reduce(
-      (sum, month) => sum + month.totalPayment,
-      0
-    );
-    const remainingNetFund =
-      monthlyData.length > 0
-        ? monthlyData[monthlyData.length - 1].netPresentValue
-        : netCapital;
+      // Calculate monthly data
+      const monthlyData = calculateInstallmentData(
+        netCapital,
+        monthlyCof,
+        durationMonths,
+        investmentType,
+        result.startDate
+      );
 
-    totalNetInvestorFund += netCapital;
-    totalRedeemedAmount += totalRedeemedForAccount;
+      // Calculate metrics for investor view
+      const totalRedeemedForAccount = monthlyData.reduce(
+        (sum, month) => sum + month.totalPayment,
+        0
+      );
+      const remainingNetFund =
+        monthlyData.length > 0
+          ? monthlyData[monthlyData.length - 1].netPresentValue
+          : netCapital;
 
-    return {
-      id: result.id,
-      accountNumber: result.accountNumber,
-      investorEmail,
-      grossCapital,
-      adminFee: grossCapital * adminFeePercentage,
-      netCapital,
-      monthlyCof,
-      durationMonths,
-      investmentType,
-      monthlyPrincipalPayment,
-      startDate: result.startDate,
-      endDate: result.endDate,
-      status: result.status,
-      monthlyData,
-      presentValueFund: 0, // Not needed for investor view
-      totalRedeemedAmount: totalRedeemedForAccount,
-      netPresentValueFund: 0, // Not needed for investor view
-      totalGainedFunds: 0, // Not needed for investor view
-      totalNetInvestorFund: remainingNetFund,
-    } as InstallmentInvestment;
-  });
+      totalNetInvestorFund += netCapital;
+      totalRedeemedAmount += totalRedeemedForAccount;
+      totalRedemptions += currentValueWithRedemptions.totalRedemptions;
+
+      return {
+        id: result.id,
+        accountNumber: result.accountNumber,
+        investorEmail,
+        grossCapital,
+        adminFee: grossCapital * adminFeePercentage,
+        netCapital,
+        monthlyCof,
+        durationMonths,
+        investmentType,
+        monthlyPrincipalPayment,
+        startDate: result.startDate,
+        endDate: result.endDate,
+        status: result.status,
+        monthlyData,
+        presentValueFund: 0, // Not needed for investor view
+        totalRedeemedAmount: totalRedeemedForAccount,
+        netPresentValueFund: 0, // Not needed for investor view
+        totalGainedFunds: 0, // Not needed for investor view
+        totalRedemptions: currentValueWithRedemptions.totalRedemptions,
+        totalNetInvestorFund: remainingNetFund,
+      } as InstallmentInvestment;
+    })
+  );
 
   return {
     investorEmail,
     totalNetInvestorFund,
     totalRedeemedAmount,
+    totalRedemptions,
     investments,
   };
 }
