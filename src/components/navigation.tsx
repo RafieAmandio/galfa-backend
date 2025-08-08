@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
+import { ChevronDown } from "lucide-react";
 
 interface NavigationProps {
   user: User | null;
@@ -14,6 +15,8 @@ interface NavigationProps {
 
 export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   const [loading, setLoading] = useState(false);
+  const [investmentsDropdownOpen, setInvestmentsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createBrowserClient();
@@ -36,6 +39,35 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       isActiveRoute(path) ? activeClasses : inactiveClasses
     }`;
   };
+
+  // Helper function to check if any investment route is active
+  const isAnyInvestmentRouteActive = () => {
+    const investmentRoutes = isAdmin
+      ? ["/flat-rate", "/floating-rate", "/installments"]
+      : [
+          "/investor/flat-rate",
+          "/investor/floating-rate",
+          "/investor/installments",
+        ];
+    return investmentRoutes.some((route) => isActiveRoute(route));
+  };
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setInvestmentsDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -72,24 +104,53 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       >
                         Dashboard
                       </Link>
-                      <Link
-                        href="/flat-rate"
-                        className={getLinkClasses("/flat-rate")}
-                      >
-                        Flat Rate
-                      </Link>
-                      <Link
-                        href="/floating-rate"
-                        className={getLinkClasses("/floating-rate")}
-                      >
-                        Floating Rate
-                      </Link>
-                      <Link
-                        href="/installments"
-                        className={getLinkClasses("/installments")}
-                      >
-                        Installments
-                      </Link>
+
+                      {/* Investments Dropdown */}
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setInvestmentsDropdownOpen(!investmentsDropdownOpen)
+                          }
+                          className={`flex items-center text-sm font-medium px-3 py-2 rounded-md transition-colors duration-200 ${
+                            isAnyInvestmentRouteActive()
+                              ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
+                              : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          Investments
+                          <ChevronDown
+                            className={`ml-1 h-4 w-4 transition-transform duration-200 ${
+                              investmentsDropdownOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {investmentsDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                            <div className="py-1">
+                              <Link
+                                href="/flat-rate"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Flat Rate
+                              </Link>
+                              <Link
+                                href="/floating-rate"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Floating Rate
+                              </Link>
+                              <Link
+                                href="/installments"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Installments
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       <Link
                         href="/admin/user-management"
                         className={getLinkClasses("/admin/user-management")}
@@ -102,6 +163,12 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       >
                         Performance
                       </Link>
+                      <Link
+                        href="/admin/mutations"
+                        className={getLinkClasses("/admin/mutations")}
+                      >
+                        Mutations
+                      </Link>
                     </>
                   ) : (
                     // Regular user navigation
@@ -112,24 +179,52 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       >
                         Dashboard
                       </Link>
-                      <Link
-                        href="/investor/flat-rate"
-                        className={getLinkClasses("/investor/flat-rate")}
-                      >
-                        Flat Rate
-                      </Link>
-                      <Link
-                        href="/investor/floating-rate"
-                        className={getLinkClasses("/investor/floating-rate")}
-                      >
-                        Floating Rate
-                      </Link>
-                      <Link
-                        href="/investor/installments"
-                        className={getLinkClasses("/investor/installments")}
-                      >
-                        Installments
-                      </Link>
+
+                      {/* Investments Dropdown */}
+                      <div className="relative" ref={dropdownRef}>
+                        <button
+                          onClick={() =>
+                            setInvestmentsDropdownOpen(!investmentsDropdownOpen)
+                          }
+                          className={`flex items-center text-sm font-medium px-3 py-2 rounded-md transition-colors duration-200 ${
+                            isAnyInvestmentRouteActive()
+                              ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
+                              : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
+                          }`}
+                        >
+                          Investments
+                          <ChevronDown
+                            className={`ml-1 h-4 w-4 transition-transform duration-200 ${
+                              investmentsDropdownOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        {investmentsDropdownOpen && (
+                          <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+                            <div className="py-1">
+                              <Link
+                                href="/investor/flat-rate"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Flat Rate
+                              </Link>
+                              <Link
+                                href="/investor/floating-rate"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Floating Rate
+                              </Link>
+                              <Link
+                                href="/investor/installments"
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                              >
+                                Installments
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>

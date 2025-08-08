@@ -29,6 +29,7 @@ Galfa Backend is a comprehensive investment platform built with Next.js that man
 - **dotenv**: Environment variable management
 - **recharts**: Charting library for financial data visualization
 - **🆕 @tanstack/react-table**: Advanced table management with filtering, sorting, and pagination
+- **🆕 zod & zod-form-data**: Type-safe form validation and parsing
 
 ### Development Tools
 
@@ -79,7 +80,22 @@ galfa-backend/
 │   │   ├── navigation.tsx          # Main navigation with role-based links
 │   │   ├── Auth.tsx                # Email/password authentication form
 │   │   ├── Account.tsx             # User profile management
-│   │   └── NoUserError.tsx         # Error component for unauthenticated users
+│   │   ├── NoUserError.tsx         # Error component for unauthenticated users
+│   │   ├── buttons/                # Shared button components
+│   │   │   └── submit-button.tsx   # Standardized submit button with loading state
+│   │   └── ui/                     # shadcn/ui components
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── calendar.tsx
+│   │       ├── card.tsx
+│   │       ├── checkbox.tsx
+│   │       ├── dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── popover.tsx
+│   │       ├── select.tsx
+│   │       ├── table.tsx
+│   │       └── textarea.tsx
 │   │
 │   ├── db/                         # Database layer
 │   │   ├── drizzle/               # Drizzle ORM configuration
@@ -160,7 +176,8 @@ galfa-backend/
 │   │           └── performance-table.tsx
 │   │
 │   ├── hooks/                      # Custom React hooks (CLIENT-SIDE)
-│   │   └── useAdminCheck.ts       # Client-side admin verification hook
+│   │   ├── useAdminCheck.ts       # Client-side admin verification hook
+│   │   └── useEffectEvent.ts      # Custom useEffectEvent hook for form handling
 │   │
 │   ├── lib/                        # Utility libraries
 │   │   ├── auth/                  # Authentication utilities
@@ -170,7 +187,8 @@ galfa-backend/
 │   │   │
 │   │   ├── utils/                 # General utilities
 │   │   │   ├── investment-calculator.ts  # NPV & compound interest
-│   │   │   └── rate-calculations.ts     # Financial rate conversions
+│   │   │   ├── rate-calculations.ts     # Financial rate conversions
+│   │   │   └── constants.ts       # Application constants
 │   │   │
 │   │   └── utils.ts               # Shared utility functions
 │   │
@@ -247,6 +265,262 @@ const user = await requireAdminOrRedirectToSummary();
 // For admin-only pages (no fallback)
 const user = await requireAdmin();
 ```
+
+### 🆕 **NEW STANDARD**: Form Handling Architecture
+
+#### **Core Principle**: Modern React Server Actions with `useActionState`
+
+#### **✅ STANDARD PATTERN**: Client Form Component (`*-modal.tsx`)
+
+```typescript
+"use client";
+
+import { useActionState, startTransition, useEffectEvent } from "react";
+import { createAccount } from "@/features/feature/actions/create-account";
+import { SubmitButton } from "@/components/buttons/submit-button";
+
+// Error display component
+function FieldError({ error }: { error?: string }) {
+  if (!error) return null;
+  return <p className="text-sm text-red-600 mt-1">{error}</p>;
+}
+
+export function CreateAccountModal({ data }: { data: any[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [actionState, actionDispatch, isActionPending] = useActionState(
+    createAccount,
+    undefined
+  );
+
+  // Form state for controlled inputs
+  const [formData, setFormData] = useState({
+    field1: "",
+    field2: "",
+    // ... other fields
+  });
+
+  // Reset form when modal opens/closes
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset form state when closing
+      setFormData({
+        field1: "",
+        field2: "",
+        // ... reset all fields
+      });
+    }
+  };
+
+  // Get field-specific errors
+  const getFieldError = (fieldName: string) => {
+    return actionState?.errors?.find((error: any) => error.field === fieldName)
+      ?.message;
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    startTransition(() => {
+      const formDataObj = new FormData();
+      formDataObj.append("field1", formData.field1);
+      formDataObj.append("field2", formData.field2);
+      // ... append all fields
+
+      actionDispatch(formDataObj);
+    });
+  };
+
+  // Handle action state changes
+  const actionEffectEvent = useEffectEvent((state: typeof actionState) => {
+    if (state) {
+      if (state.success && state.message) {
+        // Reset form state on success
+        setFormData({
+          field1: "",
+          field2: "",
+          // ... reset all fields
+        });
+
+        // Close modal after success
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 2000);
+      } else if (state.errors && state.errors.length > 0) {
+        // Scroll to first error
+        setTimeout(() => {
+          const firstError = state.errors[0];
+          const errorField = document.getElementById(firstError.field);
+
+          if (errorField) {
+            errorField.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            errorField.focus();
+          }
+        }, 100);
+      }
+    }
+  });
+
+  useEffect(
+    () => actionEffectEvent(actionState),
+    [actionState, actionEffectEvent]
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button>Create Account</Button>
+      </DialogTrigger>
+
+      <DialogContent className="max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>Create Account</DialogTitle>
+        </DialogHeader>
+
+        {/* Success/Error Messages */}
+        <div className="px-2">
+          {actionState?.message && (
+            <div
+              className={cn(
+                "p-3 rounded-md text-sm flex-shrink-0",
+                actionState.success
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              )}
+            >
+              {actionState.message}
+            </div>
+          )}
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 overflow-y-auto px-2 flex-1"
+        >
+          {/* Form Fields */}
+          <div className="space-y-2">
+            <Label htmlFor="field1" className="text-sm font-medium">
+              Field 1 *
+            </Label>
+            <Input
+              id="field1"
+              value={formData.field1}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, field1: e.target.value }))
+              }
+              required
+            />
+            <FieldError error={getFieldError("field1")} />
+          </div>
+
+          {/* Submit Button */}
+          <SubmitButton fullWidth loading={isActionPending}>
+            Create Account
+          </SubmitButton>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+#### **✅ STANDARD PATTERN**: Server Action (`actions/create-*.ts`)
+
+```typescript
+"use server";
+
+import { zfd } from "zod-form-data";
+import { z } from "zod";
+import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { createDrizzleConnection } from "@/db/drizzle/connection";
+
+export async function createAccount(prevState: any, formData: FormData) {
+  // 1. Admin Check (if required)
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    return {
+      success: false,
+      message: "Unauthorized: Admin access required",
+    };
+  }
+
+  // 2. Validation using zod-form-data and zod
+  const validationResult = await zfd
+    .formData({
+      field1: zfd.text(z.string().min(1)),
+      field2: zfd.numeric(z.number().min(0)),
+      // ... other field validations
+    })
+    .safeParseAsync(formData);
+
+  if (!validationResult.success) {
+    return {
+      success: false,
+      message: "Validation failed",
+      errors: validationResult.error.issues.map((err: any) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+    };
+  }
+
+  const { field1, field2 } = validationResult.data;
+
+  try {
+    // 3. Business logic validation
+    // ... custom validation logic
+
+    // 4. Database operations
+    const db = await createDrizzleConnection();
+
+    // ... database operations
+
+    return {
+      success: true,
+      message: "Account created successfully",
+      data: {
+        // ... created data
+      },
+    };
+  } catch (error) {
+    console.error("Error creating account:", error);
+    return {
+      success: false,
+      message: "Failed to create account",
+      errors: [{ field: "general", message: "An unexpected error occurred" }],
+    };
+  }
+}
+```
+
+#### **Form Component Requirements**:
+
+1. **Always use `useActionState`** for form state management
+2. **Use controlled inputs** with local state for all form fields
+3. **Implement proper form reset** on modal close and success
+4. **Include field-specific error handling** with `FieldError` component
+5. **Use `startTransition`** for form submission
+6. **Implement error scrolling** to first error field
+7. **Use `useEffectEvent`** for action state handling
+8. **Include success/error message display**
+9. **Use `SubmitButton`** component for consistent loading states
+10. **Implement proper form validation** with HTML5 and server-side validation
+
+#### **Server Action Requirements**:
+
+1. **Always use `"use server"`** directive
+2. **Implement proper authentication checks** at the beginning
+3. **Use `zod-form-data` and `zod`** for type-safe validation
+4. **Return consistent response format** with success/error states
+5. **Include field-specific error mapping** for validation errors
+6. **Handle business logic validation** after schema validation
+7. **Use proper error handling** with try-catch blocks
+8. **Return meaningful error messages** for debugging
+9. **Include proper TypeScript types** for all parameters and returns
+10. **Use database transactions** for complex operations
 
 ### 🔐 Authentication System
 
@@ -378,551 +652,24 @@ graph TD
     K --> L[Client-Side State Management]
 ```
 
-### Investment Calculation Engine
-
-1. **Admin Fee Processing**: 5% fee calculation with rollover exemptions
-2. **Compound Interest**: Monthly compounding with daily proportioning
-3. **NPV Calculations**: Real-time portfolio valuations
-4. **Rollover Logic**: Seamless investment renewals without fee duplication
-
-### Key Server Actions
-
-#### **Investor Portfolio Management**
-
-```typescript
-// Get complete investor portfolio summary
-getInvestorSummary(investorEmail: string): Promise<InvestorSummary>
-
-// Get comprehensive portfolio data
-getComprehensiveInvestorSummary(investorEmail: string): Promise<ComprehensiveInvestorSummary>
-
-// List all investor emails (admin only)
-getAllInvestorEmails(): Promise<string[]>
-```
-
-#### **Admin Investment Analytics**
-
-```typescript
-// Get all flat rate investment details
-getFlatRateInvestments(): Promise<FlatRateInvestment[]>
-
-// Get portfolio-wide statistics
-getPrincipleFixRate(): Promise<PrincipleFixRateResult>
-```
-
-#### **Financial Calculations**
-
-```typescript
-// Generic investment growth calculator
-calculateInvestmentGrowth(grossCapital, annualRate, startDate, endDate)
-
-// Convert annual to monthly compound rates
-getMonthlyCompoundRate(capital: number, annualRate: number): number
-```
-
-## 🛡️ Security & Best Practices
-
-### 1. **Authentication Security**
-
-- **🆕 Server-Side First**: All authentication checks happen on the server
-- Supabase Auth with email verification
-- Secure session management with httpOnly cookies
-- Role-based route protection at middleware level
-- **🆕 Automatic Redirects**: Server-side redirects prevent unauthorized access
-- Client-side auth state synchronization
-
-### 2. **Database Security**
-
-- Row Level Security (RLS) policies
-- Foreign key constraints for data integrity
-- Prepared statements via Drizzle ORM
-- Environment variable protection for credentials
-
-### 3. **Type Safety**
-
-- Comprehensive TypeScript coverage
-- Drizzle ORM type inference
-- Interface definitions for all data structures
-- Strict type checking enabled
-
-### 4. **Performance Optimization**
-
-- **🆕 Server-Side Rendering**: Faster initial page loads
-- Database indexes on frequently queried columns
-- Connection pooling for database operations
-- Efficient query patterns with joins
-- Real-time calculations with caching strategies
-
-## 🎨 UI/UX Features
-
-### Design System
-
-- **Tailwind CSS 4**: Modern utility-first styling
-- **Responsive Design**: Mobile-first approach
-- **Component Library**: Reusable UI components
-- **Consistent Styling**: Centralized design tokens
-
-### Navigation & UX
-
-- **Role-Based Navigation**: Different menus for investors vs admins
-- **🆕 Server-Side Data Loading**: No loading spinners for initial data
-- **Real-Time Updates**: Live portfolio valuations
-- **Error Handling**: Graceful error states and loading indicators
-
-## 📈 Financial Modeling
-
-### Mathematical Precision
-
-- **Decimal Precision**: PostgreSQL DECIMAL types for monetary values
-- **Compound Interest**: Accurate monthly compounding formulas
-- **Time-Weighted Returns**: Proper handling of investment periods
-- **Currency Formatting**: Indonesian Rupiah (IDR) formatting
-
-### Investment Rules
-
-1. **Admin Fee Logic**: Single 5% fee per investment chain
-2. **Rollover Processing**: No additional fees on renewals
-3. **Portfolio Calculation**: Proper exclusion of parent accounts
-4. **NPV Accuracy**: Real-time value calculations with compound growth
-
-## 🔄 Data Flow Examples
-
-### New Investment Process
-
-```
-User Registration → Profile Creation → Investment → Admin Fee Calculation →
-Portfolio Addition → NPV Tracking → Compound Interest Application
-```
-
-### Rollover Process
-
-```
-Investment Maturity → Rollover Decision → New Account Creation →
-Parent Account Closure → Fee Exemption → Continued Growth Tracking
-```
-
-### 🆕 **NEW**: Page Load Process
-
-```
-User Request → Server Auth Check → Data Fetching → View Component Render → Client Hydration
-```
-
-## 🚀 Deployment Considerations
-
-### Platforms
-
-- **Vercel**: Recommended for Next.js applications
-- **AWS/Digital Ocean**: Custom server deployments
-- **Supabase**: Database hosting and authentication
-
-### Configuration
-
-- Environment variables properly configured
-- Database migrations applied
-- Authentication providers set up
-- SSL certificates for production
-
-## 📋 **NEW STANDARD**: Development Guidelines
-
-### ✅ **DO's**:
-
-1. **Always use server components for page.tsx files**
-2. **Handle authentication server-side using auth helpers**
-3. **Fetch all data server-side before rendering**
-4. **Pass data as props to client View components**
-5. **Name client components with descriptive suffixes** (`*-view.tsx`, `*-modal.tsx`, `*-table.tsx`)
-6. **Keep server components minimal** (auth + data fetching only)
-7. **Keep all UI logic in client components**
-
-### ❌ **DON'Ts**:
-
-1. **Don't use client components for page.tsx files**
-2. **Don't handle authentication client-side in page components**
-3. **Don't fetch data client-side for initial page load**
-4. **Don't mix UI logic with data fetching in the same component**
-5. **Don't use useEffect for initial data loading**
-6. **Don't create loading states for server-fetched data**
-
-### 🔧 **Component Creation Checklist**:
-
-- [ ] Is this a page route? → Create server component `page.tsx`
-- [ ] Does it need authentication? → Use appropriate auth helper
-- [ ] Does it need data? → Fetch server-side
-- [ ] Does it have UI interactions? → Create client View component
-- [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
-- [ ] Is it a data table? → Create `*-table.tsx` client component
-
-This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.
-
-# Galfa Backend - Investment Platform Technical Documentation
-
-## 🚀 Project Overview
-
-Galfa Backend is a comprehensive investment platform built with Next.js that manages fixed-rate, floating-rate, and installment-based investment accounts. The platform features user authentication, admin panels, real-time portfolio calculations, and sophisticated financial modeling with compound interest calculations.
-
-## 🛠️ Tech Stack Overview
-
-### Core Technologies
-
-- **Framework**: Next.js 15.3.2 (React 19-based framework)
-- **Language**: TypeScript 5
-- **Database**: PostgreSQL with Drizzle ORM
-- **Authentication**: Supabase Auth with Row Level Security (RLS)
-- **Styling**: Tailwind CSS 4
-- **Charts**: Recharts 2.15.3
-- **Date Handling**: date-fns 4.1.0
-
-### Key Dependencies
-
-- **@supabase/ssr**: Server-side rendering utilities for Supabase
-- **@supabase/supabase-js**: Supabase client library
-- **drizzle-orm**: Type-safe ORM for database operations
-- **postgres**: PostgreSQL client for Node.js
-- **dotenv**: Environment variable management
-- **recharts**: Charting library for financial data visualization
-
-### Development Tools
-
-- **drizzle-kit**: Database migration and management
-- **TypeScript**: Static type checking
-- **Tailwind CSS**: Utility-first CSS framework
-- **Turbopack**: Next.js development server (dev mode)
-
-## 📁 Project Structure
-
-```
-galfa-backend/
-├── src/
-│   ├── app/                         # Next.js 15 app directory
-│   │   ├── layout.tsx              # Root layout with navigation
-│   │   ├── page.tsx                # Homepage with role-based access
-│   │   ├── globals.css             # Global styles & Tailwind config
-│   │   ├── favicon.ico             # Site favicon
-│   │   │
-│   │   ├── investor/               # Investor dashboard pages (SERVER COMPONENTS)
-│   │   │   ├── summary/            # Portfolio summary page
-│   │   │   │   └── page.tsx        # Server component - auth + data fetching
-│   │   │   ├── flat-rate/          # Flat rate investments page
-│   │   │   │   └── page.tsx        # Server component - auth + data fetching
-│   │   │   ├── floating-rate/      # Floating rate investments page
-│   │   │   │   └── page.tsx        # Server component - auth + data fetching
-│   │   │   └── installments/       # Installment investments page
-│   │   │       └── page.tsx        # Server component - auth + data fetching
-│   │   │
-│   │   ├── admin/                  # Admin pages (SERVER COMPONENTS)
-│   │   │   ├── dashboard/          # Admin dashboard
-│   │   │   │   └── page.tsx        # Server component - admin auth + data
-│   │   │   ├── performance/        # Performance analytics
-│   │   │   │   └── page.tsx        # Server component - admin auth + data
-│   │   │   └── user-management/    # User management
-│   │   │       └── page.tsx        # Server component - admin auth + data
-│   │   │
-│   │   ├── flat-rate/              # Admin flat-rate investments page
-│   │   │   └── page.tsx            # Server component - admin auth only
-│   │   │
-│   │   ├── floating-rate/          # Admin floating-rate page
-│   │   │   └── page.tsx            # Server component - admin auth only
-│   │   │
-│   │   └── installments/           # Admin installments page
-│   │       └── page.tsx            # Server component - admin auth only
-│   │
-│   ├── components/                  # Shared React components (CLIENT COMPONENTS)
-│   │   ├── navigation.tsx          # Main navigation with role-based links
-│   │   ├── Auth.tsx                # Email/password authentication form
-│   │   ├── Account.tsx             # User profile management
-│   │   └── NoUserError.tsx         # Error component for unauthenticated users
-│   │
-│   ├── db/                         # Database layer
-│   │   ├── drizzle/               # Drizzle ORM configuration
-│   │   │   ├── connection.ts      # Database connection management
-│   │   │   └── schema.ts          # Complete schema with auth integration
-│   │   │
-│   │   └── supabase/              # Supabase client configuration
-│   │       ├── browser.ts         # Browser client setup
-│   │       ├── server.ts          # Server client setup
-│   │       └── middleware.ts      # Auth middleware
-│   │
-│   ├── features/                   # Feature-based modules
-│   │   ├── investor/              # Investor portfolio management
-│   │   │   ├── actions/           # Server actions (DATA LAYER)
-│   │   │   │   ├── get-investor-summary.ts        # Portfolio calculations
-│   │   │   │   └── get-comprehensive-summary.ts   # Complete portfolio data
-│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── investor-net-fund-display.tsx  # Net fund display
-│   │   │       ├── investor-summary-view.tsx      # Complete portfolio view
-│   │   │       └── investor-flat-rate-view.tsx    # Flat rate investments view
-│   │   │
-│   │   ├── flat-rate/             # Fixed rate investments
-│   │   │   ├── actions/           # Server actions (DATA LAYER)
-│   │   │   │   ├── get-flat-rate-investments.ts
-│   │   │   │   ├── get-principle-fix-rate.ts
-│   │   │   │   ├── create-flat-rate-account.ts
-│   │   │   │   └── redemption-flat-rate-account.ts
-│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │   │   ├── admin-flat-rate-view.tsx       # Admin view for flat rate
-│   │   │   │   ├── create-flat-rate-modal.tsx     # Create account modal
-│   │   │   │   └── redeem-flat-rate-modal.tsx     # Redemption modal
-│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
-│   │   │       └── flat-rate-investments-table.tsx
-│   │   │
-│   │   ├── floating-rate/         # Variable rate investments
-│   │   │   ├── actions/           # Server actions (DATA LAYER)
-│   │   │   │   ├── get-floating-rate-investments.ts
-│   │   │   │   ├── get-investor-floating-rate-investments.ts
-│   │   │   │   └── create-floating-rate-account.ts
-│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │   │   └── create-floating-rate-modal.tsx
-│   │   │   └── views/             # TABLE COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── floating-rate-investments-monthly-table.tsx
-│   │   │       └── investor-floating-rate-investments-table.tsx
-│   │   │
-│   │   ├── installment/           # Installment-based investments
-│   │   │   ├── actions/           # Server actions (DATA LAYER)
-│   │   │   │   ├── get-installments.ts
-│   │   │   │   ├── get-installment-cof-by-month.ts
-│   │   │   │   └── get-installment-principle-by-month.ts
-│   │   │   └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── admin-installment-table.tsx
-│   │   │       └── investor-installment-table.tsx
-│   │   │
-│   │   ├── admin/                 # Admin-specific features
-│   │   │   ├── actions/           # Server actions (DATA LAYER)
-│   │   │   │   ├── create-user.ts
-│   │   │   │   └── get-users.ts
-│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │   │       ├── admin-dashboard.tsx
-│   │   │       ├── create-user-modal.tsx
-│   │   │       └── users-table.tsx
-│   │   │
-│   │   └── investments/           # General investment utilities
-│   │       ├── actions/           # Server actions (DATA LAYER)
-│   │       │   ├── create-vc-performance.ts
-│   │       │   ├── get-all-vc-performance.ts
-│   │       │   ├── get-gross-profit-by-month.ts
-│   │       │   └── update-vc-performance.ts
-│   │       ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │       │   ├── create-vc-performance-modal.tsx
-│   │       │   └── edit-vc-performance-modal.tsx
-│   │       └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
-│   │           └── performance-table.tsx
-│   │
-│   ├── hooks/                      # Custom React hooks (CLIENT-SIDE)
-│   │   └── useAdminCheck.ts       # Client-side admin verification hook
-│   │
-│   ├── lib/                        # Utility libraries
-│   │   ├── auth/                  # Authentication utilities
-│   │   │   ├── admin-check.ts     # Server-side admin verification
-│   │   │   ├── client-admin-check.ts  # Client-side admin actions
-│   │   │   └── server-auth-helpers.ts # SERVER-SIDE AUTH HELPERS (NEW STANDARD)
-│   │   │
-│   │   ├── utils/                 # General utilities
-│   │   │   ├── investment-calculator.ts  # NPV & compound interest
-│   │   │   └── rate-calculations.ts     # Financial rate conversions
-│   │   │
-│   │   └── utils.ts               # Shared utility functions
-│   │
-│   └── test/                       # Test files
-│       └── (test files)
-│
-├── middleware.ts                   # Next.js middleware for auth protection
-├── public/                        # Static assets
-├── .cursor/                       # Cursor IDE configuration
-├── .git/                          # Git repository
-├── .next/                         # Next.js build output
-├── node_modules/                  # Dependencies
-│
-├── package.json                   # Project dependencies and scripts
-├── package-lock.json             # Lock file for dependencies
-├── tsconfig.json                 # TypeScript configuration
-├── next.config.ts                # Next.js configuration
-├── postcss.config.mjs            # PostCSS configuration for Tailwind
-├── README.md                     # Project documentation
-├── next-env.d.ts                 # Next.js TypeScript declarations
-└── .gitignore                    # Git ignore rules
-```
-
-## 🏗️ Architecture Overview - NEW SERVER-SIDE PATTERN
-
-### 🔥 **NEW STANDARD**: Server-Side Data Fetching Architecture
-
-#### **Core Principle**: Complete separation of data fetching and UI rendering
-
-```typescript
-// ✅ STANDARD PATTERN: Server Component (page.tsx)
-export default async function InvestorPage() {
-  // 1. Server-side authentication
-  const user = await requireAuth();
-
-  // 2. Server-side data fetching
-  let data = null;
-  let error: string | undefined = undefined;
-
-  try {
-    data = await fetchInvestorData(user.email);
-  } catch (err) {
-    error = err instanceof Error ? err.message : "Failed to load data";
-  }
-
-  // 3. Pass data to client View component
-  return <InvestorView user={user} data={data} error={error} />;
-}
-
-// ✅ STANDARD PATTERN: Client View Component
-("use client");
-export function InvestorView({ user, data, error }) {
-  // All UI logic, interactions, and client-side state
-  return <div>...</div>;
-}
-```
-
-#### **File Naming Convention**:
-
-- **`page.tsx`**: Server components (auth + data fetching only)
-- **`*-view.tsx`**: Client components (UI + interactions only)
-- **`*-modal.tsx`**: Client components (interactive modals)
-- **`*-table.tsx`**: Client components (data display tables)
-
-#### **Authentication Patterns**:
-
-```typescript
-// For investor pages
-const user = await requireAuth();
-
-// For admin pages
-const user = await requireAdminOrRedirectToSummary();
-
-// For admin-only pages (no fallback)
-const user = await requireAdmin();
-```
-
-### 🔐 Authentication System
-
-- **Supabase Auth Integration**: Complete email/password authentication
-- **Row Level Security (RLS)**: Database-level security policies
-- **Role-Based Access Control**: Admin vs Investor user types
-- **Multi-layer Protection**: Middleware, server components, and client-side guards
-- **Session Management**: SSR-compatible auth state management
-- **🆕 Server-Side Auth Helpers**: Centralized authentication utilities
-
-#### **Server-Side Auth Helpers** (`src/lib/auth/server-auth-helpers.ts`):
-
-```typescript
-// Get current user (returns null if not authenticated)
-export async function getCurrentUser(): Promise<AuthUser | null>;
-
-// Require authentication (redirects to home if not authenticated)
-export async function requireAuth(): Promise<AuthUser>;
-
-// Require admin access (redirects to home if not admin)
-export async function requireAdmin(): Promise<AuthUser>;
-
-// Smart admin check (redirects to investor summary if not admin)
-export async function requireAdminOrRedirectToSummary(): Promise<AuthUser>;
-```
-
-### 🗄️ Database Layer
-
-- **PostgreSQL with Supabase**: Hosted database with real-time capabilities
-- **Drizzle ORM**: Type-safe database operations with relations
-- **Schema Integration**: Auth schema linked to profiles and role assignments
-- **Timestamptz Support**: Timezone-aware timestamp handling
-- **Foreign Key Integrity**: Enforced relationships between tables
-
-### 💼 Investment Management Features
-
-#### 1. **Fixed Rate Investments**
-
-- Monthly compound interest calculations
-- 5% admin fee on original investments only
-- Rollover capabilities without additional fees
-- Real-time Net Present Value (NPV) calculations
-
-#### 2. **Floating Rate Investments**
-
-- Variable rates based on performance metrics
-- Hurdle rate calculations
-- Market-responsive interest adjustments
-
-#### 3. **Installment Investments**
-
-- Monthly payment structures
-- Principal and interest breakdowns
-- Cost of funds (CoF) calculations
-
-### 🎯 User Roles & Access
-
-#### **Investors**
-
-- Portfolio summary dashboard (`/investor/summary`)
-- Detailed investment views (`/investor/flat-rate`, `/investor/floating-rate`, `/investor/installments`)
-- Real-time investment valuations
-- Historical performance tracking
-- Admin fee transparency
-
-#### **Admins**
-
-- Complete investment oversight (`/flat-rate`, `/floating-rate`, `/installments`)
-- Admin dashboard (`/admin/dashboard`)
-- User management (`/admin/user-management`)
-- Performance analytics (`/admin/performance`)
-- Portfolio-wide analytics
-- Financial reporting tools
-
-## 🔧 Development Setup
-
-### Prerequisites
-
-- **Node.js**: Latest LTS version (20+)
-- **PostgreSQL**: Database server or Supabase account
-- **Supabase Project**: With authentication enabled
-
-### Environment Variables
-
-```env
-# Database Configuration
-SUPABASE_CONNECTION_STRING=postgresql://...
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-
-# Authentication
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_KEY=your-service-key
-```
-
-### Available Scripts
-
-```bash
-npm run dev      # Start development server with Turbopack
-npm run build    # Build production application
-npm run start    # Start production server
-npm run lint     # Run ESLint checks
-```
-
-### Database Setup
-
-1. **Schema Migration**: Use Drizzle Kit for database migrations
-2. **Seed Data**: Populate with initial investment types and test accounts
-3. **RLS Policies**: Configure Supabase Row Level Security
-4. **Indexes**: Set up performance indexes for user queries
-
-## 📊 Data Flow & Business Logic
-
-### 🆕 **NEW STANDARD**: Server-Side Data Flow
+### 🆕 **NEW STANDARD**: Form Data Flow
 
 ```mermaid
 graph TD
-    A[User Request] --> B[Next.js Server Component]
-    B --> C[Server-Side Auth Check]
-    C --> D{Authenticated?}
-    D -->|No| E[Redirect to Login]
-    D -->|Yes| F[Server-Side Data Fetching]
-    F --> G[Database Query via Server Actions]
-    G --> H[Data Processing]
-    H --> I[Pass Data to Client View Component]
-    I --> J[Client-Side Rendering]
-    J --> K[User Interactions]
-    K --> L[Client-Side State Management]
+    A[User Input] --> B[Client Form Component]
+    B --> C[Controlled Input State]
+    C --> D[Form Validation]
+    D --> E[Form Submission]
+    E --> F[useActionState Dispatch]
+    F --> G[Server Action]
+    G --> H[Authentication Check]
+    H --> I[Zod Validation]
+    I --> J[Business Logic]
+    J --> K[Database Operation]
+    K --> L[Response Formatting]
+    L --> M[Client State Update]
+    M --> N[UI Feedback]
+    N --> O[Form Reset/Success]
 ```
 
 ### Investment Calculation Engine
@@ -999,6 +746,15 @@ getMonthlyCompoundRate(capital: number, annualRate: number): number
 - Connection pooling for database operations
 - Efficient query patterns with joins
 - Real-time calculations with caching strategies
+
+### 5. **🆕 Form Security & Validation**
+
+- **Server-side validation first**: All validation happens on the server
+- **Type-safe form handling**: Using zod-form-data for runtime type safety
+- **Field-specific error handling**: Granular error messages for each field
+- **CSRF protection**: Built-in with Next.js Server Actions
+- **Input sanitization**: Automatic with zod validation
+- **Rate limiting**: Implement on server actions for sensitive operations
 
 ## 🎨 UI/UX Features
 
@@ -1122,6 +878,13 @@ Parent Account Closure → Fee Exemption → Continued Growth Tracking
 User Request → Server Auth Check → Data Fetching → View Component Render → Client Hydration
 ```
 
+### 🆕 **NEW**: Form Submission Process
+
+```
+User Input → Client Validation → Form Submission → Server Action → Authentication Check →
+Zod Validation → Business Logic → Database Operation → Response → UI Update → Form Reset
+```
+
 ## 🚀 Deployment Considerations
 
 ### Platforms
@@ -1148,6 +911,9 @@ User Request → Server Auth Check → Data Fetching → View Component Render �
 5. **Name client components with descriptive suffixes** (`*-view.tsx`, `*-modal.tsx`, `*-table.tsx`)
 6. **Keep server components minimal** (auth + data fetching only)
 7. **Keep all UI logic in client components**
+8. **🆕 Always use `useActionState` for form handling**
+9. **🆕 Use `zod-form-data` for server-side validation**
+10. **🆕 Implement proper error handling and user feedback**
 
 ### ❌ **DON'Ts**:
 
@@ -1157,6 +923,10 @@ User Request → Server Auth Check → Data Fetching → View Component Render �
 4. **Don't mix UI logic with data fetching in the same component**
 5. **Don't use useEffect for initial data loading**
 6. **Don't create loading states for server-fetched data**
+7. **🆕 Don't use async/await patterns for form submissions**
+8. **🆕 Don't skip server-side validation**
+9. **🆕 Don't forget to handle form state reset**
+10. **🆕 Don't use uncontrolled inputs in forms**
 
 ### 🔧 **Component Creation Checklist**:
 
@@ -1166,6 +936,79 @@ User Request → Server Auth Check → Data Fetching → View Component Render �
 - [ ] Does it have UI interactions? → Create client View component
 - [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
 - [ ] Is it a data table? → Create `*-table.tsx` client component
+- [ ] 🆕 Is it a form? → Use `useActionState` pattern
+- [ ] 🆕 Does it need validation? → Use `zod-form-data` on server
+- [ ] 🆕 Does it need error handling? → Implement `FieldError` components
+- [ ] 🆕 Does it need loading states? → Use `SubmitButton` component
+
+### 🆕 **Form Development Guidelines**:
+
+#### **✅ Form Component Requirements:**
+
+1. **Always use `useActionState`** for form state management
+2. **Use controlled inputs** with local state for all form fields
+3. **Implement proper form reset** on modal close and success
+4. **Include field-specific error handling** with `FieldError` component
+5. **Use `startTransition`** for form submission
+6. **Implement error scrolling** to first error field
+7. **Use `useEffectEvent`** for action state handling
+8. **Include success/error message display**
+9. **Use `SubmitButton`** component for consistent loading states
+10. **Implement proper form validation** with HTML5 and server-side validation
+
+#### **🎯 Required Form Features:**
+
+```typescript
+// Standard form imports and setup
+import { useActionState, startTransition, useEffectEvent } from "react";
+import { SubmitButton } from "@/components/buttons/submit-button";
+
+// Required state management
+const [actionState, actionDispatch, isActionPending] = useActionState(
+  serverAction,
+  undefined
+);
+
+// Required form handling
+const handleSubmit = (e: FormEvent) => {
+  e.preventDefault();
+  startTransition(() => {
+    const formData = new FormData();
+    // ... append all form fields
+    actionDispatch(formData);
+  });
+};
+
+// Required error handling
+const getFieldError = (fieldName: string) => {
+  return actionState?.errors?.find((error: any) => error.field === fieldName)
+    ?.message;
+};
+```
+
+#### **📊 Server Action Pattern:**
+
+```typescript
+// Standard server action structure
+export async function serverAction(prevState: any, formData: FormData) {
+  // 1. Authentication check
+  // 2. Zod validation
+  // 3. Business logic validation
+  // 4. Database operations
+  // 5. Response formatting
+}
+```
+
+#### **🚫 Form Development DON'Ts:**
+
+1. **Don't use async/await patterns** - Always use `useActionState`
+2. **Don't skip server-side validation** - Always use `zod-form-data`
+3. **Don't forget error handling** - Always include field-specific errors
+4. **Don't use uncontrolled inputs** - Always use controlled components
+5. **Don't skip form reset** - Always reset on success/close
+6. **Don't forget loading states** - Always use `SubmitButton`
+7. **Don't skip error scrolling** - Always scroll to first error
+8. **Don't use inline validation** - Always validate on server
 
 ### 🆕 **Advanced Table Development Guidelines**:
 
@@ -1253,5 +1096,1106 @@ const table = useReactTable({
 5. **Don't use inconsistent filter UI** - Stick to standardized components
 6. **Don't skip pagination** - Always include configurable pagination
 7. **Don't forget loading states** - Include proper loading and error handling
+
+This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern and modern form handling as the core architectural principles for all future development.
+
+This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.
+
+# Galfa Backend - Investment Platform Technical Documentation
+
+## 🚀 Project Overview
+
+Galfa Backend is a comprehensive investment platform built with Next.js that manages fixed-rate, floating-rate, and installment-based investment accounts. The platform features user authentication, admin panels, real-time portfolio calculations, and sophisticated financial modeling with compound interest calculations.
+
+## 🛠️ Tech Stack Overview
+
+### Core Technologies
+
+- **Framework**: Next.js 15.3.2 (React 19-based framework)
+- **Language**: TypeScript 5
+- **Database**: PostgreSQL with Drizzle ORM
+- **Authentication**: Supabase Auth with Row Level Security (RLS)
+- **Styling**: Tailwind CSS 4
+- **Charts**: Recharts 2.15.3
+- **Date Handling**: date-fns 4.1.0
+
+### Key Dependencies
+
+- **@supabase/ssr**: Server-side rendering utilities for Supabase
+- **@supabase/supabase-js**: Supabase client library
+- **drizzle-orm**: Type-safe ORM for database operations
+- **postgres**: PostgreSQL client for Node.js
+- **dotenv**: Environment variable management
+- **recharts**: Charting library for financial data visualization
+- **🆕 @tanstack/react-table**: Advanced table management with filtering, sorting, and pagination
+- **🆕 zod & zod-form-data**: Type-safe form validation and parsing
+
+### Development Tools
+
+- **drizzle-kit**: Database migration and management
+- **TypeScript**: Static type checking
+- **Tailwind CSS**: Utility-first CSS framework
+- **Turbopack**: Next.js development server (dev mode)
+
+## 📁 Project Structure
+
+```
+galfa-backend/
+├── src/
+│   ├── app/                         # Next.js 15 app directory
+│   │   ├── layout.tsx              # Root layout with navigation
+│   │   ├── page.tsx                # Homepage with role-based access
+│   │   ├── globals.css             # Global styles & Tailwind config
+│   │   ├── favicon.ico             # Site favicon
+│   │   │
+│   │   ├── investor/               # Investor dashboard pages (SERVER COMPONENTS)
+│   │   │   ├── summary/            # Portfolio summary page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── flat-rate/          # Flat rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   ├── floating-rate/      # Floating rate investments page
+│   │   │   │   └── page.tsx        # Server component - auth + data fetching
+│   │   │   └── installments/       # Installment investments page
+│   │   │       └── page.tsx        # Server component - auth + data fetching
+│   │   │
+│   │   ├── admin/                  # Admin pages (SERVER COMPONENTS)
+│   │   │   ├── dashboard/          # Admin dashboard
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   ├── performance/        # Performance analytics
+│   │   │   │   └── page.tsx        # Server component - admin auth + data
+│   │   │   └── user-management/    # User management
+│   │   │       └── page.tsx        # Server component - admin auth + data
+│   │   │
+│   │   ├── flat-rate/              # Admin flat-rate investments page
+│   │   │   └── page.tsx            # Server component - admin auth only
+│   │   │
+│   │   ├── floating-rate/          # Admin floating-rate page
+│   │   │   └── page.tsx            # Server component - admin auth only
+│   │   │
+│   │   └── installments/           # Admin installments page
+│   │       └── page.tsx            # Server component - admin auth only
+│   │
+│   ├── components/                  # Shared React components (CLIENT COMPONENTS)
+│   │   ├── navigation.tsx          # Main navigation with role-based links
+│   │   ├── Auth.tsx                # Email/password authentication form
+│   │   ├── Account.tsx             # User profile management
+│   │   ├── NoUserError.tsx         # Error component for unauthenticated users
+│   │   ├── buttons/                # Shared button components
+│   │   │   └── submit-button.tsx   # Standardized submit button with loading state
+│   │   └── ui/                     # shadcn/ui components
+│   │       ├── badge.tsx
+│   │       ├── button.tsx
+│   │       ├── calendar.tsx
+│   │       ├── card.tsx
+│   │       ├── checkbox.tsx
+│   │       ├── dialog.tsx
+│   │       ├── input.tsx
+│   │       ├── label.tsx
+│   │       ├── popover.tsx
+│   │       ├── select.tsx
+│   │       ├── table.tsx
+│   │       └── textarea.tsx
+│   │
+│   ├── db/                         # Database layer
+│   │   ├── drizzle/               # Drizzle ORM configuration
+│   │   │   ├── connection.ts      # Database connection management
+│   │   │   └── schema.ts          # Complete schema with auth integration
+│   │   │
+│   │   └── supabase/              # Supabase client configuration
+│   │       ├── browser.ts         # Browser client setup
+│   │       ├── server.ts          # Server client setup
+│   │       └── middleware.ts      # Auth middleware
+│   │
+│   ├── features/                   # Feature-based modules
+│   │   ├── investor/              # Investor portfolio management
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-investor-summary.ts        # Portfolio calculations
+│   │   │   │   └── get-comprehensive-summary.ts   # Complete portfolio data
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── investor-net-fund-display.tsx  # Net fund display
+│   │   │       ├── investor-summary-view.tsx      # Complete portfolio view
+│   │   │       └── investor-flat-rate-view.tsx    # Flat rate investments view
+│   │   │
+│   │   ├── flat-rate/             # Fixed rate investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-flat-rate-investments.ts
+│   │   │   │   ├── get-principle-fix-rate.ts
+│   │   │   │   ├── create-flat-rate-account.ts
+│   │   │   │   └── redemption-flat-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── admin-flat-rate-view.tsx       # Admin view for flat rate
+│   │   │   │   ├── create-flat-rate-modal.tsx     # Create account modal
+│   │   │   │   └── redeem-flat-rate-modal.tsx     # Redemption modal
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       └── flat-rate-investments-table.tsx  # Tanstack React Table with comprehensive filtering
+│   │   │
+│   │   ├── floating-rate/         # Variable rate investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-floating-rate-investments.ts
+│   │   │   │   ├── get-investor-floating-rate-investments.ts
+│   │   │   │   └── create-floating-rate-account.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── create-floating-rate-modal.tsx
+│   │   │   │   └── investor-floating-rate-view.tsx
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── floating-rate-investments-monthly-table.tsx  # Tanstack React Table with comprehensive filtering
+│   │   │       └── investor-floating-rate-investments-table.tsx
+│   │   │
+│   │   ├── installment/           # Installment-based investments
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── get-installments.ts
+│   │   │   │   ├── get-installment-cof-by-month.ts
+│   │   │   │   └── get-installment-principle-by-month.ts
+│   │   │   ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │   │   ├── admin-installment-view.tsx
+│   │   │   │   └── investor-installment-view.tsx
+│   │   │   └── views/             # ADVANCED TABLE COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-installment-table.tsx    # Tanstack React Table with comprehensive filtering
+│   │   │       └── investor-installment-table.tsx
+│   │   │
+│   │   ├── admin/                 # Admin-specific features
+│   │   │   ├── actions/           # Server actions (DATA LAYER)
+│   │   │   │   ├── create-user.ts
+│   │   │   │   └── get-users.ts
+│   │   │   └── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │   │       ├── admin-dashboard.tsx
+│   │   │       ├── create-user-modal.tsx
+│   │   │       └── users-table.tsx
+│   │   │
+│   │   └── investments/           # General investment utilities
+│   │       ├── actions/           # Server actions (DATA LAYER)
+│   │       │   ├── create-vc-performance.ts
+│   │       │   ├── get-all-vc-performance.ts
+│   │       │   ├── get-gross-profit-by-month.ts
+│   │       │   └── update-vc-performance.ts
+│   │       ├── components/        # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │       │   ├── create-vc-performance-modal.tsx
+│   │       │   └── edit-vc-performance-modal.tsx
+│   │       └── views/             # VIEW COMPONENTS (CLIENT COMPONENTS)
+│   │           └── performance-table.tsx
+│   │
+│   ├── hooks/                      # Custom React hooks (CLIENT-SIDE)
+│   │   ├── useAdminCheck.ts       # Client-side admin verification hook
+│   │   └── useEffectEvent.ts      # Custom useEffectEvent hook for form handling
+│   │
+│   ├── lib/                        # Utility libraries
+│   │   ├── auth/                  # Authentication utilities
+│   │   │   ├── admin-check.ts     # Server-side admin verification
+│   │   │   ├── client-admin-check.ts  # Client-side admin actions
+│   │   │   └── server-auth-helpers.ts # SERVER-SIDE AUTH HELPERS (NEW STANDARD)
+│   │   │
+│   │   ├── utils/                 # General utilities
+│   │   │   ├── investment-calculator.ts  # NPV & compound interest
+│   │   │   ├── rate-calculations.ts     # Financial rate conversions
+│   │   │   └── constants.ts       # Application constants
+│   │   │
+│   │   └── utils.ts               # Shared utility functions
+│   │
+│   └── test/                       # Test files
+│       └── (test files)
+│
+├── middleware.ts                   # Next.js middleware for auth protection
+├── public/                        # Static assets
+├── .cursor/                       # Cursor IDE configuration
+├── .git/                          # Git repository
+├── .next/                         # Next.js build output
+├── node_modules/                  # Dependencies
+│
+├── package.json                   # Project dependencies and scripts
+├── package-lock.json             # Lock file for dependencies
+├── tsconfig.json                 # TypeScript configuration
+├── next.config.ts                # Next.js configuration
+├── postcss.config.mjs            # PostCSS configuration for Tailwind
+├── README.md                     # Project documentation
+├── next-env.d.ts                 # Next.js TypeScript declarations
+└── .gitignore                    # Git ignore rules
+```
+
+## 🏗️ Architecture Overview - NEW SERVER-SIDE PATTERN
+
+### 🔥 **NEW STANDARD**: Server-Side Data Fetching Architecture
+
+#### **Core Principle**: Complete separation of data fetching and UI rendering
+
+```typescript
+// ✅ STANDARD PATTERN: Server Component (page.tsx)
+export default async function InvestorPage() {
+  // 1. Server-side authentication
+  const user = await requireAuth();
+
+  // 2. Server-side data fetching
+  let data = null;
+  let error: string | undefined = undefined;
+
+  try {
+    data = await fetchInvestorData(user.email);
+  } catch (err) {
+    error = err instanceof Error ? err.message : "Failed to load data";
+  }
+
+  // 3. Pass data to client View component
+  return <InvestorView user={user} data={data} error={error} />;
+}
+
+// ✅ STANDARD PATTERN: Client View Component
+("use client");
+export function InvestorView({ user, data, error }) {
+  // All UI logic, interactions, and client-side state
+  return <div>...</div>;
+}
+```
+
+#### **File Naming Convention**:
+
+- **`page.tsx`**: Server components (auth + data fetching only)
+- **`*-view.tsx`**: Client components (UI + interactions only)
+- **`*-modal.tsx`**: Client components (interactive modals)
+- **`*-table.tsx`**: Client components (data display tables)
+
+#### **Authentication Patterns**:
+
+```typescript
+// For investor pages
+const user = await requireAuth();
+
+// For admin pages
+const user = await requireAdminOrRedirectToSummary();
+
+// For admin-only pages (no fallback)
+const user = await requireAdmin();
+```
+
+### 🆕 **NEW STANDARD**: Form Handling Architecture
+
+#### **Core Principle**: Modern React Server Actions with `useActionState`
+
+#### **✅ STANDARD PATTERN**: Client Form Component (`*-modal.tsx`)
+
+```typescript
+"use client";
+
+import { useActionState, startTransition, useEffectEvent } from "react";
+import { createAccount } from "@/features/feature/actions/create-account";
+import { SubmitButton } from "@/components/buttons/submit-button";
+
+// Error display component
+function FieldError({ error }: { error?: string }) {
+  if (!error) return null;
+  return <p className="text-sm text-red-600 mt-1">{error}</p>;
+}
+
+export function CreateAccountModal({ data }: { data: any[] }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [actionState, actionDispatch, isActionPending] = useActionState(
+    createAccount,
+    undefined
+  );
+
+  // Form state for controlled inputs
+  const [formData, setFormData] = useState({
+    field1: "",
+    field2: "",
+    // ... other fields
+  });
+
+  // Reset form when modal opens/closes
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      // Reset form state when closing
+      setFormData({
+        field1: "",
+        field2: "",
+        // ... reset all fields
+      });
+    }
+  };
+
+  // Get field-specific errors
+  const getFieldError = (fieldName: string) => {
+    return actionState?.errors?.find((error: any) => error.field === fieldName)
+      ?.message;
+  };
+
+  // Handle form submission
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    startTransition(() => {
+      const formDataObj = new FormData();
+      formDataObj.append("field1", formData.field1);
+      formDataObj.append("field2", formData.field2);
+      // ... append all fields
+
+      actionDispatch(formDataObj);
+    });
+  };
+
+  // Handle action state changes
+  const actionEffectEvent = useEffectEvent((state: typeof actionState) => {
+    if (state) {
+      if (state.success && state.message) {
+        // Reset form state on success
+        setFormData({
+          field1: "",
+          field2: "",
+          // ... reset all fields
+        });
+
+        // Close modal after success
+        setTimeout(() => {
+          setIsOpen(false);
+        }, 2000);
+      } else if (state.errors && state.errors.length > 0) {
+        // Scroll to first error
+        setTimeout(() => {
+          const firstError = state.errors[0];
+          const errorField = document.getElementById(firstError.field);
+
+          if (errorField) {
+            errorField.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            errorField.focus();
+          }
+        }, 100);
+      }
+    }
+  });
+
+  useEffect(
+    () => actionEffectEvent(actionState),
+    [actionState, actionEffectEvent]
+  );
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogTrigger asChild>
+        <Button>Create Account</Button>
+      </DialogTrigger>
+
+      <DialogContent className="max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>Create Account</DialogTitle>
+        </DialogHeader>
+
+        {/* Success/Error Messages */}
+        <div className="px-2">
+          {actionState?.message && (
+            <div
+              className={cn(
+                "p-3 rounded-md text-sm flex-shrink-0",
+                actionState.success
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : "bg-red-50 text-red-800 border border-red-200"
+              )}
+            >
+              {actionState.message}
+            </div>
+          )}
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 overflow-y-auto px-2 flex-1"
+        >
+          {/* Form Fields */}
+          <div className="space-y-2">
+            <Label htmlFor="field1" className="text-sm font-medium">
+              Field 1 *
+            </Label>
+            <Input
+              id="field1"
+              value={formData.field1}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, field1: e.target.value }))
+              }
+              required
+            />
+            <FieldError error={getFieldError("field1")} />
+          </div>
+
+          {/* Submit Button */}
+          <SubmitButton fullWidth loading={isActionPending}>
+            Create Account
+          </SubmitButton>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+#### **✅ STANDARD PATTERN**: Server Action (`actions/create-*.ts`)
+
+```typescript
+"use server";
+
+import { zfd } from "zod-form-data";
+import { z } from "zod";
+import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { createDrizzleConnection } from "@/db/drizzle/connection";
+
+export async function createAccount(prevState: any, formData: FormData) {
+  // 1. Admin Check (if required)
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    return {
+      success: false,
+      message: "Unauthorized: Admin access required",
+    };
+  }
+
+  // 2. Validation using zod-form-data and zod
+  const validationResult = await zfd
+    .formData({
+      field1: zfd.text(z.string().min(1)),
+      field2: zfd.numeric(z.number().min(0)),
+      // ... other field validations
+    })
+    .safeParseAsync(formData);
+
+  if (!validationResult.success) {
+    return {
+      success: false,
+      message: "Validation failed",
+      errors: validationResult.error.issues.map((err: any) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+    };
+  }
+
+  const { field1, field2 } = validationResult.data;
+
+  try {
+    // 3. Business logic validation
+    // ... custom validation logic
+
+    // 4. Database operations
+    const db = await createDrizzleConnection();
+
+    // ... database operations
+
+    return {
+      success: true,
+      message: "Account created successfully",
+      data: {
+        // ... created data
+      },
+    };
+  } catch (error) {
+    console.error("Error creating account:", error);
+    return {
+      success: false,
+      message: "Failed to create account",
+      errors: [{ field: "general", message: "An unexpected error occurred" }],
+    };
+  }
+}
+```
+
+#### **Form Component Requirements**:
+
+1. **Always use `useActionState`** for form state management
+2. **Use controlled inputs** with local state for all form fields
+3. **Implement proper form reset** on modal close and success
+4. **Include field-specific error handling** with `FieldError` component
+5. **Use `startTransition`** for form submission
+6. **Implement error scrolling** to first error field
+7. **Use `useEffectEvent`** for action state handling
+8. **Include success/error message display**
+9. **Use `SubmitButton`** component for consistent loading states
+10. **Implement proper form validation** with HTML5 and server-side validation
+
+#### **Server Action Requirements**:
+
+1. **Always use `"use server"`** directive
+2. **Implement proper authentication checks** at the beginning
+3. **Use `zod-form-data` and `zod`** for type-safe validation
+4. **Return consistent response format** with success/error states
+5. **Include field-specific error mapping** for validation errors
+6. **Handle business logic validation** after schema validation
+7. **Use proper error handling** with try-catch blocks
+8. **Return meaningful error messages** for debugging
+9. **Include proper TypeScript types** for all parameters and returns
+10. **Use database transactions** for complex operations
+
+### 🔐 Authentication System
+
+- **Supabase Auth Integration**: Complete email/password authentication
+- **Row Level Security (RLS)**: Database-level security policies
+- **Role-Based Access Control**: Admin vs Investor user types
+- **Multi-layer Protection**: Middleware, server components, and client-side guards
+- **Session Management**: SSR-compatible auth state management
+- **🆕 Server-Side Auth Helpers**: Centralized authentication utilities
+
+#### **Server-Side Auth Helpers** (`src/lib/auth/server-auth-helpers.ts`):
+
+```typescript
+// Get current user (returns null if not authenticated)
+export async function getCurrentUser(): Promise<AuthUser | null>;
+
+// Require authentication (redirects to home if not authenticated)
+export async function requireAuth(): Promise<AuthUser>;
+
+// Require admin access (redirects to home if not admin)
+export async function requireAdmin(): Promise<AuthUser>;
+
+// Smart admin check (redirects to investor summary if not admin)
+export async function requireAdminOrRedirectToSummary(): Promise<AuthUser>;
+```
+
+### 🗄️ Database Layer
+
+- **PostgreSQL with Supabase**: Hosted database with real-time capabilities
+- **Drizzle ORM**: Type-safe database operations with relations
+- **Schema Integration**: Auth schema linked to profiles and role assignments
+- **Timestamptz Support**: Timezone-aware timestamp handling
+- **Foreign Key Integrity**: Enforced relationships between tables
+
+### 💼 Investment Management Features
+
+#### 1. **Fixed Rate Investments**
+
+- Monthly compound interest calculations
+- 5% admin fee on original investments only
+- Rollover capabilities without additional fees
+- Real-time Net Present Value (NPV) calculations
+
+#### 2. **Floating Rate Investments**
+
+- Variable rates based on performance metrics
+- Hurdle rate calculations
+- Market-responsive interest adjustments
+
+#### 3. **Installment Investments**
+
+- Monthly payment structures
+- Principal and interest breakdowns
+- Cost of funds (CoF) calculations
+
+### 🎯 User Roles & Access
+
+#### **Investors**
+
+- Portfolio summary dashboard (`/investor/summary`)
+- Detailed investment views (`/investor/flat-rate`, `/investor/floating-rate`, `/investor/installments`)
+- Real-time investment valuations
+- Historical performance tracking
+- Admin fee transparency
+
+#### **Admins**
+
+- Complete investment oversight (`/flat-rate`, `/floating-rate`, `/installments`)
+- Admin dashboard (`/admin/dashboard`)
+- User management (`/admin/user-management`)
+- Performance analytics (`/admin/performance`)
+- Portfolio-wide analytics
+- Financial reporting tools
+
+## 🔧 Development Setup
+
+### Prerequisites
+
+- **Node.js**: Latest LTS version (20+)
+- **PostgreSQL**: Database server or Supabase account
+- **Supabase Project**: With authentication enabled
+
+### Environment Variables
+
+```env
+# Database Configuration
+SUPABASE_CONNECTION_STRING=postgresql://...
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your-anon-key
+
+# Authentication
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_KEY=your-service-key
+```
+
+### Available Scripts
+
+```bash
+npm run dev      # Start development server with Turbopack
+npm run build    # Build production application
+npm run start    # Start production server
+npm run lint     # Run ESLint checks
+```
+
+### Database Setup
+
+1. **Schema Migration**: Use Drizzle Kit for database migrations
+2. **Seed Data**: Populate with initial investment types and test accounts
+3. **RLS Policies**: Configure Supabase Row Level Security
+4. **Indexes**: Set up performance indexes for user queries
+
+## 📊 Data Flow & Business Logic
+
+### 🆕 **NEW STANDARD**: Server-Side Data Flow
+
+```mermaid
+graph TD
+    A[User Request] --> B[Next.js Server Component]
+    B --> C[Server-Side Auth Check]
+    C --> D{Authenticated?}
+    D -->|No| E[Redirect to Login]
+    D -->|Yes| F[Server-Side Data Fetching]
+    F --> G[Database Query via Server Actions]
+    G --> H[Data Processing]
+    H --> I[Pass Data to Client View Component]
+    I --> J[Client-Side Rendering]
+    J --> K[User Interactions]
+    K --> L[Client-Side State Management]
+```
+
+### 🆕 **NEW STANDARD**: Form Data Flow
+
+```mermaid
+graph TD
+    A[User Input] --> B[Client Form Component]
+    B --> C[Controlled Input State]
+    C --> D[Form Validation]
+    D --> E[Form Submission]
+    E --> F[useActionState Dispatch]
+    F --> G[Server Action]
+    G --> H[Authentication Check]
+    H --> I[Zod Validation]
+    I --> J[Business Logic]
+    J --> K[Database Operation]
+    K --> L[Response Formatting]
+    L --> M[Client State Update]
+    M --> N[UI Feedback]
+    N --> O[Form Reset/Success]
+```
+
+### Investment Calculation Engine
+
+1. **Admin Fee Processing**: 5% fee calculation with rollover exemptions
+2. **Compound Interest**: Monthly compounding with daily proportioning
+3. **NPV Calculations**: Real-time portfolio valuations
+4. **Rollover Logic**: Seamless investment renewals without fee duplication
+
+### Key Server Actions
+
+#### **Investor Portfolio Management**
+
+```typescript
+// Get complete investor portfolio summary
+getInvestorSummary(investorEmail: string): Promise<InvestorSummary>
+
+// Get comprehensive portfolio data
+getComprehensiveInvestorSummary(investorEmail: string): Promise<ComprehensiveInvestorSummary>
+
+// List all investor emails (admin only)
+getAllInvestorEmails(): Promise<string[]>
+```
+
+#### **Admin Investment Analytics**
+
+```typescript
+// Get all flat rate investment details
+getFlatRateInvestments(): Promise<FlatRateInvestment[]>
+
+// Get portfolio-wide statistics
+getPrincipleFixRate(): Promise<PrincipleFixRateResult>
+```
+
+#### **Financial Calculations**
+
+```typescript
+// Generic investment growth calculator
+calculateInvestmentGrowth(grossCapital, annualRate, startDate, endDate)
+
+// Convert annual to monthly compound rates
+getMonthlyCompoundRate(capital: number, annualRate: number): number
+```
+
+## 🛡️ Security & Best Practices
+
+### 1. **Authentication Security**
+
+- **🆕 Server-Side First**: All authentication checks happen on the server
+- Supabase Auth with email verification
+- Secure session management with httpOnly cookies
+- Role-based route protection at middleware level
+- **🆕 Automatic Redirects**: Server-side redirects prevent unauthorized access
+- Client-side auth state synchronization
+
+### 2. **Database Security**
+
+- Row Level Security (RLS) policies
+- Foreign key constraints for data integrity
+- Prepared statements via Drizzle ORM
+- Environment variable protection for credentials
+
+### 3. **Type Safety**
+
+- Comprehensive TypeScript coverage
+- Drizzle ORM type inference
+- Interface definitions for all data structures
+- Strict type checking enabled
+
+### 4. **Performance Optimization**
+
+- **🆕 Server-Side Rendering**: Faster initial page loads
+- Database indexes on frequently queried columns
+- Connection pooling for database operations
+- Efficient query patterns with joins
+- Real-time calculations with caching strategies
+
+### 5. **🆕 Form Security & Validation**
+
+- **Server-side validation first**: All validation happens on the server
+- **Type-safe form handling**: Using zod-form-data for runtime type safety
+- **Field-specific error handling**: Granular error messages for each field
+- **CSRF protection**: Built-in with Next.js Server Actions
+- **Input sanitization**: Automatic with zod validation
+- **Rate limiting**: Implement on server actions for sensitive operations
+
+## 🎨 UI/UX Features
+
+### Design System
+
+- **Tailwind CSS 4**: Modern utility-first styling
+- **Responsive Design**: Mobile-first approach
+- **Component Library**: Reusable UI components
+- **Consistent Styling**: Centralized design tokens
+
+### Navigation & UX
+
+- **Role-Based Navigation**: Different menus for investors vs admins
+- **🆕 Server-Side Data Loading**: No loading spinners for initial data
+- **Real-Time Updates**: Live portfolio valuations
+- **Error Handling**: Graceful error states and loading indicators
+
+### 🆕 **Advanced Table System**: Tanstack React Table with Comprehensive Filtering
+
+#### **Core Table Features:**
+
+- **🔍 Column-Specific Filtering**: Every column has its own filter type
+  - **Text Filters**: Search account numbers, emails, names
+  - **Number Range Filters**: Min/max values for amounts, percentages, durations
+  - **Date Range Filters**: From/to date selections
+  - **Type/Status Filters**: Dropdown selections with predefined options
+- **🔍 Global Search**: Search across all columns simultaneously
+- **↕️ Advanced Sorting**: Click headers to sort ascending/descending/none
+- **📄 Pagination**: Configurable page sizes (10, 20, 30, 40, 50 rows)
+- **📊 Expandable Rows**: Click to view detailed monthly data
+- **🎯 Real-time Totals**: Summary cards update based on filtered data
+
+#### **Filter UI Components:**
+
+```typescript
+// Standardized filter components used across all tables
+const TextFilter = ({ column }: { column: any }) => {
+  /* Text search with popover */
+};
+const NumberRangeFilter = ({ column }: { column: any }) => {
+  /* Min/max inputs */
+};
+const DateRangeFilter = ({ column }: { column: any }) => {
+  /* Date range picker */
+};
+const TypeFilter = ({
+  column,
+  uniqueTypes,
+}: {
+  column: any;
+  uniqueTypes: string[];
+}) => {
+  /* Dropdown select */
+};
+```
+
+#### **Active Filter Management:**
+
+- **Visual Feedback**: Blue filter icons indicate active filters
+- **Filter Badges**: Show all active filters with readable labels
+- **Individual Removal**: Click X on any filter badge to remove
+- **Bulk Reset**: "Reset All Filters" button clears everything
+- **Smart Labeling**: User-friendly column names in filter displays
+
+#### **Table File Structure:**
+
+```typescript
+// All investment tables follow this standardized pattern:
+// 1. Tanstack React Table imports
+// 2. Custom filter functions (numberRangeFilter, dateRangeFilter)
+// 3. Filter components (TextFilter, NumberRangeFilter, etc.)
+// 4. Column definitions with sorting + filtering
+// 5. Table state management
+// 6. Summary cards with filtered data
+// 7. Comprehensive UI with pagination
+```
+
+#### **Enhanced User Experience:**
+
+- **Instant Feedback**: Filters apply immediately as you type
+- **Smart Formatting**: Currency, percentages, and dates properly formatted
+- **Responsive Design**: Tables work perfectly on all screen sizes
+- **Performance Optimized**: Client-side filtering for fast interactions
+- **Consistent Styling**: shadcn/ui components throughout
+
+## 📈 Financial Modeling
+
+### Mathematical Precision
+
+- **Decimal Precision**: PostgreSQL DECIMAL types for monetary values
+- **Compound Interest**: Accurate monthly compounding formulas
+- **Time-Weighted Returns**: Proper handling of investment periods
+- **Currency Formatting**: Indonesian Rupiah (IDR) formatting
+
+### Investment Rules
+
+1. **Admin Fee Logic**: Single 5% fee per investment chain
+2. **Rollover Processing**: No additional fees on renewals
+3. **Portfolio Calculation**: Proper exclusion of parent accounts
+4. **NPV Accuracy**: Real-time value calculations with compound growth
+
+## 🔄 Data Flow Examples
+
+### New Investment Process
+
+```
+User Registration → Profile Creation → Investment → Admin Fee Calculation →
+Portfolio Addition → NPV Tracking → Compound Interest Application
+```
+
+### Rollover Process
+
+```
+Investment Maturity → Rollover Decision → New Account Creation →
+Parent Account Closure → Fee Exemption → Continued Growth Tracking
+```
+
+### 🆕 **NEW**: Page Load Process
+
+```
+User Request → Server Auth Check → Data Fetching → View Component Render → Client Hydration
+```
+
+### 🆕 **NEW**: Form Submission Process
+
+```
+User Input → Client Validation → Form Submission → Server Action → Authentication Check →
+Zod Validation → Business Logic → Database Operation → Response → UI Update → Form Reset
+```
+
+## 🚀 Deployment Considerations
+
+### Platforms
+
+- **Vercel**: Recommended for Next.js applications
+- **AWS/Digital Ocean**: Custom server deployments
+- **Supabase**: Database hosting and authentication
+
+### Configuration
+
+- Environment variables properly configured
+- Database migrations applied
+- Authentication providers set up
+- SSL certificates for production
+
+## 📋 **NEW STANDARD**: Development Guidelines
+
+### ✅ **DO's**:
+
+1. **Always use server components for page.tsx files**
+2. **Handle authentication server-side using auth helpers**
+3. **Fetch all data server-side before rendering**
+4. **Pass data as props to client View components**
+5. **Name client components with descriptive suffixes** (`*-view.tsx`, `*-modal.tsx`, `*-table.tsx`)
+6. **Keep server components minimal** (auth + data fetching only)
+7. **Keep all UI logic in client components**
+8. **🆕 Always use `useActionState` for form handling**
+9. **🆕 Use `zod-form-data` for server-side validation**
+10. **🆕 Implement proper error handling and user feedback**
+
+### ❌ **DON'Ts**:
+
+1. **Don't use client components for page.tsx files**
+2. **Don't handle authentication client-side in page components**
+3. **Don't fetch data client-side for initial page load**
+4. **Don't mix UI logic with data fetching in the same component**
+5. **Don't use useEffect for initial data loading**
+6. **Don't create loading states for server-fetched data**
+7. **🆕 Don't use async/await patterns for form submissions**
+8. **🆕 Don't skip server-side validation**
+9. **🆕 Don't forget to handle form state reset**
+10. **🆕 Don't use uncontrolled inputs in forms**
+
+### 🔧 **Component Creation Checklist**:
+
+- [ ] Is this a page route? → Create server component `page.tsx`
+- [ ] Does it need authentication? → Use appropriate auth helper
+- [ ] Does it need data? → Fetch server-side
+- [ ] Does it have UI interactions? → Create client View component
+- [ ] Is it a modal/dialog? → Create `*-modal.tsx` client component
+- [ ] Is it a data table? → Create `*-table.tsx` client component
+- [ ] 🆕 Is it a form? → Use `useActionState` pattern
+- [ ] 🆕 Does it need validation? → Use `zod-form-data` on server
+- [ ] 🆕 Does it need error handling? → Implement `FieldError` components
+- [ ] 🆕 Does it need loading states? → Use `SubmitButton` component
+
+### 🆕 **Form Development Guidelines**:
+
+#### **✅ Form Component Requirements:**
+
+1. **Always use `useActionState`** for form state management
+2. **Use controlled inputs** with local state for all form fields
+3. **Implement proper form reset** on modal close and success
+4. **Include field-specific error handling** with `FieldError` component
+5. **Use `startTransition`** for form submission
+6. **Implement error scrolling** to first error field
+7. **Use `useEffectEvent`** for action state handling
+8. **Include success/error message display**
+9. **Use `SubmitButton`** component for consistent loading states
+10. **Implement proper form validation** with HTML5 and server-side validation
+
+#### **🎯 Required Form Features:**
+
+```typescript
+// Standard form imports and setup
+import { useActionState, startTransition, useEffectEvent } from "react";
+import { SubmitButton } from "@/components/buttons/submit-button";
+
+// Required state management
+const [actionState, actionDispatch, isActionPending] = useActionState(
+  serverAction,
+  undefined
+);
+
+// Required form handling
+const handleSubmit = (e: FormEvent) => {
+  e.preventDefault();
+  startTransition(() => {
+    const formData = new FormData();
+    // ... append all form fields
+    actionDispatch(formData);
+  });
+};
+
+// Required error handling
+const getFieldError = (fieldName: string) => {
+  return actionState?.errors?.find((error: any) => error.field === fieldName)
+    ?.message;
+};
+```
+
+#### **📊 Server Action Pattern:**
+
+```typescript
+// Standard server action structure
+export async function serverAction(prevState: any, formData: FormData) {
+  // 1. Authentication check
+  // 2. Zod validation
+  // 3. Business logic validation
+  // 4. Database operations
+  // 5. Response formatting
+}
+```
+
+#### **🚫 Form Development DON'Ts:**
+
+1. **Don't use async/await patterns** - Always use `useActionState`
+2. **Don't skip server-side validation** - Always use `zod-form-data`
+3. **Don't forget error handling** - Always include field-specific errors
+4. **Don't use uncontrolled inputs** - Always use controlled components
+5. **Don't skip form reset** - Always reset on success/close
+6. **Don't forget loading states** - Always use `SubmitButton`
+7. **Don't skip error scrolling** - Always scroll to first error
+8. **Don't use inline validation** - Always validate on server
+
+### 🆕 **Advanced Table Development Guidelines**:
+
+#### **✅ Table Component Requirements:**
+
+1. **Always use Tanstack React Table** for all data tables
+2. **Include comprehensive filtering** on every relevant column
+3. **Implement all filter types**: Text, NumberRange, DateRange, Type/Status
+4. **Add global search** functionality
+5. **Include sorting** on all sortable columns with visual indicators
+6. **Add pagination** with configurable page sizes
+7. **Implement expandable rows** for detailed data when applicable
+8. **Update summary cards** to reflect filtered data in real-time
+9. **Use standardized filter components** (TextFilter, NumberRangeFilter, etc.)
+10. **Include active filter management** with badges and reset functionality
+
+#### **🎯 Required Table Features:**
+
+```typescript
+// Standard table imports and setup
+import {
+  ColumnDef,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  ColumnFiltersState,
+  SortingState,
+  VisibilityState,
+  Row,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
+
+// Required state management
+const [sorting, setSorting] = useState<SortingState>([]);
+const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+const [globalFilter, setGlobalFilter] = useState("");
+const [expanded, setExpanded] = useState({});
+
+// Required table features
+const table = useReactTable({
+  data,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getPaginationRowModel: getPaginationRowModel(),
+  getExpandedRowModel: getExpandedRowModel(),
+  // ... other required configurations
+});
+```
+
+#### **📊 Column Definition Pattern:**
+
+```typescript
+// Standard column with full functionality
+{
+  accessorKey: "columnName",
+  header: ({ column }) => (
+    <div className="flex items-center">
+      <Button
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        className="h-auto p-0 font-semibold"
+      >
+        Column Title
+        {/* Sorting icons */}
+      </Button>
+      <FilterComponent column={column} />
+    </div>
+  ),
+  cell: ({ getValue }) => <FormattedValue value={getValue()} />,
+  filterFn: "appropriateFilterFunction",
+}
+```
+
+#### **🚫 Table Development DON'Ts:**
+
+1. **Don't use basic HTML tables** - Always use Tanstack React Table
+2. **Don't skip filtering** - Every column should be filterable when relevant
+3. **Don't forget global search** - Always include cross-column search
+4. **Don't omit summary updates** - Filtered data must update totals
+5. **Don't use inconsistent filter UI** - Stick to standardized components
+6. **Don't skip pagination** - Always include configurable pagination
+7. **Don't forget loading states** - Include proper loading and error handling
+
+This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern and modern form handling as the core architectural principles for all future development.
 
 This documentation provides the complete standard for the Galfa Backend investment platform, establishing the server-side fetching pattern as the core architectural principle for all future development.
