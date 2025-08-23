@@ -13,9 +13,10 @@ import {
   SortingState,
   VisibilityState,
   Row,
-  getExpandedRowModel,
 } from "@tanstack/react-table";
-import { getFlatRateInvestments } from "../actions/get-flat-rate-investments";
+import { useQuery } from "@tanstack/react-query";
+import { getCapitalMarketPerformanceByUserIdQueryOptions } from "../actions/get-capital-market-performance-by-user-id/query-options";
+import { CreateCapitalMarketPerformanceModal } from "./create-capital-market-performance-modal";
 import {
   Table,
   TableBody,
@@ -25,7 +26,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -38,11 +38,10 @@ import {
 import {
   Loader2,
   RefreshCw,
-  ChevronDown,
-  ChevronRight,
   ChevronLeft,
-  ChevronLast,
+  ChevronRight,
   ChevronFirst,
+  ChevronLast,
   TrendingUp,
   DollarSign,
   Calendar,
@@ -60,17 +59,27 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
-type FlatRateInvestment = Awaited<ReturnType<typeof getFlatRateInvestments>>[0];
+type CapitalMarketPerformance = {
+  id: number;
+  capital_market_account_id: number | null;
+  created_at: Date;
+  updated_at: Date;
+  performance_date: Date;
+  total_invested: string;
+  gross_performance: string;
+  net_performance: string;
+};
 
 // Custom filter function for number ranges
 const numberRangeFilter = (
-  row: Row<FlatRateInvestment>,
+  row: Row<CapitalMarketPerformance>,
   columnId: string,
   value: [number?, number?]
 ) => {
   const [min, max] = value;
-  const cellValue = row.getValue(columnId) as number;
+  const cellValue = Number(row.getValue(columnId));
 
   if (min !== undefined && max !== undefined) {
     return cellValue >= min && cellValue <= max;
@@ -86,7 +95,7 @@ const numberRangeFilter = (
 
 // Custom filter function for date ranges
 const dateRangeFilter = (
-  row: Row<FlatRateInvestment>,
+  row: Row<CapitalMarketPerformance>,
   columnId: string,
   value: [string?, string?]
 ) => {
@@ -105,39 +114,43 @@ const dateRangeFilter = (
   return true;
 };
 
-export function FlatRateInvestmentsTable() {
-  const [data, setData] = useState<FlatRateInvestment[]>([]);
-  const [loading, setLoading] = useState(true);
+export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
+  const {
+    data: capitalMarketPerformance,
+    isLoading,
+    refetch,
+  } = useQuery(getCapitalMarketPerformanceByUserIdQueryOptions(userId));
+
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
-  const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
-  const [expanded, setExpanded] = useState({});
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", {
       style: "currency",
       currency: "IDR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
 
   const formatDate = (date: Date) => {
-    return format(new Date(date), "d MMMM yyyy");
+    return format(new Date(date), "MMMM yyyy");
+  };
+
+  const formatPercentage = (value: number, total: number): string => {
+    if (total === 0) return "0.00%";
+    const percentage = (value / total) * 100;
+    return `${percentage >= 0 ? "+" : ""}${percentage.toFixed(2)}%`;
   };
 
   // Helper function to get column display name
   const getColumnDisplayName = (columnId: string) => {
     const displayNames: Record<string, string> = {
-      name: "Account Name",
-      grossCapital: "Gross Capital",
-      adminFee: "Admin Fee",
-      netCapital: "Net Capital",
-      rate: "Rate",
-      transDate: "Transaction Date",
-      endDate: "End Date",
-      status: "Status",
-      currentValue: "Current Value",
-      totalRedemptions: "Total Redeemed",
+      performance_date: "Performance Date",
+      total_invested: "Total Invested",
+      gross_performance: "Gross Performance",
+      net_performance: "Net Performance",
     };
     return displayNames[columnId] || columnId;
   };
@@ -205,7 +218,7 @@ export function FlatRateInvestmentsTable() {
         </PopoverTrigger>
         <PopoverContent className="w-64" align="start">
           <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
+            <Label>Filter {getColumnDisplayName(column.id)}</Label>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 placeholder="Min"
@@ -214,7 +227,7 @@ export function FlatRateInvestmentsTable() {
                 onChange={(e) => {
                   const value = e.target.value;
                   column.setFilterValue([
-                    value ? parseFloat(value) : undefined,
+                    value === "" ? undefined : Number(value),
                     max,
                   ]);
                 }}
@@ -227,7 +240,7 @@ export function FlatRateInvestmentsTable() {
                   const value = e.target.value;
                   column.setFilterValue([
                     min,
-                    value ? parseFloat(value) : undefined,
+                    value === "" ? undefined : Number(value),
                   ]);
                 }}
               />
@@ -270,15 +283,14 @@ export function FlatRateInvestmentsTable() {
         </PopoverTrigger>
         <PopoverContent className="w-64" align="start">
           <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
+            <Label>Filter {getColumnDisplayName(column.id)}</Label>
             <div className="grid grid-cols-2 gap-2">
               <Input
                 placeholder="From"
                 type="date"
                 value={from ?? ""}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([value || undefined, to]);
+                  column.setFilterValue([e.target.value, to]);
                 }}
               />
               <Input
@@ -286,8 +298,7 @@ export function FlatRateInvestmentsTable() {
                 type="date"
                 value={to ?? ""}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([from, value || undefined]);
+                  column.setFilterValue([from, e.target.value]);
                 }}
               />
             </div>
@@ -308,182 +319,110 @@ export function FlatRateInvestmentsTable() {
     );
   };
 
-  const StatusFilter = ({ column }: { column: any }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              column.getFilterValue()
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48" align="start">
-          <div className="space-y-2">
-            <Label>Filter by {getColumnDisplayName(column.id)}</Label>
-            <Select
-              value={(column.getFilterValue() as string) ?? "all"}
-              onValueChange={(value) =>
-                column.setFilterValue(value === "all" ? undefined : value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                {uniqueStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {column.getFilterValue() && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      active: "bg-green-100 text-green-800 border-green-200",
-      redeemed: "bg-purple-100 text-purple-800 border-purple-200",
-      rollover: "bg-blue-100 text-blue-800 border-blue-200",
-      mature: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      closed: "bg-gray-100 text-gray-800 border-gray-200",
-    } as const;
-
-    return (
-      <Badge
-        variant="outline"
-        className={colors[status as keyof typeof colors] || colors.closed}
-      >
-        {status}
-      </Badge>
-    );
-  };
-
   // Column definitions
-  const columns = useMemo<ColumnDef<FlatRateInvestment>[]>(
+  const columns = useMemo<ColumnDef<CapitalMarketPerformance>[]>(
     () => [
       {
-        id: "expander",
-        header: "",
+        accessorKey: "performance_date",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Performance Date
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <DateRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="font-medium">{formatDate(getValue() as Date)}</div>
+        ),
+        filterFn: dateRangeFilter,
+      },
+      {
+        accessorKey: "total_invested",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Total Invested
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
+        cell: ({ getValue }) => (
+          <div className="">{formatCurrency(Number(getValue()))}</div>
+        ),
+        filterFn: numberRangeFilter,
+      },
+      {
+        accessorKey: "gross_performance",
+        header: ({ column }) => {
+          return (
+            <div className="flex items-center">
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
+                className="h-auto p-0 font-semibold"
+              >
+                Gross Performance
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+              <NumberRangeFilter column={column} />
+            </div>
+          );
+        },
         cell: ({ row }) => {
-          return row.getCanExpand() ? (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 w-8 p-0"
-              onClick={row.getToggleExpandedHandler()}
-            >
-              {row.getIsExpanded() ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
-              )}
-            </Button>
-          ) : null;
-        },
-        size: 50,
-      },
-      {
-        accessorKey: "name",
-        header: ({ column }) => {
+          const grossPerformance = Number(row.getValue("gross_performance"));
+          const totalInvested = Number(row.getValue("total_invested"));
           return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Account Name
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <TextFilter column={column} />
+            <div className="space-y-1">
+              <div className="">{formatCurrency(grossPerformance)}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatPercentage(grossPerformance, totalInvested)}
+              </div>
             </div>
           );
         },
-        cell: ({ getValue }) => (
-          <div className="font-medium">{getValue() as string}</div>
-        ),
-        filterFn: "includesString",
-      },
-      {
-        accessorKey: "grossCapital",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Gross Capital
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className="">{formatCurrency(getValue() as number)}</div>
-        ),
         filterFn: numberRangeFilter,
       },
       {
-        accessorKey: "adminFee",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <span className="font-semibold">Admin Fee</span>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className=" text-red-600">
-            -{formatCurrency(getValue() as number)}
-          </div>
-        ),
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "netCapital",
+        accessorKey: "net_performance",
         header: ({ column }) => {
           return (
             <div className="flex items-center">
@@ -494,7 +433,7 @@ export function FlatRateInvestmentsTable() {
                 }
                 className="h-auto p-0 font-semibold"
               >
-                Net Capital
+                Net Performance
                 {column.getIsSorted() === "asc" ? (
                   <ArrowUp className="ml-2 h-4 w-4" />
                 ) : column.getIsSorted() === "desc" ? (
@@ -507,169 +446,15 @@ export function FlatRateInvestmentsTable() {
             </div>
           );
         },
-        cell: ({ getValue }) => (
-          <div className=" text-green-600 font-medium">
-            {formatCurrency(getValue() as number)}
-          </div>
-        ),
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "rate",
-        header: ({ column }) => {
+        cell: ({ row }) => {
+          const netPerformance = Number(row.getValue("net_performance"));
+          const totalInvested = Number(row.getValue("total_invested"));
           return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Rate
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => <div>{getValue() as number}%</div>,
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "transDate",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Transaction Date
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <DateRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className="text-muted-foreground">
-            {formatDate(getValue() as Date)}
-          </div>
-        ),
-        filterFn: dateRangeFilter,
-      },
-      {
-        accessorKey: "endDate",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                End Date
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <DateRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className="text-muted-foreground">
-            {formatDate(getValue() as Date)}
-          </div>
-        ),
-        filterFn: dateRangeFilter,
-      },
-      {
-        accessorKey: "status",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <span className="font-semibold">Status</span>
-              <StatusFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => getStatusBadge(getValue() as string),
-        filterFn: "equals",
-      },
-      {
-        accessorKey: "currentValue",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Current Value
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className=" text-blue-600 font-medium">
-            {formatCurrency(getValue() as number)}
-          </div>
-        ),
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "totalRedemptions",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <span className="font-semibold">Total Redeemed</span>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => {
-          const value = getValue() as number;
-          return (
-            <div className="">
-              {value > 0 ? (
-                <span className="text-red-600">-{formatCurrency(value)}</span>
-              ) : (
-                <span className="text-muted-foreground">None</span>
-              )}
+            <div className="space-y-1">
+              <div>{formatCurrency(netPerformance)}</div>
+              <div className="text-xs text-muted-foreground">
+                {formatPercentage(netPerformance, totalInvested)}
+              </div>
             </div>
           );
         },
@@ -679,112 +464,111 @@ export function FlatRateInvestmentsTable() {
     []
   );
 
+  // Calculate summary statistics from filtered data
+  const filteredData = useMemo(() => {
+    if (!capitalMarketPerformance) return [];
+    return capitalMarketPerformance.filter((record) => {
+      // Apply global filter
+      if (globalFilter) {
+        const searchValue = globalFilter.toLowerCase();
+        const searchableFields = [
+          formatDate(record.performance_date),
+          formatCurrency(Number(record.total_invested)),
+          formatCurrency(Number(record.gross_performance)),
+          formatCurrency(Number(record.net_performance)),
+        ];
+        if (
+          !searchableFields.some((field) =>
+            field.toLowerCase().includes(searchValue)
+          )
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [capitalMarketPerformance, globalFilter]);
+
+  const totals = useMemo(() => {
+    return filteredData.reduce(
+      (acc, record) => {
+        acc.totalInvested += Number(record.total_invested);
+        acc.grossPerformance += Number(record.gross_performance);
+        acc.netPerformance += Number(record.net_performance);
+        return acc;
+      },
+      { totalInvested: 0, grossPerformance: 0, netPerformance: 0 }
+    );
+  }, [filteredData]);
+
   const table = useReactTable({
-    data,
+    data: filteredData,
     columns,
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
-    getExpandedRowModel: getExpandedRowModel(),
-    getRowCanExpand: () => true,
+    globalFilterFn: "includesString",
     state: {
       sorting,
       columnFilters,
       columnVisibility,
-      rowSelection,
       globalFilter,
-      expanded,
-    },
-    onExpandedChange: setExpanded,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
     },
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const investmentsData = await getFlatRateInvestments();
-      setData(investmentsData);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Calculate totals from filtered data
-  const filteredData = table
-    .getFilteredRowModel()
-    .rows.map((row) => row.original);
-  const totals = filteredData.reduce(
-    (acc, investment) => ({
-      grossCapital: acc.grossCapital + investment.grossCapital,
-      adminFee: acc.adminFee + investment.adminFee,
-      netCapital: acc.netCapital + investment.netCapital,
-      currentValue: acc.currentValue + investment.currentValue,
-      totalRedemptions: acc.totalRedemptions + investment.totalRedemptions,
-    }),
-    {
-      grossCapital: 0,
-      adminFee: 0,
-      netCapital: 0,
-      currentValue: 0,
-      totalRedemptions: 0,
-    }
-  );
-
-  // Get unique statuses for filter dropdown
-  const uniqueStatuses = Array.from(new Set(data.map((inv) => inv.status)));
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">
-              Loading investments...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header with Create Button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Capital Market Performance</h2>
+        <CreateCapitalMarketPerformanceModal userId={userId} />
+      </div>
+
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+                <DollarSign className="h-5 w-5 text-blue-600" />
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Total Investments
+                  Total Invested
                 </p>
                 <p className="text-lg font-bold">
-                  {filteredData.length}
-                  {filteredData.length !== data.length && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      of {data.length}
-                    </span>
-                  )}
+                  {formatCurrency(totals.totalInvested)}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Gross Performance
+                </p>
+                <p className="text-lg font-bold">
+                  {formatCurrency(totals.grossPerformance)}
                 </p>
               </div>
             </div>
@@ -795,50 +579,14 @@ export function FlatRateInvestmentsTable() {
           <CardContent className="p-6">
             <div className="flex items-center">
               <div className="p-2 bg-emerald-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Total Gross Capital
+                  Net Performance
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.grossCapital)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-teal-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Current Value
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.currentValue)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-red-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Redeemed
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.totalRedemptions)}
+                  {formatCurrency(totals.netPerformance)}
                 </p>
               </div>
             </div>
@@ -852,10 +600,10 @@ export function FlatRateInvestmentsTable() {
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl font-semibold">
-                Flat Rate Investments
+                Performance Records
               </CardTitle>
               <div className="flex items-center space-x-2">
-                <Button onClick={fetchData} variant="outline" size="sm">
+                <Button onClick={() => refetch()} variant="outline" size="sm">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
@@ -967,142 +715,33 @@ export function FlatRateInvestmentsTable() {
                 {table.getRowModel().rows?.length ? (
                   <>
                     {table.getRowModel().rows.map((row) => (
-                      <React.Fragment key={row.id}>
-                        <TableRow
-                          data-state={row.getIsSelected() && "selected"}
-                        >
-                          {row.getVisibleCells().map((cell) => (
-                            <TableCell key={cell.id}>
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext()
-                              )}
-                            </TableCell>
-                          ))}
-                        </TableRow>
-
-                        {/* Expanded Row for Monthly Data */}
-                        {row.getIsExpanded() && (
-                          <TableRow>
-                            <TableCell colSpan={columns.length} className="p-0">
-                              <div className="bg-muted/30 p-6">
-                                <div className="flex items-center gap-2 mb-4">
-                                  <Calendar className="h-4 w-4" />
-                                  <span className="font-medium">
-                                    Monthly Performance History -{" "}
-                                    {row.original.name}
-                                  </span>
-                                  <Badge variant="outline">
-                                    {row.original.monthlyData.length} months
-                                  </Badge>
-                                </div>
-
-                                <div className="rounded-md border bg-background">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Month</TableHead>
-                                        <TableHead className="text-center">
-                                          Days
-                                        </TableHead>
-                                        <TableHead>Beginning Balance</TableHead>
-                                        <TableHead>Interest Earned</TableHead>
-                                        <TableHead>Ending Balance</TableHead>
-                                        <TableHead className="text-center">
-                                          Redemptions
-                                        </TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {row.original.monthlyData.map(
-                                        (monthData) => (
-                                          <TableRow key={monthData.monthYear}>
-                                            <TableCell className="font-medium">
-                                              {monthData.monthYear}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                              {monthData.daysInPeriod}
-                                            </TableCell>
-                                            <TableCell className="">
-                                              {formatCurrency(
-                                                monthData.beginningBalance
-                                              )}
-                                            </TableCell>
-                                            <TableCell className=" text-green-600">
-                                              {formatCurrency(
-                                                monthData.monthlyInterest
-                                              )}
-                                            </TableCell>
-                                            <TableCell className=" text-blue-600 font-medium">
-                                              {formatCurrency(
-                                                monthData.endingBalance
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                              {monthData.redemptions &&
-                                              monthData.redemptions > 0 ? (
-                                                <span className=" text-red-600">
-                                                  -
-                                                  {formatCurrency(
-                                                    monthData.redemptions
-                                                  )}
-                                                </span>
-                                              ) : (
-                                                <span className="text-muted-foreground">
-                                                  -
-                                                </span>
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                        )
-                                      )}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </React.Fragment>
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
                     ))}
 
                     {/* Totals Row */}
                     {filteredData.length > 0 && (
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
-                        <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>
                         <TableCell className=" font-bold">
-                          {formatCurrency(totals.grossCapital)}
-                        </TableCell>
-                        <TableCell className=" font-bold text-red-600">
-                          -{formatCurrency(totals.adminFee)}
-                        </TableCell>
-                        <TableCell className=" font-bold text-green-600">
-                          {formatCurrency(totals.netCapital)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          -
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          -
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          -
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          -
-                        </TableCell>
-                        <TableCell className=" font-bold text-blue-600">
-                          {formatCurrency(totals.currentValue)}
+                          {formatCurrency(totals.totalInvested)}
                         </TableCell>
                         <TableCell className=" font-bold">
-                          {totals.totalRedemptions > 0 ? (
-                            <span className="text-red-600">
-                              -{formatCurrency(totals.totalRedemptions)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">None</span>
-                          )}
+                          {formatCurrency(totals.grossPerformance)}
+                        </TableCell>
+                        <TableCell className=" font-bold">
+                          {formatCurrency(totals.netPerformance)}
                         </TableCell>
                       </TableRow>
                     )}
@@ -1113,7 +752,7 @@ export function FlatRateInvestmentsTable() {
                       colSpan={columns.length}
                       className="h-24 text-center"
                     >
-                      No results.
+                      No performance records found.
                     </TableCell>
                   </TableRow>
                 )}
@@ -1124,8 +763,7 @@ export function FlatRateInvestmentsTable() {
           {/* Pagination */}
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
+              {table.getFilteredRowModel().rows.length} row(s) total.
             </div>
             <div className="flex items-center space-x-6 lg:space-x-8">
               <div className="flex items-center space-x-2">

@@ -517,7 +517,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-right">
+          <div className=" text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -549,7 +549,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-right font-medium text-blue-600">
+          <div className=" text-right font-medium text-blue-600">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -581,7 +581,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-right font-medium text-green-600">
+          <div className=" text-right font-medium text-green-600">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -1234,13 +1234,13 @@ export default function FloatingRateInvestmentsMonthlyTable({
                         <TableCell className="text-muted-foreground">
                           -
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right">
+                        <TableCell className=" font-bold text-right">
                           {formatCurrency(totals.grossCapital)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right text-blue-600">
+                        <TableCell className=" font-bold text-right text-blue-600">
                           {formatCurrency(totals.netInvestorFund)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right text-green-600">
+                        <TableCell className=" font-bold text-right text-green-600">
                           {formatCurrency(totals.presentValueFund)}
                         </TableCell>
                         <TableCell className="text-center text-muted-foreground">

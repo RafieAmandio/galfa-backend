@@ -26,7 +26,7 @@ export function HomeView({ user, isAdmin }: HomeViewProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 rounded-sm">
       <div className="container mx-auto py-12 px-4">
         {/* Welcome Header */}
         <div className="text-center mb-12">

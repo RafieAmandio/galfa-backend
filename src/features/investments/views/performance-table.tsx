@@ -269,10 +269,10 @@ export function PerformanceTable() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right ">
                         {formatCurrency(record.aum)}
                       </TableCell>
-                      <TableCell className="text-right font-mono">
+                      <TableCell className="text-right ">
                         {formatCurrency(record.profitTaken)}
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
@@ -306,10 +306,10 @@ export function PerformanceTable() {
                 <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                   <TableCell className="font-bold">TOTAL</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
-                  <TableCell className="text-right font-mono font-bold text-blue-600">
+                  <TableCell className="text-right  font-bold text-blue-600">
                     {formatCurrency(totals.totalAum)}
                   </TableCell>
-                  <TableCell className="text-right font-mono font-bold text-green-600">
+                  <TableCell className="text-right  font-bold text-green-600">
                     {formatCurrency(totals.totalProfitTaken)}
                   </TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>

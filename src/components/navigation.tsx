@@ -1,11 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 interface NavigationProps {
   user: User | null;
@@ -15,8 +22,6 @@ interface NavigationProps {
 
 export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   const [loading, setLoading] = useState(false);
-  const [investmentsDropdownOpen, setInvestmentsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createBrowserClient();
@@ -43,7 +48,7 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   // Helper function to check if any investment route is active
   const isAnyInvestmentRouteActive = () => {
     const investmentRoutes = isAdmin
-      ? ["/flat-rate", "/floating-rate", "/installments"]
+      ? ["/admin/flat-rate", "/admin/floating-rate", "/admin/installments"]
       : [
           "/investor/flat-rate",
           "/investor/floating-rate",
@@ -51,23 +56,6 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
         ];
     return investmentRoutes.some((route) => isActiveRoute(route));
   };
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        setInvestmentsDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   const handleSignOut = async () => {
     setLoading(true);
@@ -106,50 +94,39 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       </Link>
 
                       {/* Investments Dropdown */}
-                      <div className="relative">
-                        <button
-                          onClick={() =>
-                            setInvestmentsDropdownOpen(!investmentsDropdownOpen)
-                          }
-                          className={`flex items-center text-sm font-medium px-3 py-2 rounded-md transition-colors duration-200 ${
-                            isAnyInvestmentRouteActive()
-                              ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
-                              : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
-                          }`}
-                        >
-                          Investments
-                          <ChevronDown
-                            className={`ml-1 h-4 w-4 transition-transform duration-200 ${
-                              investmentsDropdownOpen ? "rotate-180" : ""
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className={`h-auto p-2 text-sm font-medium ${
+                              isAnyInvestmentRouteActive()
+                                ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
+                                : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
                             }`}
-                          />
-                        </button>
-
-                        {investmentsDropdownOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                            <div className="py-1">
-                              <Link
-                                href="/flat-rate"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Flat Rate
-                              </Link>
-                              <Link
-                                href="/floating-rate"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Floating Rate
-                              </Link>
-                              <Link
-                                href="/installments"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Installments
-                              </Link>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                          >
+                            Investments
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48" align="start">
+                          <DropdownMenuItem asChild>
+                            <Link href="/admin/flat-rate">Flat Rate</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/admin/floating-rate">
+                              Floating Rate
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/admin/installments">Installments</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/admin/capital-market">
+                              Capital Market
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
 
                       <Link
                         href="/admin/user-management"
@@ -181,50 +158,36 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       </Link>
 
                       {/* Investments Dropdown */}
-                      <div className="relative" ref={dropdownRef}>
-                        <button
-                          onClick={() =>
-                            setInvestmentsDropdownOpen(!investmentsDropdownOpen)
-                          }
-                          className={`flex items-center text-sm font-medium px-3 py-2 rounded-md transition-colors duration-200 ${
-                            isAnyInvestmentRouteActive()
-                              ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
-                              : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
-                          }`}
-                        >
-                          Investments
-                          <ChevronDown
-                            className={`ml-1 h-4 w-4 transition-transform duration-200 ${
-                              investmentsDropdownOpen ? "rotate-180" : ""
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className={`h-auto p-2 text-sm font-medium ${
+                              isAnyInvestmentRouteActive()
+                                ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
+                                : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
                             }`}
-                          />
-                        </button>
-
-                        {investmentsDropdownOpen && (
-                          <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
-                            <div className="py-1">
-                              <Link
-                                href="/investor/flat-rate"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Flat Rate
-                              </Link>
-                              <Link
-                                href="/investor/floating-rate"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Floating Rate
-                              </Link>
-                              <Link
-                                href="/investor/installments"
-                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                              >
-                                Installments
-                              </Link>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                          >
+                            Investments
+                            <ChevronDown className="ml-1 h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-48" align="start">
+                          <DropdownMenuItem asChild>
+                            <Link href="/investor/flat-rate">Flat Rate</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/investor/floating-rate">
+                              Floating Rate
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/investor/installments">
+                              Installments
+                            </Link>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </>
                   )}
                 </div>

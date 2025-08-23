@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
+import TanstackQueryProvider from "@/lib/tanstack-query/provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
@@ -42,13 +39,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Navigation user={user} isAdmin={isAdmin} authError={authError} />
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </main>
+      <body className={`${geistSans.variable} antialiased`}>
+        <NextTopLoader />
+        <TanstackQueryProvider>
+          <Navigation user={user} isAdmin={isAdmin} authError={authError} />
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {children}
+          </main>
+        </TanstackQueryProvider>
       </body>
     </html>
   );

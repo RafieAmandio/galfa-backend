@@ -581,7 +581,7 @@ export function AdminDashboardView({
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Gross Profit Formula:
                   </p>
-                  <p className="text-xs text-gray-600 font-mono">
+                  <p className="text-xs text-gray-600 ">
                     {grossProfitData.calculation.formula}
                   </p>
                 </div>
@@ -589,7 +589,7 @@ export function AdminDashboardView({
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Breakdown:
                   </p>
-                  <p className="text-xs text-gray-600 font-mono">
+                  <p className="text-xs text-gray-600 ">
                     {grossProfitData.calculation.breakdown}
                   </p>
                 </div>
@@ -597,7 +597,7 @@ export function AdminDashboardView({
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Percentage Formula:
                   </p>
-                  <p className="text-xs text-gray-600 font-mono">
+                  <p className="text-xs text-gray-600 ">
                     {grossProfitData.calculation.percentageFormula}
                   </p>
                 </div>
@@ -605,7 +605,7 @@ export function AdminDashboardView({
                   <p className="text-sm font-medium text-gray-700 mb-2">
                     Percentage Breakdown:
                   </p>
-                  <p className="text-xs text-gray-600 font-mono">
+                  <p className="text-xs text-gray-600 ">
                     {grossProfitData.calculation.percentageBreakdown}
                   </p>
                 </div>
@@ -1410,7 +1410,7 @@ export function AdminDashboardView({
                         <p className="text-sm font-medium text-gray-900 mb-2">
                           Profit Calculation:
                         </p>
-                        <p className="text-sm text-gray-600 font-mono">
+                        <p className="text-sm text-gray-600 ">
                           {
                             floatingRateAllocatedProfitData.calculation
                               .breakdown
@@ -1429,7 +1429,7 @@ export function AdminDashboardView({
                               .performanceFormula
                           }
                         </p>
-                        <p className="text-sm text-gray-600 font-mono">
+                        <p className="text-sm text-gray-600 ">
                           {
                             floatingRateAllocatedProfitData.calculation
                               .performanceBreakdown
@@ -1526,7 +1526,7 @@ export function AdminDashboardView({
                         <p className="text-sm font-medium text-gray-900 mb-2">
                           Calculation:
                         </p>
-                        <p className="text-sm text-gray-600 font-mono">
+                        <p className="text-sm text-gray-600 ">
                           {floatingRateGrowthData.calculation.breakdown}
                         </p>
                       </div>

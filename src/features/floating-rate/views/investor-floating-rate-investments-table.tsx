@@ -464,7 +464,7 @@ export default function InvestorFloatingRateInvestmentsTable({
           </div>
         ),
         cell: ({ getValue }) => (
-          <div className="font-mono text-right">
+          <div className=" text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -494,7 +494,7 @@ export default function InvestorFloatingRateInvestmentsTable({
           </div>
         ),
         cell: ({ getValue }) => (
-          <div className="font-mono text-right font-medium text-green-600">
+          <div className=" text-right font-medium text-green-600">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -526,7 +526,7 @@ export default function InvestorFloatingRateInvestmentsTable({
         cell: ({ row }) => {
           const value = getGainedFund(row.original);
           return (
-            <div className="font-mono text-right text-emerald-600">
+            <div className=" text-right text-emerald-600">
               {formatCurrency(value)}
             </div>
           );
@@ -970,16 +970,16 @@ export default function InvestorFloatingRateInvestmentsTable({
                     {filteredData.length > 0 && (
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                         <TableCell className="font-bold">TOTAL</TableCell>
-                        <TableCell className="font-mono font-bold text-right">
+                        <TableCell className=" font-bold text-right">
                           {formatCurrency(totals.grossCapital)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right text-green-600">
+                        <TableCell className=" font-bold text-right text-green-600">
                           {formatCurrency(totals.presentValueFund)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right text-emerald-600">
+                        <TableCell className=" font-bold text-right text-emerald-600">
                           {formatCurrency(totals.gainedFund)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right text-red-600">
+                        <TableCell className=" font-bold text-right text-red-600">
                           {formatCurrency(totals.totalRedemptions)}
                         </TableCell>
                         <TableCell colSpan={columns.length - 5}></TableCell>

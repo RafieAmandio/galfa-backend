@@ -433,7 +433,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-right">
+          <div className=" text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -529,7 +529,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-blue-600 font-medium text-right">
+          <div className=" text-blue-600 font-medium text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -561,7 +561,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-green-600 font-medium text-right">
+          <div className=" text-green-600 font-medium text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -593,7 +593,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-mono text-red-600 font-medium text-right">
+          <div className=" text-red-600 font-medium text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -794,7 +794,7 @@ export function AdminInstallmentTable() {
                 <TableBody>
                   <TableRow>
                     {uniqueMonths.map((month) => (
-                      <TableCell key={month} className="text-center font-mono">
+                      <TableCell key={month} className="text-center ">
                         {formatCurrency(summary.monthlyGainedFunds[month])}
                       </TableCell>
                     ))}
@@ -980,22 +980,22 @@ export function AdminInstallmentTable() {
                                             <TableCell className="font-medium">
                                               {monthData.monthYear}
                                             </TableCell>
-                                            <TableCell className="font-mono text-right">
+                                            <TableCell className=" text-right">
                                               {formatCurrency(
                                                 monthData.principalPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className="font-mono text-green-600 text-right">
+                                            <TableCell className=" text-green-600 text-right">
                                               {formatCurrency(
                                                 monthData.interestPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className="font-mono text-blue-600 font-medium text-right">
+                                            <TableCell className=" text-blue-600 font-medium text-right">
                                               {formatCurrency(
                                                 monthData.totalPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className="font-mono text-right">
+                                            <TableCell className=" text-right">
                                               {formatCurrency(
                                                 monthData.netPresentValue
                                               )}
@@ -1024,7 +1024,7 @@ export function AdminInstallmentTable() {
                         <TableCell className="text-muted-foreground">
                           -
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-right">
+                        <TableCell className=" font-bold text-right">
                           {formatCurrency(totals.totalNetCapital)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -1033,13 +1033,13 @@ export function AdminInstallmentTable() {
                         <TableCell className="text-muted-foreground">
                           -
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-blue-600 text-right">
+                        <TableCell className=" font-bold text-blue-600 text-right">
                           {formatCurrency(totals.totalPresentValueFund)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-green-600 text-right">
+                        <TableCell className=" font-bold text-green-600 text-right">
                           {formatCurrency(totals.totalGainedFunds)}
                         </TableCell>
-                        <TableCell className="font-mono font-bold text-red-600 text-right">
+                        <TableCell className=" font-bold text-red-600 text-right">
                           {formatCurrency(totals.totalRedemptions)}
                         </TableCell>
                       </TableRow>

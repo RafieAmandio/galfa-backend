@@ -154,6 +154,32 @@ export const mutations = pgTable("mutations", {
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });
 
+// Capital Market accounts table - DOESN'T RELATE TO ACCOUNTS TABLE
+export const capitalMarketAccounts = pgTable("capital_market_accounts", {
+  id: serial("id").primaryKey(),
+  user_id: uuid("user_id")
+    .references(() => profiles.id)
+    .notNull(),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
+});
+
+// Capital Market Performance table
+export const capitalMarketPerformance = pgTable("capital_market_performance", {
+  id: serial("id").primaryKey(),
+  capital_market_account_id: integer("capital_market_account_id").references(
+    () => capitalMarketAccounts.id
+  ),
+  created_at: timestamp("created_at", { withTimezone: true }).notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
+  performance_date: timestamp("performance_date", {
+    withTimezone: true,
+  }).notNull(),
+  total_invested: numeric("total_invested").notNull(),
+  gross_performance: numeric("gross_performance").notNull(),
+  net_performance: numeric("net_performance").notNull(),
+});
+
 // Relations
 export const authUsersRelations = relations(authUsers, ({ one }) => ({
   profile: one(profiles, {

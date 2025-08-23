@@ -519,7 +519,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
           </div>
         ),
         cell: ({ getValue }) => (
-          <div className="font-mono text-sm">#{getValue() as number}</div>
+          <div className=" text-sm">#{getValue() as number}</div>
         ),
         filterFn: numberRangeFilter,
       },
@@ -559,7 +559,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
           </div>
         ),
         cell: ({ getValue }) => (
-          <div className="font-mono text-right font-medium">
+          <div className=" text-right font-medium">
             {formatCurrency(Number(getValue()))}
           </div>
         ),
