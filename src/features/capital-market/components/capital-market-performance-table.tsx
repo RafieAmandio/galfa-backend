@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -16,7 +16,6 @@ import {
 } from "@tanstack/react-table";
 import { useQuery } from "@tanstack/react-query";
 import { getCapitalMarketPerformanceByUserIdQueryOptions } from "../actions/get-capital-market-performance-by-user-id/query-options";
-import { CreateCapitalMarketPerformanceModal } from "./create-capital-market-performance-modal";
 import {
   Table,
   TableBody,
@@ -413,7 +412,11 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
           return (
             <div className="space-y-1">
               <div className="">{formatCurrency(grossPerformance)}</div>
-              <div className="text-xs text-muted-foreground">
+              <div
+                className={`text-xs text-muted-foreground ${
+                  grossPerformance > 0 ? "text-green-500" : "text-red-500"
+                }`}
+              >
                 {formatPercentage(grossPerformance, totalInvested)}
               </div>
             </div>
@@ -452,7 +455,11 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
           return (
             <div className="space-y-1">
               <div>{formatCurrency(netPerformance)}</div>
-              <div className="text-xs text-muted-foreground">
+              <div
+                className={`text-xs text-muted-foreground ${
+                  netPerformance > 0 ? "text-green-500" : "text-red-500"
+                }`}
+              >
                 {formatPercentage(netPerformance, totalInvested)}
               </div>
             </div>
@@ -534,7 +541,6 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
       {/* Header with Create Button */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Capital Market Performance</h2>
-        <CreateCapitalMarketPerformanceModal userId={userId} />
       </div>
 
       {/* Summary Cards */}

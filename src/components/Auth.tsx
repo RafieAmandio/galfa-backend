@@ -51,7 +51,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8 rounded-sm">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="text-center space-y-4">

@@ -48,11 +48,17 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   // Helper function to check if any investment route is active
   const isAnyInvestmentRouteActive = () => {
     const investmentRoutes = isAdmin
-      ? ["/admin/flat-rate", "/admin/floating-rate", "/admin/installments"]
+      ? [
+          "/admin/flat-rate",
+          "/admin/floating-rate",
+          "/admin/installments",
+          "/admin/capital-market",
+        ]
       : [
           "/investor/flat-rate",
           "/investor/floating-rate",
           "/investor/installments",
+          "/investor/capital-market",
         ];
     return investmentRoutes.some((route) => isActiveRoute(route));
   };
@@ -184,6 +190,11 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                           <DropdownMenuItem asChild>
                             <Link href="/investor/installments">
                               Installments
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href="/investor/capital-market">
+                              Capital Market
                             </Link>
                           </DropdownMenuItem>
                         </DropdownMenuContent>

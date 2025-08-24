@@ -73,6 +73,7 @@ import { format } from "date-fns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminGetAllCapitalMarketAccountsQueryOptions } from "../actions/admin-get-all-capital-market-accounts/query-options";
 import { CapitalMarketPerformanceTable } from "./capital-market-performance-table";
+import { CreateCapitalMarketPerformanceModal } from "./create-capital-market-performance-modal";
 
 interface CapitalMarketAccount {
   id: number;
@@ -413,6 +414,11 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
                   <DialogTitle>{account.user_name} Capital Market</DialogTitle>
                 </DialogHeader>
                 <div className="py-4">
+                  <div className="flex justify-end">
+                    <CreateCapitalMarketPerformanceModal
+                      userId={account.user_id}
+                    />
+                  </div>
                   <CapitalMarketPerformanceTable userId={account.user_id} />
                 </div>
               </DialogContent>
