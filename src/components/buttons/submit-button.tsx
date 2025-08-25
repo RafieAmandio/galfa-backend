@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
 interface SubmitButtonProps {
   children: React.ReactNode;
@@ -24,7 +25,14 @@ export function SubmitButton({
       disabled={disabled || loading}
       className={cn(fullWidth && "w-full", className)}
     >
-      {loading ? "Creating..." : children}
+      {loading ? (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="sr-only">Submitting...</span>
+        </>
+      ) : (
+        children
+      )}
     </Button>
   );
 }

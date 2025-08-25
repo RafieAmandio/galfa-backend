@@ -317,7 +317,7 @@ export function CreateFlatRateModal({
   };
 
   const defaultTrigger = (
-    <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
+    <Button className="flex items-center gap-2 bg-green-600 hover:bg-green-700 hover:cursor-pointer">
       <PlusIcon className="w-4 h-4" />
       Create New Investment
     </Button>

@@ -43,7 +43,6 @@ import {
   ChevronLast,
   TrendingUp,
   DollarSign,
-  Calendar,
   Search,
   ArrowUpDown,
   ArrowUp,
@@ -59,6 +58,13 @@ import {
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { DeleteCapitalMarketPerformanceForm } from "./delete-capital-market-performance-form";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type CapitalMarketPerformance = {
   id: number;
@@ -114,6 +120,11 @@ const dateRangeFilter = (
 };
 
 export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedPerformanceId, setSelectedPerformanceId] = useState<
+    number | null
+  >(null);
+
   const {
     data: capitalMarketPerformance,
     isLoading,
@@ -154,47 +165,47 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
     return displayNames[columnId] || columnId;
   };
 
-  // Filter Components
-  const TextFilter = ({ column }: { column: any }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              column.getFilterValue()
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search..."
-                value={(column.getFilterValue() as string) ?? ""}
-                onChange={(e) => column.setFilterValue(e.target.value)}
-              />
-              {column.getFilterValue() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => column.setFilterValue("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
+  // // Filter Components
+  // const TextFilter = ({ column }: { column: any }) => {
+  //   return (
+  //     <Popover>
+  //       <PopoverTrigger asChild>
+  //         <Button
+  //           variant="ghost"
+  //           size="sm"
+  //           className={`h-6 w-6 p-0 ml-1 ${
+  //             column.getFilterValue()
+  //               ? "text-blue-600"
+  //               : "text-muted-foreground"
+  //           }`}
+  //         >
+  //           <Filter className="h-3 w-3" />
+  //         </Button>
+  //       </PopoverTrigger>
+  //       <PopoverContent className="w-56" align="start">
+  //         <div className="space-y-2">
+  //           <Label>Filter {getColumnDisplayName(column.id)}</Label>
+  //           <div className="flex gap-2">
+  //             <Input
+  //               placeholder="Search..."
+  //               value={(column.getFilterValue() as string) ?? ""}
+  //               onChange={(e) => column.setFilterValue(e.target.value)}
+  //             />
+  //             {column.getFilterValue() && (
+  //               <Button
+  //                 variant="outline"
+  //                 size="sm"
+  //                 onClick={() => column.setFilterValue("")}
+  //               >
+  //                 <X className="h-3 w-3" />
+  //               </Button>
+  //             )}
+  //           </div>
+  //         </div>
+  //       </PopoverContent>
+  //     </Popover>
+  //   );
+  // };
 
   const NumberRangeFilter = ({ column }: { column: any }) => {
     const filterValue = column.getFilterValue() as
@@ -376,9 +387,7 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
             </div>
           );
         },
-        cell: ({ getValue }) => (
-          <div className="">{formatCurrency(Number(getValue()))}</div>
-        ),
+        cell: ({ getValue }) => <div>{formatCurrency(Number(getValue()))}</div>,
         filterFn: numberRangeFilter,
       },
       {
@@ -466,6 +475,29 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
           );
         },
         filterFn: numberRangeFilter,
+      },
+      {
+        id: "actions",
+        header: () => (
+          <div className="flex items-center font-semibold">Actions</div>
+        ),
+        cell: ({ row }) => (
+          <div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="cursor-pointer"
+              onClick={() => {
+                setSelectedPerformanceId(row.original.id);
+                setIsDeleteModalOpen(true);
+              }}
+            >
+              Delete
+            </Button>
+          </div>
+        ),
+        enableSorting: false,
+        enableHiding: false,
       },
     ],
     []
@@ -749,6 +781,7 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
                         <TableCell className=" font-bold">
                           {formatCurrency(totals.netPerformance)}
                         </TableCell>
+                        <TableCell className=" font-bold"></TableCell>
                       </TableRow>
                     )}
                   </>
@@ -840,6 +873,32 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Modal */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete Capital Market Performance Record</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            {selectedPerformanceId !== null && (
+              <DeleteCapitalMarketPerformanceForm
+                onCancel={() => setIsDeleteModalOpen(false)}
+                userId={userId}
+                performanceId={selectedPerformanceId}
+              />
+            )}
+          </div>
+          {/* <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter> */}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

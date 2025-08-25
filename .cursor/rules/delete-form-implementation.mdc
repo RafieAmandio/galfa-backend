@@ -1,0 +1,88 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+
+### Capital Market Performance – Delete Rules
+
+This document defines the rules and patterns for implementing "Delete Capital Market Performance" across server actions and client forms.
+
+### Scope
+
+- Server Action: `deleteCapitalMarketPerformance`
+- Client Form: `DeleteCapitalMarketPerformanceForm`
+- Table Integration: `CapitalMarketPerformanceTable`
+
+### Server Action Rules (`deleteCapitalMarketPerformance`)
+
+- Location: `src/features/capital-market/actions/delete-capital-market-performance.ts`
+- Must include: `"use server"` at top.
+- Auth: Require admin via `checkAdminAccess()`. Return 401-style response shape when unauthorized.
+- Validation: Use `zod-form-data` with schema:
+  - `performanceId`: required, integer, positive
+- DB: Use Drizzle `delete` on `capitalMarketPerformance` by `id`; return 404-style response when not found.
+- Response shape:
+  - `{ success: boolean, message: string, data?: any, errors?: { field: string, message: string }[] }`
+- Error handling: Wrap in try/catch, log error, return consistent failure response.
+
+Example signature:
+
+```ts
+export async function deleteCapitalMarketPerformance(
+  prevState: any,
+  formData: FormData
+);
+```
+
+### Client Form Rules (`DeleteCapitalMarketPerformanceForm`)
+
+- Location: `src/features/capital-market/components/delete-capital-market-performance-form.tsx`
+- Must include: `"use client"` at top.
+- Form handling pattern:
+  - Use `useActionState(deleteCapitalMarketPerformance, undefined)`
+  - Use controlled submit with `onSubmit` + `startTransition`
+  - Build `FormData` including `performanceId`
+  - Display success/error message from `actionState.message`
+  - Disable submit while pending
+- React Query invalidation:
+  - Invalidate using `getCapitalMarketPerformanceByUserIdQueryOptions(userId)` on success
+- Close behavior: call `onCancel()` after successful deletion
+- Button:
+  - Use shared `SubmitButton` with spinner while loading
+  - Include a secondary "Cancel" button that calls `onCancel`
+
+Props:
+
+```ts
+{
+  onCancel: () => void;
+  userId: string;
+  performanceId: number;
+}
+```
+
+### Table Integration (`CapitalMarketPerformanceTable`)
+
+- Location: `src/features/capital-market/components/capital-market-performance-table.tsx`
+- On row action "Delete":
+  - Set `selectedPerformanceId` from `row.original.id`
+  - Open confirmation dialog and render `DeleteCapitalMarketPerformanceForm`
+  - Pass `userId` and `performanceId`
+
+### UX Rules
+
+- Confirmation copy must warn: "This action cannot be undone."
+- Show spinner in the submit button while deleting; hide any extra loading text.
+- Errors should be shown in a red alert area above the buttons.
+
+### Security Rules
+
+- Delete is admin-only. Never expose this form in investor-only contexts.
+- Server action performs final authorization check; do not rely solely on UI.
+
+### Testing Checklist
+
+- Deleting a valid record returns success, closes modal, and data refreshes.
+- Deleting a non-existing id returns error message without closing modal.
+- Non-admin attempt returns unauthorized message and no deletion occurs.
