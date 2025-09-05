@@ -1,15 +1,12 @@
 "use server";
 
-import { checkAdminAccess } from "@/lib/auth/admin-check";
-import {
-  getFloatingRateAllocatedProfit,
-  getFloatingRateAllocatedProfitPublic,
-} from "./get-floating-rate-allocated-profit";
+import { getFloatingRateAllocatedProfitPublic } from "../get-floating-rate-allocated-profit/index";
 // Add direct database import for simple performance query
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
 import { and, gte, lt } from "drizzle-orm";
 import { startOfMonth, endOfMonth, subMonths } from "date-fns";
+import { cache } from "react";
 
 interface FloatingRateGrowthData {
   month: Date;
@@ -119,7 +116,7 @@ async function calculateFloatingRateGrowthInternal(
  * - If performance % < 24%: growth % = performance % / 12
  * - If performance % >= 24%: growth % = 1.42%
  */
-export async function getFloatingRateGrowthPercentage(
+export const getFloatingRateGrowthPercentage = cache(async function (
   month: Date
 ): Promise<FloatingRateGrowthResult> {
   // Check admin access
@@ -133,7 +130,7 @@ export async function getFloatingRateGrowthPercentage(
   // }
 
   return calculateFloatingRateGrowthInternal(month);
-}
+});
 
 /**
  * Calculate floating rate growth percentage for investors (internal use)
@@ -141,11 +138,11 @@ export async function getFloatingRateGrowthPercentage(
  * - If performance % < 24%: growth % = performance % / 12
  * - If performance % >= 24%: growth % = 1.42%
  */
-export async function getFloatingRateGrowthPercentageInternal(
+export const getFloatingRateGrowthPercentageInternal = cache(async function (
   month: Date
 ): Promise<FloatingRateGrowthResult> {
   return calculateFloatingRateGrowthInternal(month);
-}
+});
 
 /**
  * Calculate floating rate growth percentage for investors (public version)
@@ -154,7 +151,7 @@ export async function getFloatingRateGrowthPercentageInternal(
  * - If performance % < 24%: growth % = performance % / 12
  * - If performance % >= 24%: growth % = 1.42%
  */
-export async function getFloatingRateGrowthPercentagePublic(
+export const getFloatingRateGrowthPercentagePublic = cache(async function (
   month: Date
 ): Promise<FloatingRateGrowthResult> {
   try {
@@ -290,4 +287,4 @@ export async function getFloatingRateGrowthPercentagePublic(
       },
     };
   }
-}
+});

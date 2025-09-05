@@ -16,6 +16,7 @@ import {
   addMonths,
   format,
 } from "date-fns";
+import { cache } from "react";
 
 interface MonthlyInstallmentCoFResult {
   success: boolean;
@@ -140,7 +141,7 @@ function calculateInstallmentValue(
  * CoF for a given month shows the gained interest for the FOLLOWING month
  * (e.g., CoF for April shows gained interest for May)
  */
-export async function getInstallmentCoFByMonth(
+export const getInstallmentCoFByMonth = cache(async function (
   targetMonth: Date
 ): Promise<MonthlyInstallmentCoFResult> {
   // Check admin access
@@ -273,4 +274,4 @@ export async function getInstallmentCoFByMonth(
         "An error occurred while retrieving monthly installment gained funds data",
     };
   }
-}
+});

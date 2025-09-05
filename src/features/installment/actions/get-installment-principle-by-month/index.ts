@@ -10,6 +10,7 @@ import {
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { startOfMonth, endOfMonth, format } from "date-fns";
+import { cache } from "react";
 
 interface MonthlyInstallmentPrincipleResult {
   success: boolean;
@@ -40,7 +41,7 @@ interface MonthlyInstallmentPrincipleResult {
  * This shows the total capital that was actively working for investors during that month
  * Includes all accounts that were active at any point during the target month
  */
-export async function getInstallmentPrincipleByMonth(
+export const getInstallmentPrincipleByMonth = cache(async function (
   targetMonth: Date
 ): Promise<MonthlyInstallmentPrincipleResult> {
   // Check admin access
@@ -147,4 +148,4 @@ export async function getInstallmentPrincipleByMonth(
         "An error occurred while retrieving monthly installment capital data",
     };
   }
-}
+});

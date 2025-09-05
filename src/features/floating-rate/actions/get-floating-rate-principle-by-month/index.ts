@@ -9,8 +9,8 @@ import {
   authUsers,
 } from "@/db/drizzle/schema";
 import { eq, and, gte, lte, or, isNull } from "drizzle-orm";
-import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { startOfMonth, endOfMonth } from "date-fns";
+import { cache } from "react";
 
 interface FloatingRatePrincipleData {
   month: Date;
@@ -39,7 +39,7 @@ interface FloatingRatePrincipleResult {
  * Get floating rate principle (net capital) data for a specific month
  * Shows total net capital working for floating rate investments
  */
-export async function getFloatingRatePrincipleByMonth(
+export const getFloatingRatePrincipleByMonth = cache(async function (
   month: Date
 ): Promise<FloatingRatePrincipleResult> {
   // Check admin access
@@ -146,4 +146,4 @@ export async function getFloatingRatePrincipleByMonth(
         "An error occurred while retrieving floating rate principle data",
     };
   }
-}
+});

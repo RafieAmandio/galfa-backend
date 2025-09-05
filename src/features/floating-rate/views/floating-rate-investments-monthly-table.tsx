@@ -104,12 +104,44 @@ const dateRangeFilter = (
   return true;
 };
 
+interface PaginationParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  search?: string;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 interface FloatingRateInvestmentsMonthlyTableProps {
-  data: any | null;
+  data: {
+    investments: any[];
+    totalGrossCapital: number;
+    totalNetInvestorFund: number;
+    totalAdminFees: number;
+    totalPresentValueFund: number;
+    totalGainedFund: number;
+    activeAccountsCount: number;
+    availableMonths: string[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  } | null;
+  paginationParams: PaginationParams;
+  onPaginationChange: (params: Partial<PaginationParams>) => void;
 }
 
 export default function FloatingRateInvestmentsMonthlyTable({
   data,
+  paginationParams,
+  onPaginationChange,
 }: FloatingRateInvestmentsMonthlyTableProps) {
   // Remove data fetching state - data comes from props
   const loading = false;
@@ -700,18 +732,62 @@ export default function FloatingRateInvestmentsMonthlyTable({
 
   const tableData = useMemo(() => data?.investments || [], [data]);
 
+  // Handle server-side sorting
+  const handleSortingChange = (updaterOrValue: any) => {
+    const newSorting =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(sorting)
+        : updaterOrValue;
+
+    if (newSorting.length > 0) {
+      const sort = newSorting[0];
+      onPaginationChange({
+        sortBy: sort.id,
+        sortOrder: sort.desc ? "desc" : "asc",
+      });
+    }
+    setSorting(newSorting);
+  };
+
+  // Handle server-side filtering
+  const handleColumnFiltersChange = (updaterOrValue: any) => {
+    const newFilters =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(columnFilters)
+        : updaterOrValue;
+
+    setColumnFilters(newFilters);
+
+    // Extract filter values and update pagination params
+    const searchFilter =
+      newFilters.find((f: any) => f.id === "global")?.value || "";
+    const statusFilter =
+      newFilters.find((f: any) => f.id === "status")?.value || "";
+
+    onPaginationChange({
+      search: searchFilter,
+      status: statusFilter,
+    });
+  };
+
+  // Handle server-side global filter
+  const handleGlobalFilterChange = (value: string) => {
+    setGlobalFilter(value);
+    onPaginationChange({
+      search: value,
+    });
+  };
+
   const table = useReactTable({
     data: tableData,
     columns,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
+    onSortingChange: handleSortingChange,
+    onColumnFiltersChange: handleColumnFiltersChange,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: setGlobalFilter,
+    onGlobalFilterChange: handleGlobalFilterChange,
     getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: () => true,
     state: {
@@ -723,33 +799,36 @@ export default function FloatingRateInvestmentsMonthlyTable({
       expanded,
     },
     onExpandedChange: setExpanded,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
+    // Server-side pagination - disable client-side pagination
+    manualPagination: true,
+    pageCount: data?.pagination.totalPages || 0,
   });
 
   // Data fetching removed - data comes from server-side props
 
-  // Calculate totals from filtered data
-  const filteredData = table
-    .getFilteredRowModel()
-    .rows.map((row) => row.original);
-  const totals = filteredData.reduce(
-    (acc: any, investment: any) => ({
-      grossCapital: acc.grossCapital + investment.grossCapital,
-      adminFee: acc.adminFee + investment.adminFee,
-      netInvestorFund: acc.netInvestorFund + investment.netInvestorFund,
-      presentValueFund: acc.presentValueFund + investment.presentValueFund,
-    }),
-    {
-      grossCapital: 0,
-      adminFee: 0,
-      netInvestorFund: 0,
-      presentValueFund: 0,
-    }
-  );
+  // Use server-side totals instead of client-side calculation
+  const totals = data
+    ? {
+        grossCapital: data.totalGrossCapital,
+        adminFee: data.totalAdminFees,
+        netInvestorFund: data.totalNetInvestorFund,
+        presentValueFund: data.totalPresentValueFund,
+      }
+    : {
+        grossCapital: 0,
+        adminFee: 0,
+        netInvestorFund: 0,
+        presentValueFund: 0,
+      };
+
+  // Server-side pagination handlers
+  const handlePageChange = (page: number) => {
+    onPaginationChange({ page });
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    onPaginationChange({ limit: pageSize, page: 1 });
+  };
 
   if (loading) {
     return (
@@ -805,12 +884,10 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   Total Investments
                 </p>
                 <p className="text-lg font-bold">
-                  {filteredData.length}
-                  {filteredData.length !== data.investments.length && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      of {data.investments.length}
-                    </span>
-                  )}
+                  {data.pagination.total}
+                  <span className="text-sm text-muted-foreground ml-1">
+                    total investments
+                  </span>
                 </p>
               </div>
             </div>
@@ -936,20 +1013,32 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search all columns..."
-                    value={globalFilter}
-                    onChange={(event) => setGlobalFilter(event.target.value)}
+                    value={paginationParams.search || ""}
+                    onChange={(event) =>
+                      handleGlobalFilterChange(event.target.value)
+                    }
                     className="max-w-sm"
                   />
                 </div>
 
                 {/* Reset All Filters */}
-                {(globalFilter || columnFilters.length > 0) && (
+                {(paginationParams.search ||
+                  paginationParams.status ||
+                  paginationParams.dateFrom ||
+                  paginationParams.dateTo) && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
                       setGlobalFilter("");
-                      table.resetColumnFilters();
+                      setColumnFilters([]);
+                      onPaginationChange({
+                        search: "",
+                        status: "",
+                        dateFrom: "",
+                        dateTo: "",
+                        page: 1,
+                      });
                     }}
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -959,50 +1048,66 @@ export default function FloatingRateInvestmentsMonthlyTable({
               </div>
 
               {/* Active Filters Display */}
-              {columnFilters.length > 0 && (
+              {(paginationParams.search ||
+                paginationParams.status ||
+                paginationParams.dateFrom ||
+                paginationParams.dateTo) && (
                 <div className="flex flex-wrap gap-2">
                   <span className="text-sm text-muted-foreground">
                     Active filters:
                   </span>
-                  {columnFilters.map((filter) => {
-                    const formatFilterValue = (value: any) => {
-                      if (Array.isArray(value)) {
-                        const [min, max] = value;
-                        if (min !== undefined && max !== undefined) {
-                          return `${min} - ${max}`;
-                        } else if (min !== undefined) {
-                          return `≥ ${min}`;
-                        } else if (max !== undefined) {
-                          return `≤ ${max}`;
-                        }
-                        return "";
-                      }
-                      return String(value);
-                    };
-
-                    return (
-                      <Badge
-                        key={filter.id}
-                        variant="secondary"
-                        className="text-xs"
+                  {paginationParams.search && (
+                    <Badge variant="secondary" className="text-xs">
+                      Search: {paginationParams.search}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-3 w-3 p-0 ml-1"
+                        onClick={() => onPaginationChange({ search: "" })}
                       >
-                        {getColumnDisplayName(filter.id)}:{" "}
-                        {formatFilterValue(filter.value)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-3 w-3 p-0 ml-1"
-                          onClick={() => {
-                            table
-                              .getColumn(filter.id)
-                              ?.setFilterValue(undefined);
-                          }}
-                        >
-                          <X className="h-2 w-2" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {paginationParams.status && (
+                    <Badge variant="secondary" className="text-xs">
+                      Status: {paginationParams.status}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-3 w-3 p-0 ml-1"
+                        onClick={() => onPaginationChange({ status: "" })}
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {paginationParams.dateFrom && (
+                    <Badge variant="secondary" className="text-xs">
+                      From: {paginationParams.dateFrom}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-3 w-3 p-0 ml-1"
+                        onClick={() => onPaginationChange({ dateFrom: "" })}
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </Badge>
+                  )}
+                  {paginationParams.dateTo && (
+                    <Badge variant="secondary" className="text-xs">
+                      To: {paginationParams.dateTo}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-3 w-3 p-0 ml-1"
+                        onClick={() => onPaginationChange({ dateTo: "" })}
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </Badge>
+                  )}
                 </div>
               )}
             </div>
@@ -1227,7 +1332,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                     ))}
 
                     {/* Totals Row */}
-                    {filteredData.length > 0 && (
+                    {tableData.length > 0 && (
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                         <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>
@@ -1272,25 +1377,28 @@ export default function FloatingRateInvestmentsMonthlyTable({
             </Table>
           </div>
 
-          {/* Pagination */}
+          {/* Server-side Pagination */}
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredSelectedRowModel().rows.length} of{" "}
-              {table.getFilteredRowModel().rows.length} row(s) selected.
+              Showing {(data.pagination.page - 1) * data.pagination.limit + 1}{" "}
+              to{" "}
+              {Math.min(
+                data.pagination.page * data.pagination.limit,
+                data.pagination.total
+              )}{" "}
+              of {data.pagination.total} results
             </div>
             <div className="flex items-center space-x-6 lg:space-x-8">
               <div className="flex items-center space-x-2">
                 <p className="text-sm font-medium">Rows per page</p>
                 <Select
-                  value={`${table.getState().pagination.pageSize}`}
+                  value={`${paginationParams.limit || 10}`}
                   onValueChange={(value) => {
-                    table.setPageSize(Number(value));
+                    handlePageSizeChange(Number(value));
                   }}
                 >
                   <SelectTrigger className="h-8 w-[70px]">
-                    <SelectValue
-                      placeholder={table.getState().pagination.pageSize}
-                    />
+                    <SelectValue placeholder={paginationParams.limit || 10} />
                   </SelectTrigger>
                   <SelectContent side="top">
                     {[10, 20, 30, 40, 50].map((pageSize) => (
@@ -1302,15 +1410,14 @@ export default function FloatingRateInvestmentsMonthlyTable({
                 </Select>
               </div>
               <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-                Page {table.getState().pagination.pageIndex + 1} of{" "}
-                {table.getPageCount()}
+                Page {data.pagination.page} of {data.pagination.totalPages}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
                   variant="outline"
                   className="hidden h-8 w-8 p-0 lg:flex"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={() => handlePageChange(1)}
+                  disabled={!data.pagination.hasPreviousPage}
                 >
                   <span className="sr-only">Go to first page</span>
                   <ChevronFirst />
@@ -1318,8 +1425,8 @@ export default function FloatingRateInvestmentsMonthlyTable({
                 <Button
                   variant="outline"
                   className="h-8 w-8 p-0"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
+                  onClick={() => handlePageChange(data.pagination.page - 1)}
+                  disabled={!data.pagination.hasPreviousPage}
                 >
                   <span className="sr-only">Go to previous page</span>
                   <ChevronLeft />
@@ -1327,8 +1434,8 @@ export default function FloatingRateInvestmentsMonthlyTable({
                 <Button
                   variant="outline"
                   className="h-8 w-8 p-0"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
+                  onClick={() => handlePageChange(data.pagination.page + 1)}
+                  disabled={!data.pagination.hasNextPage}
                 >
                   <span className="sr-only">Go to next page</span>
                   <ChevronRight />
@@ -1336,8 +1443,8 @@ export default function FloatingRateInvestmentsMonthlyTable({
                 <Button
                   variant="outline"
                   className="hidden h-8 w-8 p-0 lg:flex"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
+                  onClick={() => handlePageChange(data.pagination.totalPages)}
+                  disabled={!data.pagination.hasNextPage}
                 >
                   <span className="sr-only">Go to last page</span>
                   <ChevronLast />

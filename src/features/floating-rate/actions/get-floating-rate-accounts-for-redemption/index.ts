@@ -10,6 +10,7 @@ import {
 import { eq, and, not, exists, gt } from "drizzle-orm";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { cache } from "react";
 
 interface FloatingRateAccountForRedemption {
   id: number;
@@ -26,7 +27,7 @@ interface FloatingRateAccountForRedemption {
   remainingPrincipal: number;
 }
 
-export async function getFloatingRateAccountsForRedemption(
+export const getFloatingRateAccountsForRedemption = cache(async function (
   redemptionDate: Date
 ): Promise<FloatingRateAccountForRedemption[]> {
   // Check admin access
@@ -122,4 +123,4 @@ export async function getFloatingRateAccountsForRedemption(
   return accountsWithBalances.filter(
     (account): account is FloatingRateAccountForRedemption => account !== null
   );
-}
+});

@@ -212,7 +212,6 @@ export function CreateFloatingRateModal({
 
   const defaultTrigger = (
     <Button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700">
-      <PlusIcon className="w-4 h-4" />
       Create New Floating Rate Investment
     </Button>
   );

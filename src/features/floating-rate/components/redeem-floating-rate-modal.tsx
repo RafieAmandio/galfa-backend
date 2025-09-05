@@ -5,7 +5,6 @@ import {
   redeemFloatingRateAccount,
   getFloatingRateAccountRedemptions,
 } from "../actions/redemption-floating-rate-account";
-import { getFloatingRateAccountsForRedemption } from "../actions/get-floating-rate-accounts-for-redemption";
 import {
   Dialog,
   DialogContent,
@@ -25,26 +24,12 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface FloatingRateAccountForRedemption {
-  id: number;
-  accountNumber: string;
-  investorEmail: string;
-  grossCapital: number;
-  adminFee: number;
-  netInvestorFund: number;
-  transactionDate: Date;
-  endDate: Date;
-  isRollover: boolean;
-  currentValue: number;
-  totalRedemptions: number;
-  remainingPrincipal: number;
-}
+import { useQuery } from "@tanstack/react-query";
+import { getFloatingRateAccountsForRedemptionQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-accounts-for-redemption/query-options";
 
 interface RedemptionModalProps {
   onRedemptionComplete?: () => void;
   trigger?: React.ReactNode;
-  initialRedemptionAccounts?: FloatingRateAccountForRedemption[] | null;
 }
 
 interface AccountOption {
@@ -68,7 +53,6 @@ interface RedemptionHistory {
 export function RedeemFloatingRateModal({
   onRedemptionComplete,
   trigger,
-  initialRedemptionAccounts,
 }: RedemptionModalProps) {
   const [open, setOpen] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
@@ -80,7 +64,6 @@ export function RedeemFloatingRateModal({
   const [description, setDescription] = useState("");
   const [isFullRedemption, setIsFullRedemption] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
@@ -89,58 +72,32 @@ export function RedeemFloatingRateModal({
     RedemptionHistory[]
   >([]);
 
-  // Helper function to check if date is today
-  const isTodayDate = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
+  // Fetch accounts using Tanstack React Query
+  const {
+    data: filteredAccounts,
+    isLoading: isAccountsLoading,
+    error: accountsError,
+    refetch: refetchAccounts,
+  } = useQuery(
+    getFloatingRateAccountsForRedemptionQueryOptions(redemptionDate)
+  );
 
-  // Helper function to convert redemption accounts to account options
-  const convertToAccountOptions = (
-    redemptionAccounts: FloatingRateAccountForRedemption[]
-  ) => {
-    return redemptionAccounts.map((account) => ({
-      id: account.id,
-      name: account.accountNumber,
-      grossCapital: account.grossCapital,
-      netCapital: account.netInvestorFund,
-      currentValue: account.currentValue,
-      investorEmail: account.investorEmail,
-    }));
-  };
-
-  // Load available accounts when modal opens or redemption date changes
+  // Convert accounts to options when data changes
   useEffect(() => {
-    if (open && redemptionDate) {
-      // If redemption date is today and we have initial data, use it
-      if (isTodayDate(redemptionDate) && initialRedemptionAccounts) {
-        setAccounts(convertToAccountOptions(initialRedemptionAccounts));
-        setLoadingAccounts(false);
-        return;
-      }
-
-      // Otherwise fetch accounts for the selected date
-      const loadAccounts = async () => {
-        setLoadingAccounts(true);
-        try {
-          const filteredAccounts = await getFloatingRateAccountsForRedemption(
-            redemptionDate
-          );
-          setAccounts(convertToAccountOptions(filteredAccounts));
-        } catch (error) {
-          console.error("Error loading accounts:", error);
-          setMessage({
-            type: "error",
-            text: "Failed to load accounts",
-          });
-        } finally {
-          setLoadingAccounts(false);
-        }
-      };
-
-      loadAccounts();
+    if (filteredAccounts) {
+      setAccounts(convertToAccountOptions(filteredAccounts));
     }
-  }, [open, redemptionDate, initialRedemptionAccounts]);
+  }, [filteredAccounts]);
+
+  // Handle accounts error
+  useEffect(() => {
+    if (accountsError) {
+      setMessage({
+        type: "error",
+        text: "Failed to load accounts",
+      });
+    }
+  }, [accountsError]);
 
   // Load redemption history for selected account
   useEffect(() => {
@@ -189,6 +146,33 @@ export function RedeemFloatingRateModal({
     }
   }, [open]);
 
+  // Helper function to check if date is today
+  const isTodayDate = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  // Helper function to convert redemption accounts to account options
+  const convertToAccountOptions = (redemptionAccounts: any[]) => {
+    return redemptionAccounts.map((account) => ({
+      id: account.id,
+      name: account.accountNumber,
+      grossCapital: account.grossCapital,
+      netCapital: account.netInvestorFund,
+      currentValue: account.currentValue,
+      investorEmail: account.investorEmail,
+    }));
+  };
+
+  // Handle date change
+  const handleDateChange = (date: Date | undefined) => {
+    if (date) {
+      setRedemptionDate(date);
+      // Refetch accounts for the new date
+      refetchAccounts();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -229,6 +213,8 @@ export function RedeemFloatingRateModal({
     setMessage(null);
 
     try {
+      setMessage({ type: "success", text: "Processing redemption..." });
+
       const result = await redeemFloatingRateAccount({
         accountId: selectedAccountId,
         redemptionAmount: amount,
@@ -294,13 +280,6 @@ export function RedeemFloatingRateModal({
       variant="destructive"
       className="flex items-center gap-2 cursor-pointer"
     >
-      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-          clipRule="evenodd"
-        />
-      </svg>
       Process Redemption
     </Button>
   );
@@ -349,7 +328,7 @@ export function RedeemFloatingRateModal({
                     <Calendar
                       mode="single"
                       selected={redemptionDate}
-                      onSelect={(date) => setRedemptionDate(date || new Date())}
+                      onSelect={(date) => handleDateChange(date)}
                       initialFocus
                     />
                   </PopoverContent>
@@ -361,7 +340,7 @@ export function RedeemFloatingRateModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Account *
                 </label>
-                {loadingAccounts ? (
+                {isAccountsLoading ? (
                   <div className="p-3 text-center text-gray-500 border rounded-md">
                     Loading available accounts...
                   </div>

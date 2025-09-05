@@ -9,7 +9,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { format, startOfMonth } from "date-fns";
-import { TrendingUp, DollarSign, PieChart, Users } from "lucide-react";
+import { TrendingUp, DollarSign, PieChart, Users, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getFloatingRatePrincipleByMonthQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-principle-by-month/query-options";
+import { getFloatingRateAllocatedProfitQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-allocated-profit/query-options";
+import { getFloatingRateGrowthPercentageQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage/query-options";
+import { getFixRatePrincipleByMonthQueryOptions } from "@/features/flat-rate/actions/get-fix-rate-principle-by-month/query-options";
+import { getFixRateCoFByMonthQueryOptions } from "@/features/flat-rate/actions/get-fix-rate-cof-by-month/query-options";
+import { getInflowByMonthQueryOptions } from "@/features/investments/actions/get-inflow-by-month/query-options";
+import { getOutflowByMonthQueryOptions } from "@/features/investments/actions/get-outflow-by-month/query-options";
+import { getVCPerformanceByMonthQueryOptions } from "@/features/investments/actions/get-vc-performance-by-month/query-options";
+import { getGrossProfitByMonthQueryOptions } from "@/features/investments/actions/get-gross-profit-by-month/query-options";
+import { getInstallmentPrincipleByMonthQueryOptions } from "@/features/installment/actions/get-installment-principle-by-month/query-options";
+import { getInstallmentCoFByMonthQueryOptions } from "@/features/installment/actions/get-installment-cof-by-month/query-options";
 
 interface PrincipleData {
   month: Date;
@@ -236,8 +248,15 @@ interface DashboardData {
 
 interface AdminDashboardViewProps {
   user: any;
-  dashboardData: DashboardData | null;
-  error: string | undefined;
+  dashboardData: {
+    selectedMonth: Date;
+    warnings: {
+      vcPerformanceWarning: string | null;
+      grossProfitWarning: string | null;
+      floatingRateWarning: string | null;
+    };
+  } | null;
+  error?: string;
 }
 
 export function AdminDashboardView({
@@ -259,6 +278,118 @@ export function AdminDashboardView({
       ? dashboardData.selectedMonth.getFullYear().toString()
       : currentDate.getFullYear().toString()
   );
+
+  // Fetch all dashboard data using Tanstack React Query
+  const {
+    data: principleResult,
+    isLoading: isPrincipleLoading,
+    error: principleError,
+  } = useQuery(getFixRatePrincipleByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: cofResult,
+    isLoading: isCoFLoading,
+    error: cofError,
+  } = useQuery(getFixRateCoFByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: inflowResult,
+    isLoading: isInflowLoading,
+    error: inflowError,
+  } = useQuery(getInflowByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: outflowResult,
+    isLoading: isOutflowLoading,
+    error: outflowError,
+  } = useQuery(getOutflowByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: vcPerformanceResult,
+    isLoading: isVCPerformanceLoading,
+    error: vcPerformanceError,
+  } = useQuery(getVCPerformanceByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: grossProfitResult,
+    isLoading: isGrossProfitLoading,
+    error: grossProfitError,
+  } = useQuery(getGrossProfitByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: installmentPrincipleResult,
+    isLoading: isInstallmentPrincipleLoading,
+    error: installmentPrincipleError,
+  } = useQuery(getInstallmentPrincipleByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: installmentCoFResult,
+    isLoading: isInstallmentCoFLoading,
+    error: installmentCoFError,
+  } = useQuery(getInstallmentCoFByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: floatingRatePrincipleResult,
+    isLoading: isFloatingRatePrincipleLoading,
+    error: floatingRatePrincipleError,
+  } = useQuery(getFloatingRatePrincipleByMonthQueryOptions(selectedMonth));
+
+  const {
+    data: floatingRateAllocatedProfitResult,
+    isLoading: isFloatingRateAllocatedProfitLoading,
+    error: floatingRateAllocatedProfitError,
+  } = useQuery(getFloatingRateAllocatedProfitQueryOptions(selectedMonth));
+
+  const {
+    data: floatingRateGrowthResult,
+    isLoading: isFloatingRateGrowthLoading,
+    error: floatingRateGrowthError,
+  } = useQuery(getFloatingRateGrowthPercentageQueryOptions(selectedMonth));
+
+  // Extract all data from query results
+  // Note: All actions return data directly
+  const principleData = principleResult?.data || null;
+  const cofData = cofResult?.data || null;
+  const inflowData = inflowResult?.data || null;
+  const outflowData = outflowResult?.data || null;
+  const vcPerformanceData = vcPerformanceResult?.data || null;
+  const grossProfitData = grossProfitResult?.data || null;
+  const installmentPrincipleData = installmentPrincipleResult?.data || null;
+  const installmentCoFData = installmentCoFResult?.data || null;
+
+  // Floating rate actions return data directly (not wrapped in success/data structure)
+  const floatingRatePrincipleData = floatingRatePrincipleResult?.data || null;
+  const floatingRateAllocatedProfitData =
+    floatingRateAllocatedProfitResult?.data || null;
+  const floatingRateGrowthData = floatingRateGrowthResult?.data || null;
+
+  // Check for errors
+  const dashboardError =
+    principleError?.message ||
+    cofError?.message ||
+    inflowError?.message ||
+    outflowError?.message ||
+    vcPerformanceError?.message ||
+    grossProfitError?.message ||
+    installmentPrincipleError?.message ||
+    installmentCoFError?.message ||
+    floatingRatePrincipleError?.message ||
+    floatingRateAllocatedProfitError?.message ||
+    floatingRateGrowthError?.message;
+
+  // Check if any data is loading
+  const isLoading =
+    isPrincipleLoading ||
+    isCoFLoading ||
+    isInflowLoading ||
+    isOutflowLoading ||
+    isVCPerformanceLoading ||
+    isGrossProfitLoading ||
+    isInstallmentPrincipleLoading ||
+    isInstallmentCoFLoading ||
+    isFloatingRatePrincipleLoading ||
+    isFloatingRateAllocatedProfitLoading ||
+    isFloatingRateGrowthLoading;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -313,19 +444,7 @@ export function AdminDashboardView({
     { value: "12", label: "December" },
   ];
 
-  // Extract data from props
-  const principleData = dashboardData?.principleData;
-  const cofData = dashboardData?.cofData;
-  const inflowData = dashboardData?.inflowData;
-  const outflowData = dashboardData?.outflowData;
-  const vcPerformanceData = dashboardData?.vcPerformanceData;
-  const grossProfitData = dashboardData?.grossProfitData;
-  const installmentPrincipleData = dashboardData?.installmentPrincipleData;
-  const installmentCoFData = dashboardData?.installmentCoFData;
-  const floatingRatePrincipleData = dashboardData?.floatingRatePrincipleData;
-  const floatingRateAllocatedProfitData =
-    dashboardData?.floatingRateAllocatedProfitData;
-  const floatingRateGrowthData = dashboardData?.floatingRateGrowthData;
+  // Extract warnings from props (these don't change with month)
   const warnings = dashboardData?.warnings;
 
   return (
@@ -398,14 +517,22 @@ export function AdminDashboardView({
       </div>
 
       {/* Error State */}
-      {error && (
+      {dashboardError && (
         <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <p className="text-red-700">{error}</p>
+          <p className="text-red-700">{dashboardError}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex gap-3 bg-blue-50 border border-blue-200 p-4 rounded-lg">
+          <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
+          <p className="text-blue-700">Loading dashboard data...</p>
         </div>
       )}
 
       {/* Dashboard Content */}
-      {!error && principleData && cofData && inflowData && outflowData && (
+      {!isLoading && principleData && cofData && inflowData && outflowData && (
         <>
           {/* Cash Flow Metrics - Inflow & Outflow */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -782,31 +909,33 @@ export function AdminDashboardView({
                         </tr>
                       </thead>
                       <tbody className="space-y-2">
-                        {principleData.accounts.slice(0, 5).map((account) => (
-                          <tr
-                            key={account.id}
-                            className="border-b border-gray-100"
-                          >
-                            <td className="py-2 text-sm">
-                              <div>
-                                <p className="font-medium">
-                                  {account.accountNumber}
-                                </p>
-                                {account.isRollover && (
-                                  <span className="text-xs text-blue-600">
-                                    Rollover
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="py-2 text-sm text-gray-600">
-                              {account.investorEmail}
-                            </td>
-                            <td className="py-2 text-sm text-right font-medium">
-                              {formatCurrency(account.netCapital)}
-                            </td>
-                          </tr>
-                        ))}
+                        {principleData.accounts
+                          .slice(0, 5)
+                          .map((account: any) => (
+                            <tr
+                              key={account.id}
+                              className="border-b border-gray-100"
+                            >
+                              <td className="py-2 text-sm">
+                                <div>
+                                  <p className="font-medium">
+                                    {account.accountNumber}
+                                  </p>
+                                  {account.isRollover && (
+                                    <span className="text-xs text-blue-600">
+                                      Rollover
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-2 text-sm text-gray-600">
+                                {account.investorEmail}
+                              </td>
+                              <td className="py-2 text-sm text-right font-medium">
+                                {formatCurrency(account.netCapital)}
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                     {principleData.accounts.length > 5 && (
@@ -860,7 +989,7 @@ export function AdminDashboardView({
                         </tr>
                       </thead>
                       <tbody className="space-y-2">
-                        {cofData.accounts.slice(0, 5).map((account) => (
+                        {cofData.accounts.slice(0, 5).map((account: any) => (
                           <tr
                             key={account.id}
                             className="border-b border-gray-100"
@@ -1041,7 +1170,7 @@ export function AdminDashboardView({
                         <tbody className="space-y-2">
                           {installmentPrincipleData.accounts
                             .slice(0, 5)
-                            .map((account) => (
+                            .map((account: any) => (
                               <tr
                                 key={account.id}
                                 className="border-b border-gray-100"
@@ -1121,7 +1250,7 @@ export function AdminDashboardView({
                         <tbody className="space-y-2">
                           {installmentCoFData.accounts
                             .slice(0, 5)
-                            .map((account) => (
+                            .map((account: any) => (
                               <tr
                                 key={account.id}
                                 className="border-b border-gray-100"

@@ -1,9 +1,10 @@
 "use server";
 
-import { getGrossProfitByMonth } from "../../investments/actions/get-gross-profit-by-month";
-import { getFixRateCoFByMonth } from "../../flat-rate/actions/get-fix-rate-cof-by-month";
-import { getInstallmentCoFByMonth } from "../../installment/actions/get-installment-cof-by-month";
-import { getFloatingRatePrincipleByMonth } from "./get-floating-rate-principle-by-month";
+import { getGrossProfitByMonth } from "../../../investments/actions/get-gross-profit-by-month";
+import { getFixRateCoFByMonth } from "../../../flat-rate/actions/get-fix-rate-cof-by-month";
+import { getInstallmentCoFByMonth } from "../../../installment/actions/get-installment-cof-by-month";
+import { getFloatingRatePrincipleByMonth } from "../get-floating-rate-principle-by-month/index";
+import { cache } from "react";
 
 interface FloatingRateAllocatedProfitData {
   month: Date;
@@ -35,7 +36,7 @@ interface FloatingRateAllocatedProfitResult {
  * Calculate gross profit allocated to floating rate investments
  * Formula: Total Gross Profit - Fixed Rate CoF - Installment CoF
  */
-export async function getFloatingRateAllocatedProfit(
+export const getFloatingRateAllocatedProfit = cache(async function (
   month: Date
 ): Promise<FloatingRateAllocatedProfitResult> {
   // Removed admin check for universal access
@@ -178,7 +179,7 @@ export async function getFloatingRateAllocatedProfit(
         "An error occurred while calculating floating rate allocated profit",
     };
   }
-}
+});
 
 /**
  * Calculate gross profit allocated to floating rate investments (public version)

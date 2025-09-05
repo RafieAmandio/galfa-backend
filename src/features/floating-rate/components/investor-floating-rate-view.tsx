@@ -5,7 +5,8 @@ import type { AuthUser } from "@/lib/auth/server-auth-helpers";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { FloatingRateDataWithMonthly } from "./admin-floating-rate-view";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getFloatingRateInvestmentsWithMonthlyPerformanceOfCurrentUserQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-investments-with-monthly-performance-of-current-user/query-options";
 
 interface MonthlyRedemption {
   amount: number;
@@ -43,18 +44,61 @@ interface FloatingRateInvestment {
 
 interface InvestorFloatingRateViewProps {
   user: AuthUser;
-  data: FloatingRateDataWithMonthly | null;
-  error?: string;
 }
 
 export function InvestorFloatingRateView({
   user,
-  data,
-  error,
 }: InvestorFloatingRateViewProps) {
+  // Fetch data using Tanstack React Query
+  const queryClient = useQueryClient();
+  const {
+    data: result,
+    isLoading,
+    error,
+  } = useQuery(
+    getFloatingRateInvestmentsWithMonthlyPerformanceOfCurrentUserQueryOptions()
+  );
+
   const handleRefresh = () => {
-    window.location.reload();
+    // This will be handled by the query client invalidation
+    queryClient.invalidateQueries(
+      getFloatingRateInvestmentsWithMonthlyPerformanceOfCurrentUserQueryOptions()
+    );
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-lg">
+            Loading your floating rate investments...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <p className="text-red-600 mb-4">
+              {error instanceof Error
+                ? error.message
+                : "Failed to load your floating rate investments"}
+            </p>
+            <Button onClick={handleRefresh} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const data = result?.success ? result.data : null;
 
   return (
     <div className="container mx-auto p-6">
@@ -68,19 +112,7 @@ export function InvestorFloatingRateView({
         </p>
       </div>
 
-      {error ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-red-600 mb-4">{error}</p>
-            <Button onClick={handleRefresh} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <InvestorFloatingRateInvestmentsTable data={data} />
-      )}
+      {data && <InvestorFloatingRateInvestmentsTable data={data} />}
     </div>
   );
 }

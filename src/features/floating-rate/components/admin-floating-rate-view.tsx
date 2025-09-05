@@ -4,26 +4,21 @@ import { AuthUser } from "@/lib/auth/server-auth-helpers";
 import FloatingRateInvestmentsMonthlyTable from "@/features/floating-rate/views/floating-rate-investments-monthly-table";
 import { CreateFloatingRateModal } from "@/features/floating-rate/components/create-floating-rate-modal";
 import { RedeemFloatingRateModal } from "@/features/floating-rate/components/redeem-floating-rate-modal";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimizedQueryOptions,
+  PaginationParams,
+} from "@/features/floating-rate/actions/get-floating-rate-investments-with-monthly-performance-paginated-optimized/query-options";
+import { clearFloatingRateCaches } from "@/features/floating-rate/actions/get-floating-rate-investments-with-monthly-performance-paginated-optimized/cache";
+import { getAllInvestorsQueryOptions } from "@/features/investor/actions/get-all-investors/query-options";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface InvestorOption {
   id: string;
   email: string;
   fullName: string | null;
-}
-
-interface FloatingRateAccountForRedemption {
-  id: number;
-  accountNumber: string;
-  investorEmail: string;
-  grossCapital: number;
-  adminFee: number;
-  netInvestorFund: number;
-  transactionDate: Date;
-  endDate: Date;
-  isRollover: boolean;
-  currentValue: number;
-  totalRedemptions: number;
-  remainingPrincipal: number;
 }
 
 interface MonthlyPerformance {
@@ -73,23 +68,111 @@ export interface FloatingRateDataWithMonthly {
 
 interface AdminFloatingRateViewProps {
   user: AuthUser;
-  floatingRateData: FloatingRateDataWithMonthly | null;
-  investorEmails: InvestorOption[] | null;
-  initialRedemptionAccounts: FloatingRateAccountForRedemption[] | null;
-  error?: string;
 }
 
-export function AdminFloatingRateView({
-  user,
-  floatingRateData,
-  investorEmails,
-  initialRedemptionAccounts,
-  error,
-}: AdminFloatingRateViewProps) {
-  // Handle refresh by reloading the page (server-side data will be re-fetched)
+export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
+  const queryClient = useQueryClient();
+
+  // Pagination state
+  const [paginationParams, setPaginationParams] = useState<PaginationParams>({
+    page: 1,
+    limit: 10,
+    sortBy: "transaction_date",
+    sortOrder: "desc",
+    search: "",
+    status: "",
+    dateFrom: "",
+    dateTo: "",
+  });
+
+  // Fetch data using Tanstack React Query with pagination (OPTIMIZED VERSION)
+  const {
+    data: floatingRateResult,
+    isLoading: isFloatingRateLoading,
+    error: floatingRateError,
+  } = useQuery(
+    getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimizedQueryOptions(
+      paginationParams
+    )
+  );
+
+  const {
+    data: investorEmails,
+    isLoading: isInvestorsLoading,
+    error: investorsError,
+  } = useQuery(getAllInvestorsQueryOptions());
+
+  // Extract data and handle loading/error states
+  const floatingRateData =
+    floatingRateResult &&
+    typeof floatingRateResult === "object" &&
+    "success" in floatingRateResult &&
+    floatingRateResult.success
+      ? (floatingRateResult as any).data
+      : null;
+  const error = floatingRateError?.message || investorsError?.message;
+
+  const isLoading = isFloatingRateLoading || isInvestorsLoading;
+
+  // Handle refresh by invalidating queries and clearing caches
   const handleRefresh = () => {
-    window.location.reload();
+    // Clear server-side caches
+    clearFloatingRateCaches();
+
+    // Invalidate client-side queries
+    queryClient.invalidateQueries({
+      queryKey: [
+        "floating-rate-investments-monthly-performance-paginated-optimized",
+      ],
+    });
+    queryClient.invalidateQueries(getAllInvestorsQueryOptions());
   };
+
+  // Handle pagination changes
+  const handlePaginationChange = (newParams: Partial<PaginationParams>) => {
+    setPaginationParams((prev) => ({
+      ...prev,
+      ...newParams,
+      // Reset to page 1 when changing filters
+      page:
+        newParams.search !== undefined ||
+        newParams.status !== undefined ||
+        newParams.dateFrom !== undefined ||
+        newParams.dateTo !== undefined
+          ? 1
+          : newParams.page || prev.page,
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex gap-3 items-center justify-center h-64">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <div className="text-lg">Loading floating rate investments...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="text-red-800">
+            <h3 className="text-lg font-medium">Error loading data</h3>
+            <p className="mt-1">{error}</p>
+            <button
+              onClick={handleRefresh}
+              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6">
@@ -103,56 +186,19 @@ export function AdminFloatingRateView({
               Manage and monitor floating rate investment accounts
             </p>
           </div>
-          <div className="flex items-center space-x-4">
-            <RedeemFloatingRateModal
-              initialRedemptionAccounts={initialRedemptionAccounts}
-              onRedemptionComplete={handleRefresh}
-            />
-            <CreateFloatingRateModal
-              investorEmails={investorEmails}
-              onAccountCreated={handleRefresh}
-            />
+          <div className="flex gap-2">
+            <CreateFloatingRateModal investorEmails={investorEmails || []} />
+            <RedeemFloatingRateModal onRedemptionComplete={handleRefresh} />
           </div>
         </div>
       </div>
 
-      {error ? (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg
-                className="h-5 w-5 text-red-400"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">
-                Error loading data
-              </h3>
-              <div className="mt-2 text-sm text-red-700">
-                <p>{error}</p>
-              </div>
-              <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  className="bg-red-100 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-200"
-                >
-                  Try again
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <FloatingRateInvestmentsMonthlyTable data={floatingRateData} />
+      {floatingRateData && (
+        <FloatingRateInvestmentsMonthlyTable
+          data={floatingRateData}
+          paginationParams={paginationParams}
+          onPaginationChange={handlePaginationChange}
+        />
       )}
     </div>
   );
