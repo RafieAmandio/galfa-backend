@@ -59,8 +59,10 @@ import {
   Filter,
   X,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { parse } from "date-fns";
+import { DeleteInstallmentModal } from "../components/delete-installment-modal";
 
 interface AdminInstallmentSummary {
   totalGainedFunds: number;
@@ -599,6 +601,27 @@ export function AdminInstallmentTable() {
         ),
         filterFn: numberRangeFilter,
       },
+      {
+        id: "actions",
+        header: () => <div className="text-center font-semibold">Actions</div>,
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <DeleteInstallmentModal
+                accountId={row.original.id}
+                accountNumber={row.original.accountNumber}
+                onAccountDeleted={fetchData}
+              >
+                <Button variant="destructive" size="sm" className="h-8">
+                  Delete
+                </Button>
+              </DeleteInstallmentModal>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+      },
     ],
     [uniqueTypes]
   );
@@ -1041,6 +1064,9 @@ export function AdminInstallmentTable() {
                         </TableCell>
                         <TableCell className=" font-bold text-red-600 text-right">
                           {formatCurrency(totals.totalRedemptions)}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
                         </TableCell>
                       </TableRow>
                     )}
