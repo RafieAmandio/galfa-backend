@@ -7,8 +7,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
-import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { eq, and, gte, lte, lt, isNotNull } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
@@ -39,6 +38,40 @@ interface MonthlyCoFResult {
 }
 
 /**
+ * Update expired accounts to 'expired' status
+ * This ensures accounts past their end date are properly marked as expired
+ */
+async function updateExpiredAccounts(db: any): Promise<void> {
+  try {
+    const currentDate = new Date();
+
+    const result = await db
+      .update(accounts)
+      .set({
+        status: "mature",
+        updated_at: currentDate,
+      })
+      .where(
+        and(
+          eq(accounts.status, "active"),
+          isNotNull(accounts.end_date),
+          lt(accounts.end_date, currentDate)
+        )
+      )
+      .returning({ id: accounts.id });
+
+    if (result.length > 0) {
+      console.log(
+        `Updated ${result.length} expired accounts to 'expired' status`
+      );
+    }
+  } catch (error) {
+    console.error("Error updating expired accounts:", error);
+    // Don't throw error to prevent CoF calculation from failing
+  }
+}
+
+/**
  * Get sum of all Total Gain Fund (amount of money gained) for every fix rate account for a specific month
  * This calculates the Cost of Funds (CoF) - how much the platform paid in interest to investors
  *
@@ -50,18 +83,12 @@ interface MonthlyCoFResult {
 export async function getFixRateCoFByMonth(
   targetMonth: Date
 ): Promise<MonthlyCoFResult> {
-  // Check admin access
-  // const adminCheck = await checkAdminAccess();
-  // if (!adminCheck.isAdmin) {
-  //   return {
-  //     success: false,
-  //     message: "Unauthorized: Admin access required",
-  //   };
-  // }
-
   const db = createDrizzleConnection();
 
   try {
+    // First, update any expired accounts to 'expired' status
+    await updateExpiredAccounts(db);
+
     const monthStart = startOfMonth(targetMonth);
     const monthEnd = endOfMonth(targetMonth);
 
@@ -86,6 +113,8 @@ export async function getFixRateCoFByMonth(
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .where(
         and(
+          // Only include active accounts
+          eq(accounts.status, "active"),
           // Account was created before or during the month
           lte(accounts.transaction_date, monthEnd),
           // Account was active during the month (either no end date or ended after month start)

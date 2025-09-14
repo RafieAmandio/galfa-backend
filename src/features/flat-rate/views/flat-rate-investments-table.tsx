@@ -16,6 +16,7 @@ import {
   getExpandedRowModel,
 } from "@tanstack/react-table";
 import { getFlatRateInvestments } from "../actions/get-flat-rate-investments";
+import { DeleteFlatRateModal } from "../components/delete-flat-rate-modal";
 import {
   Table,
   TableBody,
@@ -52,6 +53,7 @@ import {
   ArrowDown,
   Filter,
   X,
+  Trash,
 } from "lucide-react";
 import {
   Popover,
@@ -675,6 +677,31 @@ export function FlatRateInvestmentsTable() {
         },
         filterFn: numberRangeFilter,
       },
+      {
+        id: "actions",
+        header: () => <span className="font-semibold">Actions</span>,
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center space-x-2">
+              <DeleteFlatRateModal
+                accountId={row.original.id}
+                accountNumber={row.original.name}
+                onAccountDeleted={() => {
+                  // Refresh the table data
+                  window.location.reload();
+                }}
+              >
+                <Button variant="destructive" size="sm">
+                  Delete
+                </Button>
+              </DeleteFlatRateModal>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableHiding: false,
+        size: 100,
+      },
     ],
     []
   );
@@ -1103,6 +1130,9 @@ export function FlatRateInvestmentsTable() {
                           ) : (
                             <span className="text-muted-foreground">None</span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          -
                         </TableCell>
                       </TableRow>
                     )}

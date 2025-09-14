@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, lt, isNotNull } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
@@ -35,8 +35,45 @@ interface FlatRateInvestment {
   monthlyData: MonthlyData[];
 }
 
+/**
+ * Update expired accounts to 'expired' status
+ * This ensures accounts past their end date are properly marked as expired
+ */
+async function updateMaturedAccounts(db: any): Promise<void> {
+  try {
+    const currentDate = new Date();
+
+    const result = await db
+      .update(accounts)
+      .set({
+        status: "mature",
+        updated_at: currentDate,
+      })
+      .where(
+        and(
+          eq(accounts.status, "active"),
+          isNotNull(accounts.end_date),
+          lt(accounts.end_date, currentDate)
+        )
+      )
+      .returning({ id: accounts.id });
+
+    if (result.length > 0) {
+      console.log(
+        `Updated ${result.length} matured accounts to 'mature' status`
+      );
+    }
+  } catch (error) {
+    console.error("Error updating matured accounts:", error);
+    // Don't throw error to prevent function from failing
+  }
+}
+
 export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
   const db = createDrizzleConnection();
+
+  // First, update any matured accounts to 'mature' status
+  await updateMaturedAccounts(db);
 
   const results = await db
     .select({

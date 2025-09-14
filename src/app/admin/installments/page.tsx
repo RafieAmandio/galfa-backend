@@ -3,7 +3,7 @@ import { getAllInvestors } from "@/features/investor/actions/get-all-investors";
 import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 
 export default async function InstallmentsPage() {
-  const user = await requireAdminOrRedirectToSummary();
+  await requireAdminOrRedirectToSummary();
 
   // Authenticate admin user on server side
   const investorEmails = await getAllInvestors();

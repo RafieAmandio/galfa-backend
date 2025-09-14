@@ -7,7 +7,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, and, gte, lte, lt, isNotNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
@@ -35,6 +35,40 @@ interface MonthlyPrincipleResult {
 }
 
 /**
+ * Update expired accounts to 'expired' status
+ * This ensures accounts past their end date are properly marked as expired
+ */
+async function updateExpiredAccounts(db: any): Promise<void> {
+  try {
+    const currentDate = new Date();
+
+    const result = await db
+      .update(accounts)
+      .set({
+        status: "expired",
+        updated_at: currentDate,
+      })
+      .where(
+        and(
+          eq(accounts.status, "active"),
+          isNotNull(accounts.end_date),
+          lt(accounts.end_date, currentDate)
+        )
+      )
+      .returning({ id: accounts.id });
+
+    if (result.length > 0) {
+      console.log(
+        `Updated ${result.length} expired accounts to 'expired' status`
+      );
+    }
+  } catch (error) {
+    console.error("Error updating expired accounts:", error);
+    // Don't throw error to prevent function from failing
+  }
+}
+
+/**
  * Get sum of all Net Investor Funds (after admin fees) for a specific month
  * This shows the total capital that was actively working for investors during that month
  * Includes all accounts that were active at any point during the target month
@@ -57,6 +91,9 @@ export async function getFixRatePrincipleByMonth(
   const db = createDrizzleConnection();
 
   try {
+    // First, update any expired accounts to 'expired' status
+    await updateExpiredAccounts(db);
+
     const monthStart = startOfMonth(targetMonth);
     const monthEnd = endOfMonth(targetMonth);
 
