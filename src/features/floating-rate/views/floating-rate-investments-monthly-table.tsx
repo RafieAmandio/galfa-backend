@@ -60,6 +60,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
+import { DeleteFloatingRateModal } from "@/features/floating-rate/components/delete-floating-rate-modal";
 
 // This component receives data from server-side
 
@@ -136,12 +137,14 @@ interface FloatingRateInvestmentsMonthlyTableProps {
   } | null;
   paginationParams: PaginationParams;
   onPaginationChange: (params: Partial<PaginationParams>) => void;
+  onDeleted?: () => void;
 }
 
 export default function FloatingRateInvestmentsMonthlyTable({
   data,
   paginationParams,
   onPaginationChange,
+  onDeleted,
 }: FloatingRateInvestmentsMonthlyTableProps) {
   // Remove data fetching state - data comes from props
   const loading = false;
@@ -725,6 +728,28 @@ export default function FloatingRateInvestmentsMonthlyTable({
           if (value === "false") return !isRollover;
           return true;
         },
+      },
+      {
+        id: "actions",
+        header: () => <div className="text-center font-semibold">Actions</div>,
+        cell: ({ row }) => {
+          return (
+            <div className="flex items-center justify-center gap-2">
+              <DeleteFloatingRateModal
+                accountId={row.original.id}
+                accountNumber={row.original.accountNumber}
+                onAccountDeleted={onDeleted}
+              >
+                <Button variant="destructive" size="sm" className="h-8">
+                  Delete
+                </Button>
+              </DeleteFloatingRateModal>
+            </div>
+          );
+        },
+        enableSorting: false,
+        enableColumnFilter: false,
+        size: 110,
       },
     ],
     [uniqueStatuses]
@@ -1349,6 +1374,9 @@ export default function FloatingRateInvestmentsMonthlyTable({
                           {formatCurrency(totals.presentValueFund)}
                         </TableCell>
                         <TableCell className="text-center text-muted-foreground">
+                          -
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
                           -
                         </TableCell>
                         <TableCell className="text-muted-foreground">

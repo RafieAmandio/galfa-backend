@@ -198,6 +198,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
           data={floatingRateData}
           paginationParams={paginationParams}
           onPaginationChange={handlePaginationChange}
+          onDeleted={handleRefresh}
         />
       )}
     </div>
