@@ -9,7 +9,6 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, not, exists, gt } from "drizzle-orm";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
-import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { cache } from "react";
 
 interface FloatingRateAccountForRedemption {
@@ -30,12 +29,6 @@ interface FloatingRateAccountForRedemption {
 export const getFloatingRateAccountsForRedemption = cache(async function (
   redemptionDate: Date
 ): Promise<FloatingRateAccountForRedemption[]> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
-  }
-
   const db = createDrizzleConnection();
 
   // Get all accounts that are eligible for redemption

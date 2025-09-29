@@ -15,12 +15,6 @@ export interface InvestorOption {
  * Get list of all investors for admin to select from
  */
 export async function getAllInvestors(): Promise<InvestorOption[]> {
-  // Check admin access
-  const adminCheck = await checkAdminAccess();
-  if (!adminCheck.isAdmin) {
-    throw new Error("Unauthorized: Admin access required");
-  }
-
   const db = createDrizzleConnection();
 
   const results = await db

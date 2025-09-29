@@ -2,7 +2,6 @@
 
 import { cache } from "react";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
-import { checkAdminAccess } from "@/lib/auth/admin-check";
 import {
   accounts,
   floatingRateAccounts,
@@ -116,15 +115,6 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
   cache(async function (
     params: PaginationParams = {}
   ): Promise<PaginatedFloatingRateInvestmentsResult> {
-    // Check admin access
-    const adminCheck = await checkAdminAccess();
-    if (!adminCheck.isAdmin) {
-      return {
-        success: false,
-        message: "Unauthorized: Admin access required",
-      };
-    }
-
     const {
       page = 1,
       limit = 10,
@@ -486,7 +476,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
 
       // Calculate monthly performance for each investment using pre-calculated data
       const investments: FloatingRateInvestmentWithMonthly[] =
-        investmentData.map((investment) => {
+        investmentData.map((investment, index) => {
           totalGrossCapital += investment.grossCapital;
           totalNetInvestorFund += investment.netInvestorFund;
           totalAdminFees += investment.adminFee;
@@ -504,6 +494,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
           let calculationDate = startOfMonth(investment.transactionDate);
           const endDate = startOfMonth(new Date());
           let isFirstMonth = true;
+          let monthCount = 0;
 
           while (!isAfter(calculationDate, endDate)) {
             const monthStart = calculationDate;
@@ -616,6 +607,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
 
             calculationDate = addMonths(calculationDate, 1);
             isFirstMonth = false;
+            monthCount++;
           }
 
           const presentValueFund = currentValue;
@@ -665,10 +657,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
         },
       };
     } catch (error) {
-      console.error(
-        "Error fetching paginated floating rate investments:",
-        error
-      );
+      console.error("Error fetching floating rate investments:", error);
       return {
         success: false,
         message: "Failed to fetch floating rate investments",

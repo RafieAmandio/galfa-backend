@@ -1,4 +1,4 @@
-"use server";
+"server-only";
 
 import { createServerClient } from "@/db/supabase/server";
 import { redirect } from "next/navigation";
@@ -71,17 +71,18 @@ export async function requireAdmin(): Promise<AuthUser> {
  * If authenticated but not admin, redirect to investor summary
  */
 export async function requireAdminOrRedirectToSummary(): Promise<AuthUser> {
-  const user = await getCurrentUser();
+  const adminCheck = await checkAdminAccess();
 
-  if (!user) {
+  if (!adminCheck.user || !adminCheck.user.email) {
     redirect("/");
   }
-
-  const adminCheck = await checkAdminAccess();
 
   if (!adminCheck.isAdmin) {
     redirect("/investor/summary");
   }
 
-  return user;
+  return {
+    ...adminCheck.user,
+    email: adminCheck.user.email,
+  } as AuthUser;
 }

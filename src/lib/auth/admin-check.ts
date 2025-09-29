@@ -1,4 +1,4 @@
-"use server";
+"server-only";
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { authUsers, profiles, roleAssignments } from "@/db/drizzle/schema";
