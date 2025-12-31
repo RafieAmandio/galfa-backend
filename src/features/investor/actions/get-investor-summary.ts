@@ -1,6 +1,6 @@
 "use server";
 
-import { createDrizzleConnection } from "@/db/drizzle/connection";
+import { createDrizzleConnection, getDbConnectionDebug } from "@/db/drizzle/connection";
 import {
   accounts,
   fixRateAccounts,
@@ -42,6 +42,7 @@ interface InvestmentDetail {
 export async function getInvestorSummary(
   investorEmail: string
 ): Promise<InvestorSummary | null> {
+  console.info("DB Connection Debug:", getDbConnectionDebug());
   const db = createDrizzleConnection();
 
   // Get all active investments for the investor
@@ -65,6 +66,20 @@ export async function getInvestorSummary(
     .where(
       and(eq(authUsers.email, investorEmail), eq(accounts.status, "active"))
     );
+
+  console.info("Investor flat-rate active rows:", results.length);
+  if (results.length > 0) {
+    const sample = results[0];
+    console.info("Investor sample row:", {
+      id: sample.id,
+      accountNumber: sample.accountNumber,
+      status: "active",
+      hasEndDate: Boolean(sample.endDate),
+      isRollover: Boolean(sample.isRollover),
+      adminFeeApplied: sample.adminFeeApplied,
+      rolloverSequence: sample.rolloverSequence,
+    });
+  }
 
   if (results.length === 0) {
     return null;

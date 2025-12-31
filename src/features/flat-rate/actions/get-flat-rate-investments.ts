@@ -1,6 +1,6 @@
 "use server";
 
-import { createDrizzleConnection } from "@/db/drizzle/connection";
+import { createDrizzleConnection, getDbConnectionDebug } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq, and, lt, isNotNull } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
@@ -70,6 +70,7 @@ async function updateMaturedAccounts(db: any): Promise<void> {
 }
 
 export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
+  console.info("DB Connection Debug:", getDbConnectionDebug());
   const db = createDrizzleConnection();
 
   // First, update any matured accounts to 'mature' status
@@ -90,6 +91,20 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
     })
     .from(accounts)
     .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id));
+
+  console.info("FlatRate investments rows:", results.length);
+  if (results.length > 0) {
+    const sample = results[0];
+    console.info("FlatRate sample row:", {
+      id: sample.id,
+      name: sample.name,
+      status: sample.status,
+      hasEndDate: Boolean(sample.endDate),
+      isRollover: Boolean(sample.isRollover),
+      adminFeeApplied: sample.adminFeeApplied,
+      rolloverSequence: sample.rolloverSequence,
+    });
+  }
 
   // Process each result and calculate NPV with redemptions
   const investments = await Promise.all(

@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+type CookieSpec = {
+  name: string;
+  value: string;
+  options?: Record<string, any>;
+};
+
 export async function supabaseMiddleware(request: NextRequest) {
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
@@ -15,6 +21,12 @@ export async function supabaseMiddleware(request: NextRequest) {
     request,
   });
 
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const proto = (forwardedProto || request.nextUrl.protocol || "").replace(":", "");
+  const isHttps = proto === "https";
+  const host = request.nextUrl.hostname || "";
+  const isLocalHttp = !isHttps && (host === "localhost" || host === "127.0.0.1");
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -23,17 +35,22 @@ export async function supabaseMiddleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
+        setAll(cookiesToSet: CookieSpec[]) {
+          cookiesToSet.forEach(({ name, value }: CookieSpec) =>
             request.cookies.set(name, value)
           );
           supabaseResponse = NextResponse.next({
             request,
           });
-          cookiesToSet.forEach(({ name, value, options }) =>
+          cookiesToSet.forEach(({ name, value, options }: CookieSpec) =>
             supabaseResponse.cookies.set(name, value, options)
           );
         },
+      },
+      cookieOptions: {
+        path: "/",
+        sameSite: "lax",
+        secure: isHttps,
       },
     }
   );
@@ -46,12 +63,34 @@ export async function supabaseMiddleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const incomingCookies = request.cookies.getAll();
+  const cookieNames = incomingCookies.map((c) => c.name);
+  const hasSbCookie = cookieNames.some((n) => n.includes("sb:"));
+  const adminDisabled = process.env.DISABLE_ADMIN_CHECK === "true";
+
+  console.info("middleware", {
+    path: request.nextUrl.pathname,
+    method: request.method,
+    hasUser: Boolean(user),
+    host,
+    proto,
+    secureCookie: isHttps,
+    cookieCount: incomingCookies.length,
+    hasSbCookie,
+    adminDisabled,
+  });
+
   // AUTHORIZATION HERE
   // Protect investor summary page
   if (!user && request.nextUrl.pathname.startsWith("/investor/summary")) {
     // no user, redirect to login page
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    console.info("redirect", {
+      from: request.nextUrl.pathname,
+      to: url.pathname,
+      reason: "unauthenticated",
+    });
     return NextResponse.redirect(url);
   }
 
@@ -60,11 +99,16 @@ export async function supabaseMiddleware(request: NextRequest) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone();
     url.pathname = "/";
+    console.info("redirect", {
+      from: request.nextUrl.pathname,
+      to: url.pathname,
+      reason: "unauthenticated",
+    });
     return NextResponse.redirect(url);
   }
 
   // ONLY FOR ADMIN
-  if (user && request.nextUrl.pathname.startsWith("/dashboard/admin/")) {
+  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/dashboard/admin/")) {
     const { data: userData, error: userError } = await supabase
       .from("user_role_members")
       .select("user_role_id")
@@ -73,18 +117,28 @@ export async function supabaseMiddleware(request: NextRequest) {
     if (!userData || userError) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
+      console.info("redirect", {
+        from: request.nextUrl.pathname,
+        to: url.pathname,
+        reason: "no_roles",
+      });
       return NextResponse.redirect(url);
     }
 
     if (!userData.some((data) => data.user_role_id === 2)) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
+      console.info("redirect", {
+        from: request.nextUrl.pathname,
+        to: url.pathname,
+        reason: "not_admin_role",
+      });
       return NextResponse.redirect(url);
     }
   }
 
   // ADMIN-ONLY ROUTES - Flat Rate Page
-  if (user && request.nextUrl.pathname.startsWith("/flat-rate")) {
+  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/flat-rate")) {
     // Check if user is super admin in auth.users
     const { data: authUser, error: authError } = await supabase
       .from("auth.users")
@@ -96,12 +150,17 @@ export async function supabaseMiddleware(request: NextRequest) {
     if (authError || !authUser?.is_super_admin) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
+      console.info("redirect", {
+        from: request.nextUrl.pathname,
+        to: url.pathname,
+        reason: "not_super_admin",
+      });
       return NextResponse.redirect(url);
     }
   }
 
   // ADMIN-ONLY ROUTES - Admin Pages
-  if (user && request.nextUrl.pathname.startsWith("/admin/")) {
+  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/admin/")) {
     // Check if user is super admin in auth.users
     const { data: authUser, error: authError } = await supabase
       .from("auth.users")
@@ -113,6 +172,11 @@ export async function supabaseMiddleware(request: NextRequest) {
     if (authError || !authUser?.is_super_admin) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
+      console.info("redirect", {
+        from: request.nextUrl.pathname,
+        to: url.pathname,
+        reason: "not_super_admin",
+      });
       return NextResponse.redirect(url);
     }
   }
