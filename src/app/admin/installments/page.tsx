@@ -2,6 +2,8 @@ import { AdminInstallmentView } from "@/features/installment/components/admin-in
 import { getAllInvestors } from "@/features/investor/actions/get-all-investors";
 import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 
+export const dynamic = "force-dynamic";
+
 export default async function InstallmentsPage() {
   await requireAdminOrRedirectToSummary();
 

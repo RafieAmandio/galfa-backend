@@ -1,6 +1,8 @@
 import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 import { AdminFloatingRateView } from "@/features/floating-rate/components/admin-floating-rate-view";
 
+export const dynamic = "force-dynamic";
+
 export default async function FloatingRatePage() {
   // Authenticate admin user on server side
   const user = await requireAdminOrRedirectToSummary();

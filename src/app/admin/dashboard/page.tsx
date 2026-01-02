@@ -2,6 +2,8 @@ import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers"
 import { AdminDashboardView } from "@/features/admin/components/admin-dashboard-view";
 import { startOfMonth } from "date-fns";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   // Authenticate admin user on server side
   const user = await requireAdminOrRedirectToSummary();

@@ -1,6 +1,8 @@
 import { requireAdminOrRedirectToSummary } from "@/lib/auth/server-auth-helpers";
 import { PerformanceTable } from "@/features/investments/views/performance-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function PerformancePage() {
   // Authenticate admin user on server side
   const user = await requireAdminOrRedirectToSummary();
