@@ -3,6 +3,7 @@
 import { createServerClient } from "@/db/supabase/server";
 import { redirect } from "next/navigation";
 import { checkAdminAccess } from "./admin-check";
+import { cache } from "react";
 
 export interface AuthUser {
   id: string;
@@ -13,8 +14,9 @@ export interface AuthUser {
 /**
  * Get the current authenticated user from server-side
  * Returns null if not authenticated
+ * Wrapped with React cache to deduplicate calls within the same request
  */
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export const getCurrentUser = cache(async (): Promise<AuthUser | null> => {
   try {
     const supabase = await createServerClient();
     const {
@@ -23,11 +25,9 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     } = await supabase.auth.getUser();
 
     if (error || !user || !user.email) {
-      console.info("Auth getCurrentUser: none", { error: Boolean(error) });
       return null;
     }
 
-    console.info("Auth getCurrentUser:", { id: user.id, email: user.email });
     return {
       ...user,
       email: user.email,
@@ -36,7 +36,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     console.error("Failed to get current user:", error);
     return null;
   }
-}
+});
 
 /**
  * Get the current authenticated user and redirect if not authenticated
@@ -48,7 +48,6 @@ export async function requireAuth(): Promise<AuthUser> {
     redirect("/");
   }
 
-  console.info("requireAuth:", { id: user.id, email: user.email });
   return user;
 }
 
@@ -86,11 +85,6 @@ export async function requireAdminOrRedirectToSummary(): Promise<AuthUser> {
     redirect("/investor/summary");
   }
 
-  console.info("requireAdminOrRedirectToSummary:", {
-    id: adminCheck.user.id,
-    email: adminCheck.user.email,
-    isAdmin: adminCheck.isAdmin,
-  });
   return {
     ...(adminCheck.user || { id: "disabled-admin", email: "disabled@local" }),
     email: (adminCheck.user?.email as string) || "disabled@local",

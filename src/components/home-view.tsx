@@ -1,8 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Auth from "@/components/Auth";
-import Account from "@/components/Account";
 import {
   Card,
   CardContent,
@@ -13,247 +11,500 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { User } from "@supabase/supabase-js";
+import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
 import Link from "next/link";
+import {
+  TrendingUp,
+  TrendingDown,
+  Wallet,
+  PiggyBank,
+  BarChart3,
+  FileText,
+  Users,
+  Settings,
+  ArrowRight,
+  Percent,
+  Calendar,
+  Activity,
+} from "lucide-react";
 
 interface HomeViewProps {
   user: User | null;
   isAdmin: boolean;
+  portfolioSummary: ComprehensiveInvestorSummary | null;
 }
 
-export function HomeView({ user, isAdmin }: HomeViewProps) {
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function formatPercent(value: number): string {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+}
+
+export function HomeView({ user, isAdmin, portfolioSummary }: HomeViewProps) {
   if (!user) {
     return <Auth />;
   }
 
+  const hasInvestments = portfolioSummary !== null;
+  const gainLossIsPositive = (portfolioSummary?.totalGainLoss ?? 0) >= 0;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 rounded-sm">
-      <div className="container mx-auto py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto py-8 px-4">
         {/* Welcome Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Galfa Investment Platform
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-slate-900">
+              Welcome back{user.email ? `, ${user.email.split("@")[0]}` : ""}
             </h1>
             {isAdmin && (
-              <Badge
-                variant="default"
-                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white"
-              >
+              <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
                 Admin
               </Badge>
             )}
           </div>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Manage your investments and track your portfolio performance with
-            our comprehensive financial platform
+          <p className="text-slate-600">
+            Here&apos;s an overview of your investment portfolio
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Quick Actions Card */}
-          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-gray-900">
-                <svg
-                  className="w-6 h-6 text-blue-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
+        {/* Portfolio Summary Section */}
+        {hasInvestments ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Total Invested */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Total Invested
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {formatCurrency(portfolioSummary.totalNetInvestedFund)}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Wallet className="h-6 w-6 text-blue-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Current Value */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Current Value
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {formatCurrency(portfolioSummary.totalNetPresentValue)}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center">
+                    <PiggyBank className="h-6 w-6 text-indigo-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Total Gain/Loss */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Total Gain/Loss
+                    </p>
+                    <p
+                      className={`text-2xl font-bold mt-1 ${
+                        gainLossIsPositive ? "text-emerald-600" : "text-red-600"
+                      }`}
+                    >
+                      {formatCurrency(portfolioSummary.totalGainLoss)}
+                    </p>
+                  </div>
+                  <div
+                    className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                      gainLossIsPositive ? "bg-emerald-50" : "bg-red-50"
+                    }`}
+                  >
+                    {gainLossIsPositive ? (
+                      <TrendingUp className="h-6 w-6 text-emerald-600" />
+                    ) : (
+                      <TrendingDown className="h-6 w-6 text-red-600" />
+                    )}
+                  </div>
+                </div>
+                <p
+                  className={`text-sm mt-2 ${
+                    gainLossIsPositive ? "text-emerald-600" : "text-red-600"
+                  }`}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Quick Actions
-              </CardTitle>
-              <CardDescription>
-                Access your investment tools and portfolio overview
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+                  {formatPercent(portfolioSummary.totalGainLossPercentage)}
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Active Investments */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Active Investments
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {portfolioSummary.activeInvestments}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-amber-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="border-0 shadow-sm bg-white mb-8">
+            <CardContent className="py-12 text-center">
+              <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <PiggyBank className="h-8 w-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No investments yet
+              </h3>
+              <p className="text-slate-500 mb-4">
+                Your portfolio is empty. Check your investment summary for more
+                details.
+              </p>
+              <Button asChild>
+                <Link href="/investor/summary">View Investment Summary</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Investment Breakdown */}
+        {hasInvestments && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+            {/* Flat Rate */}
+            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Percent className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Flat Rate</CardTitle>
+                      <CardDescription>Fixed return investments</CardDescription>
+                    </div>
+                  </div>
+                  {portfolioSummary.flatRateInvestments.hasData && (
+                    <Badge variant="secondary">
+                      {portfolioSummary.flatRateInvestments.activeInvestments} active
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {portfolioSummary.flatRateInvestments.hasData ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Invested</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          portfolioSummary.flatRateInvestments.totalNetInvestedFund
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Current Value</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          portfolioSummary.flatRateInvestments.totalNetPresentValue
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Return</span>
+                      <span
+                        className={`font-medium ${
+                          portfolioSummary.flatRateInvestments.totalGainLoss >= 0
+                            ? "text-emerald-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {formatPercent(
+                          portfolioSummary.flatRateInvestments.totalGainLossPercentage
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No flat rate investments</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Floating Rate */}
+            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <BarChart3 className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Floating Rate</CardTitle>
+                      <CardDescription>Variable return investments</CardDescription>
+                    </div>
+                  </div>
+                  {portfolioSummary.floatingRateInvestments.hasData && (
+                    <Badge variant="secondary">
+                      {portfolioSummary.floatingRateInvestments.activeInvestments} active
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {portfolioSummary.floatingRateInvestments.hasData ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Net Capital</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          portfolioSummary.floatingRateInvestments.totalNetCapital
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Gained Fund</span>
+                      <span className="font-medium text-emerald-600">
+                        {formatCurrency(
+                          portfolioSummary.floatingRateInvestments.totalGainedFund
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Admin Fees</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          portfolioSummary.floatingRateInvestments.totalAdminFees
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">
+                    No floating rate investments
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Installment */}
+            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Installment</CardTitle>
+                      <CardDescription>Periodic payment investments</CardDescription>
+                    </div>
+                  </div>
+                  {portfolioSummary.installmentInvestments.hasData && (
+                    <Badge variant="secondary">
+                      {portfolioSummary.installmentInvestments.activeInvestments} active
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {portfolioSummary.installmentInvestments.hasData ? (
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Net Invested</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          portfolioSummary.installmentInvestments.totalNetInvestorFund
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Redeemed</span>
+                      <span className="font-medium text-emerald-600">
+                        {formatCurrency(
+                          portfolioSummary.installmentInvestments.totalRedeemedAmount
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400">No installment investments</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
+          >
+            <Link href="/investor/summary" className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-slate-900">Investment Summary</div>
+                <div className="text-sm text-slate-500">View all investments</div>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
+          >
+            <Link href="/investor/floating-rate" className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <BarChart3 className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-slate-900">Floating Rate</div>
+                <div className="text-sm text-slate-500">Variable investments</div>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
+          >
+            <Link href="/investor/installment" className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-purple-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-slate-900">Installments</div>
+                <div className="text-sm text-slate-500">Periodic payments</div>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
+          >
+            <Link href="/investor/capital-market" className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="text-left">
+                <div className="font-medium text-slate-900">Capital Market</div>
+                <div className="text-sm text-slate-500">Market investments</div>
+              </div>
+              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+            </Link>
+          </Button>
+        </div>
+
+        {/* Admin Quick Actions */}
+        {isAdmin && (
+          <div className="mt-8">
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">
+              Admin Actions
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Button
                 asChild
-                className="w-full h-12 text-base bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-md"
+                variant="outline"
+                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
               >
-                <Link href="/investor/summary">
-                  <svg
-                    className="w-5 h-5 mr-2"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9 12a1 1 0 001 1h4a1 1 0 100-2h-4a1 1 0 00-1 1zM6 10a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zM7 6a1 1 0 000 2h6a1 1 0 100-2H7z" />
-                    <path
-                      fillRule="evenodd"
-                      d="M3 6a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V6zm2-1a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1V6a1 1 0 00-1-1H5z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  View Investment Summary
+                <Link href="/admin/dashboard" className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <BarChart3 className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-slate-900">Dashboard</div>
+                    <div className="text-sm text-slate-500">Admin overview</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
                 </Link>
               </Button>
 
-              {isAdmin && (
-                <>
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full h-12 text-base border-2 border-green-200 hover:bg-green-50 hover:border-green-300 shadow-sm"
-                  >
-                    <Link href="/flat-rate">
-                      <svg
-                        className="w-5 h-5 mr-2 text-green-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span className="text-green-700">
-                        Flat Rate Calculator
-                      </span>
-                      <Badge variant="secondary" className="ml-auto">
-                        Admin
-                      </Badge>
-                    </Link>
-                  </Button>
-
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full h-12 text-base border-2 border-purple-200 hover:bg-purple-50 hover:border-purple-300 shadow-sm"
-                  >
-                    <Link href="/admin/user-management">
-                      <svg
-                        className="w-5 h-5 mr-2 text-purple-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-                      </svg>
-                      <span className="text-purple-700">User Management</span>
-                      <Badge variant="secondary" className="ml-auto">
-                        Admin
-                      </Badge>
-                    </Link>
-                  </Button>
-
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full h-12 text-base border-2 border-orange-200 hover:bg-orange-50 hover:border-orange-300 shadow-sm"
-                  >
-                    <Link href="/admin/performance">
-                      <svg
-                        className="w-5 h-5 mr-2 text-orange-600"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                      </svg>
-                      <span className="text-orange-700">Performance</span>
-                      <Badge variant="secondary" className="ml-auto">
-                        Admin
-                      </Badge>
-                    </Link>
-                  </Button>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Account Management Card */}
-          <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-gray-900">
-                <svg
-                  className="w-6 h-6 text-indigo-600"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Account Management
-              </CardTitle>
-              <CardDescription>
-                Manage your profile and account settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Account user={user} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Additional Features Grid */}
-        {isAdmin && (
-          <div className="mt-12 max-w-6xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-              Admin Features
-            </h2>
-            <div className="grid md:grid-cols-3 gap-6">
-              <Card className="shadow-md border-0 bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow">
-                <CardHeader className="text-center">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <svg
-                      className="w-6 h-6 text-blue-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zM14 6a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2h6zM4 14a2 2 0 002 2h8a2 2 0 002-2v-2a2 2 0 00-2-2H6a2 2 0 00-2 2v2z" />
-                    </svg>
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
+              >
+                <Link href="/admin/user-management" className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <CardTitle className="text-lg">Flat Rate</CardTitle>
-                  <CardDescription>
-                    Manage flat rate investments
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-
-              <Card className="shadow-md border-0 bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow">
-                <CardHeader className="text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <svg
-                      className="w-6 h-6 text-green-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                    </svg>
+                  <div className="text-left">
+                    <div className="font-medium text-slate-900">Users</div>
+                    <div className="text-sm text-slate-500">Manage users</div>
                   </div>
-                  <CardTitle className="text-lg">Floating Rate</CardTitle>
-                  <CardDescription>
-                    Manage variable-rate investments
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+                </Link>
+              </Button>
 
-              <Card className="shadow-md border-0 bg-white/50 backdrop-blur-sm hover:shadow-lg transition-shadow">
-                <CardHeader className="text-center">
-                  <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                    <svg
-                      className="w-6 h-6 text-purple-600"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
+              >
+                <Link href="/admin/reports" className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <FileText className="h-5 w-5 text-emerald-600" />
                   </div>
-                  <CardTitle className="text-lg">Installments</CardTitle>
-                  <CardDescription>Manage installment plans</CardDescription>
-                </CardHeader>
-              </Card>
+                  <div className="text-left">
+                    <div className="font-medium text-slate-900">Reports</div>
+                    <div className="text-sm text-slate-500">Generate reports</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+                </Link>
+              </Button>
+
+              <Button
+                asChild
+                variant="outline"
+                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
+              >
+                <Link href="/flat-rate" className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                    <Settings className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-medium text-slate-900">Calculator</div>
+                    <div className="text-sm text-slate-500">Flat rate calc</div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
+                </Link>
+              </Button>
             </div>
           </div>
         )}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
+import { DownloadPdfButton } from "@/features/reports/components/download-pdf-button";
 
 interface InvestorSummaryViewProps {
   user: {
@@ -54,13 +55,16 @@ export function InvestorSummaryView({
                 Manage your complete investment portfolio and track performance
               </p>
             </div>
-            <button
-              onClick={handleSignOut}
-              disabled={isSigningOut}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-            >
-              {isSigningOut ? "Signing Out..." : "Sign Out"}
-            </button>
+            <div className="flex items-center gap-3">
+              <DownloadPdfButton email={user.email} variant="outline" size="sm" />
+              <button
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {isSigningOut ? "Signing Out..." : "Sign Out"}
+              </button>
+            </div>
           </div>
         </div>
 

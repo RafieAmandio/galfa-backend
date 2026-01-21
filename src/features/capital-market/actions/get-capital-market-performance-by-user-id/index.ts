@@ -18,6 +18,11 @@ export const getCapitalMarketPerformanceByUserId = cache(async function (
     .from(capitalMarketAccounts)
     .where(eq(capitalMarketAccounts.user_id, userId));
 
+  // Return empty array if user has no capital market account
+  if (capitalMarketAccount.length === 0) {
+    return [];
+  }
+
   const capitalMarketPerformanceResponse = await db
     .select()
     .from(capitalMarketPerformance)

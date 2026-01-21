@@ -4,6 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { authUsers, profiles, roleAssignments } from "@/db/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { createServerClient } from "@/db/supabase/server";
+import { cache } from "react";
 
 export interface AdminCheckResult {
   isAdmin: boolean;
@@ -14,8 +15,9 @@ export interface AdminCheckResult {
 /**
  * Check if the current authenticated user has admin privileges
  * Checks both super admin flag and role assignments
+ * Wrapped with React cache to deduplicate calls within the same request
  */
-export async function checkAdminAccess(): Promise<AdminCheckResult> {
+export const checkAdminAccess = cache(async (): Promise<AdminCheckResult> => {
   try {
     const adminDisabled = process.env.DISABLE_ADMIN_CHECK === "true";
     // Get current user from Supabase
@@ -33,7 +35,10 @@ export async function checkAdminAccess(): Promise<AdminCheckResult> {
     }
 
     if (authError || !user) {
-      console.info("Admin check: unauthenticated", { authError: Boolean(authError) });
+      // Only log in development and not during build
+      if (process.env.NODE_ENV === "development" && !process.env.NEXT_PHASE) {
+        console.info("Admin check: unauthenticated");
+      }
       return {
         isAdmin: false,
         user: null,
@@ -54,7 +59,6 @@ export async function checkAdminAccess(): Promise<AdminCheckResult> {
       .limit(1);
 
     if (authUserResult.length > 0 && authUserResult[0].isSuperAdmin) {
-      console.info("Admin check: super admin", { userId: user.id, email: authUserResult[0].email });
       return {
         isAdmin: true,
         user,
@@ -74,11 +78,6 @@ export async function checkAdminAccess(): Promise<AdminCheckResult> {
       (role) => role.roleName && role.roleName.toLowerCase() === "admin"
     );
 
-    console.info("Admin check: role-based", {
-      userId: user.id,
-      roles: roleResult.map((r) => r.roleName).filter(Boolean),
-      isAdmin: hasAdminRole,
-    });
     return {
       isAdmin: hasAdminRole,
       user,
@@ -91,7 +90,7 @@ export async function checkAdminAccess(): Promise<AdminCheckResult> {
       error: "Failed to check admin status",
     };
   }
-}
+});
 
 /**
  * Get user's roles for display purposes

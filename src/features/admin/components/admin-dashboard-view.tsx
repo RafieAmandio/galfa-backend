@@ -8,8 +8,32 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, startOfMonth } from "date-fns";
-import { TrendingUp, DollarSign, PieChart, Users, Loader2 } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  PieChart,
+  Users,
+  Loader2,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  Activity,
+  AlertTriangle,
+  Calendar,
+  BarChart3,
+  Percent,
+} from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getFloatingRatePrincipleByMonthQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-principle-by-month/query-options";
 import { getFloatingRateAllocatedProfitQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-allocated-profit/query-options";
@@ -23,229 +47,6 @@ import { getGrossProfitByMonthQueryOptions } from "@/features/investments/action
 import { getInstallmentPrincipleByMonthQueryOptions } from "@/features/installment/actions/get-installment-principle-by-month/query-options";
 import { getInstallmentCoFByMonthQueryOptions } from "@/features/installment/actions/get-installment-cof-by-month/query-options";
 
-interface PrincipleData {
-  month: Date;
-  totalGrossCapital: number;
-  totalAdminFees: number;
-  totalNetCapital: number;
-  activeAccountsCount: number;
-  accounts: Array<{
-    id: number;
-    accountNumber: string;
-    investorEmail: string | null;
-    grossCapital: number;
-    adminFee: number;
-    netCapital: number;
-    transactionDate: Date;
-    isRollover: boolean | null;
-  }>;
-}
-
-interface CoFData {
-  month: Date;
-  totalGainFund: number;
-  totalNetCapitalWorking: number;
-  totalPresentValue: number;
-  averageReturnPercentage: number;
-  activeAccountsCount: number;
-  accounts: Array<{
-    id: number;
-    accountNumber: string;
-    investorEmail: string | null;
-    netCapital: number;
-    annualRate: number;
-    presentValue: number;
-    totalGain: number;
-    returnPercentage: number;
-    transactionDate: Date;
-    endDate: Date | null;
-  }>;
-}
-
-interface InflowData {
-  month: Date;
-  totalNewInvestments: number;
-  totalAdminFeesCollected: number;
-  totalNetInflowFunds: number;
-  newAccountsCount: number;
-  newInvestments: Array<{
-    id: number;
-    accountNumber: string;
-    accountType: "fixed_rate" | "floating_rate" | "installment";
-    investorEmail: string | null;
-    investorName: string | null;
-    grossCapital: number;
-    adminFee: number;
-    netCapital: number;
-    rate: number;
-    rateType: string;
-    transactionDate: Date;
-    endDate: Date | null;
-  }>;
-}
-
-interface OutflowData {
-  month: Date;
-  totalOutflow: number;
-  fixRateOutflow: number;
-  floatingRateOutflow: number;
-  installmentOutflow: number;
-  outflowCount: number;
-  outflowTransactions: Array<{
-    id: number;
-    accountId: number;
-    accountNumber: string;
-    accountType: "fixed_rate" | "floating_rate" | "installment";
-    investorEmail: string | null;
-    investorName: string | null;
-    amount: number;
-    transactionDate: Date;
-    description: string | null;
-    redemptionType: "partial" | "full" | "scheduled";
-    isRollover: boolean | null;
-  }>;
-}
-
-interface VCPerformanceData {
-  month: Date;
-  totalAUM: number;
-  totalProfitTaken: number;
-  averageAUM: number;
-  averageProfitTaken: number;
-  dataPointsCount: number;
-  latestAUM: number;
-  latestProfitTaken: number;
-  latestDate: Date | null;
-}
-
-interface GrossProfitData {
-  month: Date;
-  currentMonthAUM: number;
-  previousMonthAUM: number;
-  totalInflow: number;
-  totalOutflow: number;
-  grossProfit: number;
-  grossProfitPercentage: number;
-  calculation: {
-    formula: string;
-    breakdown: string;
-    percentageFormula: string;
-    percentageBreakdown: string;
-  };
-  hasCurrentMonthData: boolean;
-  hasPreviousMonthData: boolean;
-}
-
-interface InstallmentPrincipleData {
-  month: Date;
-  totalGrossCapital: number;
-  totalAdminFees: number;
-  totalNetCapital: number;
-  activeAccountsCount: number;
-  accounts: Array<{
-    id: number;
-    accountNumber: string;
-    investorEmail: string | null;
-    grossCapital: number;
-    adminFee: number;
-    netCapital: number;
-    monthlyCof: number;
-    investmentType: "principle" | "interest_only";
-    transactionDate: Date;
-    endDate: Date | null;
-  }>;
-}
-
-interface InstallmentCoFData {
-  month: Date;
-  totalGainedFunds: number;
-  totalNetCapitalWorking: number;
-  averageReturnPercentage: number;
-  activeAccountsCount: number;
-  accounts: Array<{
-    id: number;
-    accountNumber: string;
-    investorEmail: string | null;
-    netCapital: number;
-    monthlyCof: number;
-    investmentType: "principle" | "interest_only";
-    presentValue: number;
-    totalGainedFunds: number;
-    returnPercentage: number;
-    transactionDate: Date;
-    endDate: Date | null;
-  }>;
-}
-
-interface FloatingRatePrincipleData {
-  month: Date;
-  totalGrossCapital: number;
-  totalAdminFees: number;
-  totalNetCapital: number;
-  activeAccountsCount: number;
-  accounts: Array<{
-    id: number;
-    accountNumber: string;
-    investorEmail: string | null;
-    grossCapital: number;
-    adminFee: number;
-    netCapital: number;
-    transactionDate: Date;
-  }>;
-}
-
-interface FloatingRateAllocatedProfitData {
-  month: Date;
-  totalGrossProfit: number;
-  fixRateCoF: number;
-  installmentCoF: number;
-  floatingRateAllocatedProfit: number;
-  floatingRatePrinciple: number;
-  performancePercentage: number;
-  calculation: {
-    formula: string;
-    breakdown: string;
-    performanceFormula: string;
-    performanceBreakdown: string;
-  };
-  hasGrossProfitData: boolean;
-  hasFixRateData: boolean;
-  hasInstallmentData: boolean;
-  hasPrincipleData: boolean;
-}
-
-interface FloatingRateGrowthData {
-  month: Date;
-  performancePercentage: number;
-  growthPercentage: number;
-  calculation: {
-    rule: string;
-    formula: string;
-    breakdown: string;
-  };
-  hasPerformanceData: boolean;
-}
-
-interface DashboardData {
-  selectedMonth: Date;
-  principleData: PrincipleData | null;
-  cofData: CoFData | null;
-  inflowData: InflowData | null;
-  outflowData: OutflowData | null;
-  vcPerformanceData: VCPerformanceData | null;
-  grossProfitData: GrossProfitData | null;
-  installmentPrincipleData: InstallmentPrincipleData | null;
-  installmentCoFData: InstallmentCoFData | null;
-  floatingRatePrincipleData: FloatingRatePrincipleData | null;
-  floatingRateAllocatedProfitData: FloatingRateAllocatedProfitData | null;
-  floatingRateGrowthData: FloatingRateGrowthData | null;
-  warnings: {
-    vcPerformanceWarning: string | null;
-    grossProfitWarning: string | null;
-    floatingRateWarning: string | null;
-  };
-}
-
 interface AdminDashboardViewProps {
   user: any;
   dashboardData: {
@@ -258,6 +59,34 @@ interface AdminDashboardViewProps {
   } | null;
   error?: string;
 }
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
+
+const formatPercentage = (value: number) => {
+  return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+};
+
+const monthOptions = [
+  { value: "1", label: "January" },
+  { value: "2", label: "February" },
+  { value: "3", label: "March" },
+  { value: "4", label: "April" },
+  { value: "5", label: "May" },
+  { value: "6", label: "June" },
+  { value: "7", label: "July" },
+  { value: "8", label: "August" },
+  { value: "9", label: "September" },
+  { value: "10", label: "October" },
+  { value: "11", label: "November" },
+  { value: "12", label: "December" },
+];
 
 export function AdminDashboardView({
   user,
@@ -280,74 +109,43 @@ export function AdminDashboardView({
   );
 
   // Fetch all dashboard data using Tanstack React Query
-  const {
-    data: principleResult,
-    isLoading: isPrincipleLoading,
-    error: principleError,
-  } = useQuery(getFixRatePrincipleByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: cofResult,
-    isLoading: isCoFLoading,
-    error: cofError,
-  } = useQuery(getFixRateCoFByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: inflowResult,
-    isLoading: isInflowLoading,
-    error: inflowError,
-  } = useQuery(getInflowByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: outflowResult,
-    isLoading: isOutflowLoading,
-    error: outflowError,
-  } = useQuery(getOutflowByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: vcPerformanceResult,
-    isLoading: isVCPerformanceLoading,
-    error: vcPerformanceError,
-  } = useQuery(getVCPerformanceByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: grossProfitResult,
-    isLoading: isGrossProfitLoading,
-    error: grossProfitError,
-  } = useQuery(getGrossProfitByMonthQueryOptions(selectedMonth));
-
+  const { data: principleResult, isLoading: isPrincipleLoading } = useQuery(
+    getFixRatePrincipleByMonthQueryOptions(selectedMonth)
+  );
+  const { data: cofResult, isLoading: isCoFLoading } = useQuery(
+    getFixRateCoFByMonthQueryOptions(selectedMonth)
+  );
+  const { data: inflowResult, isLoading: isInflowLoading } = useQuery(
+    getInflowByMonthQueryOptions(selectedMonth)
+  );
+  const { data: outflowResult, isLoading: isOutflowLoading } = useQuery(
+    getOutflowByMonthQueryOptions(selectedMonth)
+  );
+  const { data: vcPerformanceResult, isLoading: isVCPerformanceLoading } =
+    useQuery(getVCPerformanceByMonthQueryOptions(selectedMonth));
+  const { data: grossProfitResult, isLoading: isGrossProfitLoading } = useQuery(
+    getGrossProfitByMonthQueryOptions(selectedMonth)
+  );
   const {
     data: installmentPrincipleResult,
     isLoading: isInstallmentPrincipleLoading,
-    error: installmentPrincipleError,
   } = useQuery(getInstallmentPrincipleByMonthQueryOptions(selectedMonth));
-
-  const {
-    data: installmentCoFResult,
-    isLoading: isInstallmentCoFLoading,
-    error: installmentCoFError,
-  } = useQuery(getInstallmentCoFByMonthQueryOptions(selectedMonth));
-
+  const { data: installmentCoFResult, isLoading: isInstallmentCoFLoading } =
+    useQuery(getInstallmentCoFByMonthQueryOptions(selectedMonth));
   const {
     data: floatingRatePrincipleResult,
     isLoading: isFloatingRatePrincipleLoading,
-    error: floatingRatePrincipleError,
   } = useQuery(getFloatingRatePrincipleByMonthQueryOptions(selectedMonth));
-
   const {
     data: floatingRateAllocatedProfitResult,
     isLoading: isFloatingRateAllocatedProfitLoading,
-    error: floatingRateAllocatedProfitError,
   } = useQuery(getFloatingRateAllocatedProfitQueryOptions(selectedMonth));
-
   const {
     data: floatingRateGrowthResult,
     isLoading: isFloatingRateGrowthLoading,
-    error: floatingRateGrowthError,
   } = useQuery(getFloatingRateGrowthPercentageQueryOptions(selectedMonth));
 
-  // Extract all data from query results
-  // Note: All actions return data directly
+  // Extract all data
   const principleData = principleResult?.data || null;
   const cofData = cofResult?.data || null;
   const inflowData = inflowResult?.data || null;
@@ -356,28 +154,11 @@ export function AdminDashboardView({
   const grossProfitData = grossProfitResult?.data || null;
   const installmentPrincipleData = installmentPrincipleResult?.data || null;
   const installmentCoFData = installmentCoFResult?.data || null;
-
-  // Floating rate actions return data directly (not wrapped in success/data structure)
   const floatingRatePrincipleData = floatingRatePrincipleResult?.data || null;
   const floatingRateAllocatedProfitData =
     floatingRateAllocatedProfitResult?.data || null;
   const floatingRateGrowthData = floatingRateGrowthResult?.data || null;
 
-  // Check for errors
-  const dashboardError =
-    principleError?.message ||
-    cofError?.message ||
-    inflowError?.message ||
-    outflowError?.message ||
-    vcPerformanceError?.message ||
-    grossProfitError?.message ||
-    installmentPrincipleError?.message ||
-    installmentCoFError?.message ||
-    floatingRatePrincipleError?.message ||
-    floatingRateAllocatedProfitError?.message ||
-    floatingRateGrowthError?.message;
-
-  // Check if any data is loading
   const isLoading =
     isPrincipleLoading ||
     isCoFLoading ||
@@ -391,23 +172,10 @@ export function AdminDashboardView({
     isFloatingRateAllocatedProfitLoading ||
     isFloatingRateGrowthLoading;
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    }).format(amount);
-  };
-
-  const formatPercentage = (value: number) => {
-    return `${value.toFixed(2)}%`;
-  };
-
-  // Handle month/year changes
   const handleMonthChange = (month: string) => {
     setSelectedMonthNumber(month);
     const newDate = new Date(parseInt(selectedYear), parseInt(month) - 1, 1);
     setSelectedMonth(startOfMonth(newDate));
-    // TODO: In a real implementation, this would trigger a server action to refetch data
   };
 
   const handleYearChange = (year: string) => {
@@ -418,1293 +186,894 @@ export function AdminDashboardView({
       1
     );
     setSelectedMonth(startOfMonth(newDate));
-    // TODO: In a real implementation, this would trigger a server action to refetch data
   };
 
-  // Generate year options (last 5 years to next 5 years)
   const currentYear = new Date().getFullYear();
-  const yearOptions = [];
-  for (let i = currentYear - 10; i <= currentYear + 10; i++) {
-    yearOptions.push(i.toString());
-  }
+  const yearOptions = Array.from({ length: 21 }, (_, i) =>
+    (currentYear - 10 + i).toString()
+  );
 
-  // Month options
-  const monthOptions = [
-    { value: "1", label: "January" },
-    { value: "2", label: "February" },
-    { value: "3", label: "March" },
-    { value: "4", label: "April" },
-    { value: "5", label: "May" },
-    { value: "6", label: "June" },
-    { value: "7", label: "July" },
-    { value: "8", label: "August" },
-    { value: "9", label: "September" },
-    { value: "10", label: "October" },
-    { value: "11", label: "November" },
-    { value: "12", label: "December" },
-  ];
-
-  // Extract warnings from props (these don't change with month)
   const warnings = dashboardData?.warnings;
 
+  // Calculate totals
+  const totalNetCapital =
+    (principleData?.totalNetCapital || 0) +
+    (installmentPrincipleData?.totalNetCapital || 0) +
+    (floatingRatePrincipleData?.totalNetCapital || 0);
+
+  const totalActiveAccounts =
+    (principleData?.activeAccountsCount || 0) +
+    (installmentPrincipleData?.activeAccountsCount || 0) +
+    (floatingRatePrincipleData?.activeAccountsCount || 0);
+
   return (
-    <div className="space-y-6">
-      {/* Month Selection */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              Monthly Analytics
-            </h2>
-            <p className="text-sm text-gray-600">
-              Select a month and year to view detailed analytics
-            </p>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* Month Selector */}
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-600 mb-1">
-                Month
-              </label>
-              <Select
-                value={selectedMonthNumber}
-                onValueChange={handleMonthChange}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {monthOptions.map((month) => (
-                    <SelectItem key={month.value} value={month.value}>
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto py-8 px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Admin Dashboard
+              </h1>
+              <p className="text-slate-600">
+                Monthly analytics and performance overview
+              </p>
             </div>
 
-            {/* Year Selector */}
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-600 mb-1">
-                Year
-              </label>
-              <Select value={selectedYear} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Year" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((year) => (
-                    <SelectItem key={year} value={year}>
-                      {year}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Selected Date Display */}
-            <div className="flex flex-col">
-              <label className="text-xs font-medium text-gray-600 mb-1">
-                Selected Period
-              </label>
-              <div className="px-3 py-2 bg-gray-50 rounded-md border text-sm font-medium text-gray-900">
+            {/* Period Selector */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white rounded-lg border p-1">
+                <Select
+                  value={selectedMonthNumber}
+                  onValueChange={handleMonthChange}
+                >
+                  <SelectTrigger className="w-[130px] border-0 shadow-none">
+                    <SelectValue placeholder="Month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((month) => (
+                      <SelectItem key={month.value} value={month.value}>
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={selectedYear} onValueChange={handleYearChange}>
+                  <SelectTrigger className="w-[90px] border-0 shadow-none">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((year) => (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Badge variant="secondary" className="px-3 py-2">
+                <Calendar className="h-4 w-4 mr-2" />
                 {format(selectedMonth, "MMMM yyyy")}
-              </div>
+              </Badge>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Error State */}
-      {dashboardError && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <p className="text-red-700">{dashboardError}</p>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex gap-3 bg-blue-50 border border-blue-200 p-4 rounded-lg">
-          <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
-          <p className="text-blue-700">Loading dashboard data...</p>
-        </div>
-      )}
-
-      {/* Dashboard Content */}
-      {!isLoading && principleData && cofData && inflowData && outflowData && (
-        <>
-          {/* Cash Flow Metrics - Inflow & Outflow */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* New Inflow Metric */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center">
-                <div className="p-2 bg-indigo-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-indigo-600" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    New Inflow
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {formatCurrency(inflowData.totalNetInflowFunds)}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {inflowData.newAccountsCount} new accounts •{" "}
-                    {formatCurrency(inflowData.totalAdminFeesCollected)} admin
-                    fees
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Total Outflow Metric */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center">
-                <div className="p-2 bg-red-100 rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-red-600 rotate-180" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">
-                    Total Outflow
-                  </p>
-                  <p className="text-xl font-bold text-gray-900">
-                    {formatCurrency(outflowData.totalOutflow)}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {outflowData.outflowCount} transactions
-                  </p>
-                </div>
-              </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="flex items-center gap-3 bg-white rounded-lg border px-6 py-4">
+              <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />
+              <span className="text-slate-600">Loading dashboard data...</span>
             </div>
           </div>
+        )}
 
-          {/* VC Performance Warning */}
-          {warnings?.vcPerformanceWarning && (
-            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-              <div className="flex items-center">
-                <div className="p-2 bg-yellow-100 rounded-lg">
-                  <Users className="h-5 w-5 text-yellow-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-yellow-700 text-sm font-medium">
-                    Performance Notice
-                  </p>
-                  <p className="text-yellow-600 text-sm mt-1">
-                    {warnings.vcPerformanceWarning}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* VC Performance Metrics - AUM & Profit Taken */}
-          {vcPerformanceData && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              {/* Assets Under Management */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <PieChart className="h-6 w-6 text-emerald-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Assets Under Management
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {formatCurrency(vcPerformanceData.latestAUM)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {format(selectedMonth, "d MMMM yyyy")} •{" "}
-                      {vcPerformanceData.dataPointsCount > 1
-                        ? `${vcPerformanceData.dataPointsCount} records (warning)`
-                        : "1 record"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Profit Taken */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-teal-100 rounded-lg">
-                    <DollarSign className="h-6 w-6 text-teal-600" />
-                  </div>
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-600">
-                      Profit Taken
-                    </p>
-                    <p className="text-xl font-bold text-gray-900">
-                      {formatCurrency(vcPerformanceData.latestProfitTaken)}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {format(selectedMonth, "d MMMM yyyy")} •{" "}
-                      {vcPerformanceData.latestDate
-                        ? format(vcPerformanceData.latestDate, "d MMMM")
-                        : "No date"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Gross Profit Warning */}
-          {warnings?.grossProfitWarning && (
-            <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg">
-              <div className="flex items-center">
-                <div className="p-2 bg-orange-100 rounded-lg">
-                  <TrendingUp className="h-5 w-5 text-orange-600" />
-                </div>
-                <div className="ml-3">
-                  <p className="text-orange-700 text-sm font-medium">
-                    Gross Profit Calculation Notice
-                  </p>
-                  <p className="text-orange-600 text-sm mt-1">
-                    {warnings.grossProfitWarning}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Gross Profit Metric */}
-          {grossProfitData && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 rounded-lg">
-                    <TrendingUp className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Gross Profit
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                      {format(selectedMonth, "d MMMM yyyy")} Portfolio Growth
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-gray-900">
-                    {formatCurrency(grossProfitData.grossProfit)}
-                  </p>
-                  <p
-                    className={`text-sm font-medium ${
-                      grossProfitData.grossProfit >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
-                  >
-                    {grossProfitData.grossProfit >= 0 ? "↗ Profit" : "↘ Loss"} (
-                    {formatPercentage(grossProfitData.grossProfitPercentage)})
-                  </p>
-                </div>
-              </div>
-
-              {/* Calculation Breakdown */}
-              <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Gross Profit Formula:
-                  </p>
-                  <p className="text-xs text-gray-600 ">
-                    {grossProfitData.calculation.formula}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Breakdown:
-                  </p>
-                  <p className="text-xs text-gray-600 ">
-                    {grossProfitData.calculation.breakdown}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Percentage Formula:
-                  </p>
-                  <p className="text-xs text-gray-600 ">
-                    {grossProfitData.calculation.percentageFormula}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">
-                    Percentage Breakdown:
-                  </p>
-                  <p className="text-xs text-gray-600 ">
-                    {grossProfitData.calculation.percentageBreakdown}
-                  </p>
-                </div>
-              </div>
-
-              {/* Component Values */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
-                <div className="text-center p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-600 font-medium">
-                    Current AUM
-                  </p>
-                  <p className="text-sm font-bold text-blue-800">
-                    {formatCurrency(grossProfitData.currentMonthAUM)}
-                  </p>
-                  {!grossProfitData.hasCurrentMonthData && (
-                    <p className="text-xs text-red-500">No data</p>
-                  )}
-                </div>
-                <div className="text-center p-3 bg-purple-50 rounded-lg">
-                  <p className="text-xs text-purple-600 font-medium">
-                    Previous AUM
-                  </p>
-                  <p className="text-sm font-bold text-purple-800">
-                    {formatCurrency(grossProfitData.previousMonthAUM)}
-                  </p>
-                  {!grossProfitData.hasPreviousMonthData && (
-                    <p className="text-xs text-red-500">No data</p>
-                  )}
-                </div>
-                <div className="text-center p-3 bg-green-50 rounded-lg">
-                  <p className="text-xs text-green-600 font-medium">Inflow</p>
-                  <p className="text-sm font-bold text-green-800">
-                    {formatCurrency(grossProfitData.totalInflow)}
-                  </p>
-                </div>
-                <div className="text-center p-3 bg-orange-50 rounded-lg">
-                  <p className="text-xs text-orange-600 font-medium">Outflow</p>
-                  <p className="text-sm font-bold text-orange-800">
-                    {formatCurrency(grossProfitData.totalOutflow)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Fix Rate Summary - Complete Section */}
-          <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-            {/* Section Header */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Fix Rate Summary
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Monthly analytics for {format(selectedMonth, "d MMMM yyyy")} -
-                  Fixed Rate Investment Performance
+        {/* Warnings */}
+        {!isLoading && warnings && (
+          <div className="space-y-2 mb-6">
+            {warnings.vcPerformanceWarning && (
+              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                <p className="text-sm text-amber-800">
+                  {warnings.vcPerformanceWarning}
                 </p>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <PieChart className="h-5 w-5" />
-                <span>Analytics Dashboard</span>
+            )}
+            {warnings.grossProfitWarning && (
+              <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">
+                <AlertTriangle className="h-5 w-5 text-orange-600 flex-shrink-0" />
+                <p className="text-sm text-orange-800">
+                  {warnings.grossProfitWarning}
+                </p>
               </div>
-            </div>
-
-            {/* Key Metrics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Total Net Capital */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Net Capital Working
-                    </p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {formatCurrency(principleData.totalNetCapital)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Total Gain Fund (CoF) */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Total Gain (CoF)
-                    </p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {formatCurrency(cofData.totalGainFund)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Average Monthly Return */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <PieChart className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Avg Monthly Return
-                    </p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {formatPercentage(cofData.averageReturnPercentage)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Active Accounts */}
-              <div className="bg-gray-50 p-4 rounded-lg border">
-                <div className="flex items-center">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Users className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div className="ml-3">
-                    <p className="text-xs font-medium text-gray-600">
-                      Active Accounts
-                    </p>
-                    <p className="text-sm font-bold text-gray-900">
-                      {principleData.activeAccountsCount}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Detailed Tables */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Principle Data Table */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Net Investor Funds (Principle)
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Total Gross Capital
-                      </p>
-                      <p className="font-medium">
-                        {formatCurrency(principleData.totalGrossCapital)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total Admin Fees</p>
-                      <p className="font-medium text-orange-600">
-                        {formatCurrency(principleData.totalAdminFees)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                            Account
-                          </th>
-                          <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                            Investor
-                          </th>
-                          <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                            Net Capital
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="space-y-2">
-                        {principleData.accounts
-                          .slice(0, 5)
-                          .map((account: any) => (
-                            <tr
-                              key={account.id}
-                              className="border-b border-gray-100"
-                            >
-                              <td className="py-2 text-sm">
-                                <div>
-                                  <p className="font-medium">
-                                    {account.accountNumber}
-                                  </p>
-                                  {account.isRollover && (
-                                    <span className="text-xs text-blue-600">
-                                      Rollover
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="py-2 text-sm text-gray-600">
-                                {account.investorEmail}
-                              </td>
-                              <td className="py-2 text-sm text-right font-medium">
-                                {formatCurrency(account.netCapital)}
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                    {principleData.accounts.length > 5 && (
-                      <p className="text-sm text-gray-500 text-center mt-4">
-                        ... and {principleData.accounts.length - 5} more
-                        accounts
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* CoF Data Table */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Total Gain Fund (CoF)
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Total Capital Working
-                      </p>
-                      <p className="font-medium">
-                        {formatCurrency(cofData.totalNetCapitalWorking)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">
-                        Total Interest Paid
-                      </p>
-                      <p className="font-medium text-green-600">
-                        {formatCurrency(cofData.totalGainFund)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                            Account
-                          </th>
-                          <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                            Rate
-                          </th>
-                          <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                            Total Gain
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="space-y-2">
-                        {cofData.accounts.slice(0, 5).map((account: any) => (
-                          <tr
-                            key={account.id}
-                            className="border-b border-gray-100"
-                          >
-                            <td className="py-2 text-sm">
-                              <div>
-                                <p className="font-medium">
-                                  {account.accountNumber}
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Return:{" "}
-                                  {formatPercentage(account.returnPercentage)}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="py-2 text-sm text-right">
-                              {formatPercentage(account.annualRate * 100)}
-                            </td>
-                            <td className="py-2 text-sm text-right font-medium text-green-600">
-                              {formatCurrency(account.totalGain)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {cofData.accounts.length > 5 && (
-                      <p className="text-sm text-gray-500 text-center mt-4">
-                        ... and {cofData.accounts.length - 5} more accounts
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
+        )}
 
-          {/* Installment Summary - Complete Section */}
-          {installmentPrincipleData && installmentCoFData && (
-            <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-              {/* Section Header */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    Installment Summary
-                  </h2>
-                  <p className="text-sm text-gray-600">
-                    Monthly analytics for {format(selectedMonth, "d MMMM yyyy")}{" "}
-                    - Installment Investment Performance
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <PieChart className="h-5 w-5" />
-                  <span>Installment Analytics</span>
-                </div>
-              </div>
-
-              {/* Key Metrics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                {/* Total Net Capital */}
-                <div className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-indigo-100 rounded-lg">
-                      <DollarSign className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">
-                        Net Capital Working
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatCurrency(
-                          installmentPrincipleData.totalNetCapital
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Total Gained Funds */}
-                <div className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-emerald-100 rounded-lg">
-                      <TrendingUp className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">
-                        Total Gained Funds
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatCurrency(installmentCoFData.totalGainedFunds)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Average Monthly Return */}
-                <div className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-teal-100 rounded-lg">
-                      <PieChart className="h-5 w-5 text-teal-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">
-                        Avg Monthly Return
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {formatPercentage(
-                          installmentCoFData.averageReturnPercentage
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Active Accounts */}
-                <div className="bg-gray-50 p-4 rounded-lg border">
-                  <div className="flex items-center">
-                    <div className="p-2 bg-amber-100 rounded-lg">
-                      <Users className="h-5 w-5 text-amber-600" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-xs font-medium text-gray-600">
-                        Active Accounts
-                      </p>
-                      <p className="text-sm font-bold text-gray-900">
-                        {installmentPrincipleData.activeAccountsCount}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Detailed Tables */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Principle Data Table */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Net Investor Funds (Principle)
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Total Gross Capital
-                        </p>
-                        <p className="font-medium">
-                          {formatCurrency(
-                            installmentPrincipleData.totalGrossCapital
-                          )}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Total Admin Fees
-                        </p>
-                        <p className="font-medium text-orange-600">
-                          {formatCurrency(
-                            installmentPrincipleData.totalAdminFees
-                          )}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                              Account
-                            </th>
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                              Type
-                            </th>
-                            <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                              Net Capital
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="space-y-2">
-                          {installmentPrincipleData.accounts
-                            .slice(0, 5)
-                            .map((account: any) => (
-                              <tr
-                                key={account.id}
-                                className="border-b border-gray-100"
-                              >
-                                <td className="py-2 text-sm">
-                                  <div>
-                                    <p className="font-medium">
-                                      {account.accountNumber}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {account.investorEmail}
-                                    </p>
-                                  </div>
-                                </td>
-                                <td className="py-2 text-sm">
-                                  <span
-                                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                      account.investmentType === "principle"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-green-100 text-green-800"
-                                    }`}
-                                  >
-                                    {account.investmentType === "principle"
-                                      ? "Principal"
-                                      : "Interest Only"}
-                                  </span>
-                                </td>
-                                <td className="py-2 text-sm text-right font-medium">
-                                  {formatCurrency(account.netCapital)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                      {installmentPrincipleData.accounts.length > 5 && (
-                        <p className="text-sm text-gray-500 text-center mt-4">
-                          ... and {installmentPrincipleData.accounts.length - 5}{" "}
-                          more accounts
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* CoF Data Table */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Total Gained Funds (CoF)
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-4 p-4 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm text-gray-600">
-                          Total Interest Earned
-                        </p>
-                        <p className="font-medium text-emerald-600">
-                          {formatCurrency(installmentCoFData.totalGainedFunds)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
-                              Account
-                            </th>
-                            <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                              Monthly Rate
-                            </th>
-                            <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
-                              Interest Earned
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="space-y-2">
-                          {installmentCoFData.accounts
-                            .slice(0, 5)
-                            .map((account: any) => (
-                              <tr
-                                key={account.id}
-                                className="border-b border-gray-100"
-                              >
-                                <td className="py-2 text-sm">
-                                  <div>
-                                    <p className="font-medium">
-                                      {account.accountNumber}
-                                    </p>
-                                  </div>
-                                </td>
-                                <td className="py-2 text-sm text-right">
-                                  {formatPercentage(account.monthlyCof * 100)}
-                                </td>
-                                <td className="py-2 text-sm text-right font-medium text-emerald-600">
-                                  {formatCurrency(account.totalGainedFunds)}
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                      {installmentCoFData.accounts.length > 5 && (
-                        <p className="text-sm text-gray-500 text-center mt-4">
-                          ... and {installmentCoFData.accounts.length - 5} more
-                          accounts
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Floating Rate Summary - Complete Section */}
-          {floatingRatePrincipleData &&
-            floatingRateAllocatedProfitData &&
-            floatingRateGrowthData && (
-              <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-                {/* Section Header */}
+        {/* Main KPIs */}
+        {!isLoading && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            {/* Total Net Capital */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                      Floating Rate Summary
-                    </h2>
-                    <p className="text-sm text-gray-600">
-                      Monthly analytics for{" "}
-                      {format(selectedMonth, "d MMMM yyyy")} - Floating Rate
-                      Investment Performance
+                    <p className="text-sm font-medium text-slate-500">
+                      Total Net Capital
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {formatCurrency(totalNetCapital)}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <TrendingUp className="h-5 w-5" />
-                    <span>Performance-Based Analytics</span>
+                  <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Wallet className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-                {/* Warning Message */}
-                {warnings?.floatingRateWarning && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                    <div className="flex">
-                      <div className="flex-shrink-0">
-                        <svg
-                          className="h-5 w-5 text-yellow-400"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
+            {/* Gross Profit */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Gross Profit
+                    </p>
+                    <p
+                      className={`text-2xl font-bold mt-1 ${
+                        (grossProfitData?.grossProfit || 0) >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatCurrency(grossProfitData?.grossProfit || 0)}
+                    </p>
+                    <p
+                      className={`text-sm ${
+                        (grossProfitData?.grossProfit || 0) >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      {formatPercentage(
+                        grossProfitData?.grossProfitPercentage || 0
+                      )}
+                    </p>
+                  </div>
+                  <div
+                    className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                      (grossProfitData?.grossProfit || 0) >= 0
+                        ? "bg-emerald-50"
+                        : "bg-red-50"
+                    }`}
+                  >
+                    {(grossProfitData?.grossProfit || 0) >= 0 ? (
+                      <TrendingUp className="h-6 w-6 text-emerald-600" />
+                    ) : (
+                      <TrendingDown className="h-6 w-6 text-red-600" />
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* AUM */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Assets Under Management
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {formatCurrency(vcPerformanceData?.latestAUM || 0)}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center">
+                    <PieChart className="h-6 w-6 text-indigo-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Active Accounts */}
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Active Accounts
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">
+                      {totalActiveAccounts}
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-amber-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Cash Flow */}
+        {!isLoading && inflowData && outflowData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Inflow
+                    </p>
+                    <p className="text-2xl font-bold text-emerald-600 mt-1">
+                      {formatCurrency(inflowData.totalNetInflowFunds)}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {inflowData.newAccountsCount} new accounts
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-emerald-50 flex items-center justify-center">
+                    <ArrowUpRight className="h-6 w-6 text-emerald-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-0 shadow-sm">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">
+                      Outflow
+                    </p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">
+                      {formatCurrency(outflowData.totalOutflow)}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      {outflowData.outflowCount} transactions
+                    </p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-red-50 flex items-center justify-center">
+                    <ArrowDownRight className="h-6 w-6 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Investment Type Tabs */}
+        {!isLoading && (
+          <Tabs defaultValue="overview" className="space-y-6">
+            <TabsList className="bg-white border">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="fixed-rate">Fixed Rate</TabsTrigger>
+              <TabsTrigger value="floating-rate">Floating Rate</TabsTrigger>
+              <TabsTrigger value="installment">Installment</TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Fixed Rate Card */}
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <Percent className="h-5 w-5 text-blue-600" />
                       </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-yellow-800">
-                          {warnings.floatingRateWarning}
+                      <div>
+                        <CardTitle className="text-base">Fixed Rate</CardTitle>
+                        <CardDescription>
+                          {principleData?.activeAccountsCount || 0} accounts
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Net Capital</span>
+                      <span className="font-medium">
+                        {formatCurrency(principleData?.totalNetCapital || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Total Gain (CoF)</span>
+                      <span className="font-medium text-emerald-600">
+                        {formatCurrency(cofData?.totalGainFund || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Avg Return</span>
+                      <span className="font-medium">
+                        {formatPercentage(cofData?.averageReturnPercentage || 0)}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Floating Rate Card */}
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <BarChart3 className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">
+                          Floating Rate
+                        </CardTitle>
+                        <CardDescription>
+                          {floatingRatePrincipleData?.activeAccountsCount || 0}{" "}
+                          accounts
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Net Capital</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          floatingRatePrincipleData?.totalNetCapital || 0
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Allocated Profit</span>
+                      <span className="font-medium text-emerald-600">
+                        {formatCurrency(
+                          floatingRateAllocatedProfitData?.floatingRateAllocatedProfit ||
+                            0
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Growth</span>
+                      <span className="font-medium">
+                        {formatPercentage(
+                          floatingRateGrowthData?.growthPercentage || 0
+                        )}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Installment Card */}
+                <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                        <Activity className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">Installment</CardTitle>
+                        <CardDescription>
+                          {installmentPrincipleData?.activeAccountsCount || 0}{" "}
+                          accounts
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Net Capital</span>
+                      <span className="font-medium">
+                        {formatCurrency(
+                          installmentPrincipleData?.totalNetCapital || 0
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Gained Funds</span>
+                      <span className="font-medium text-emerald-600">
+                        {formatCurrency(
+                          installmentCoFData?.totalGainedFunds || 0
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-500">Avg Return</span>
+                      <span className="font-medium">
+                        {formatPercentage(
+                          installmentCoFData?.averageReturnPercentage || 0
+                        )}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Gross Profit Breakdown */}
+              {grossProfitData && (
+                <Card className="border-0 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Gross Profit Breakdown
+                    </CardTitle>
+                    <CardDescription>
+                      {format(selectedMonth, "MMMM yyyy")} portfolio performance
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-blue-600 font-medium mb-1">
+                          Current AUM
+                        </p>
+                        <p className="text-sm font-bold text-blue-800">
+                          {formatCurrency(grossProfitData.currentMonthAUM)}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-purple-50 rounded-lg">
+                        <p className="text-xs text-purple-600 font-medium mb-1">
+                          Previous AUM
+                        </p>
+                        <p className="text-sm font-bold text-purple-800">
+                          {formatCurrency(grossProfitData.previousMonthAUM)}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                        <p className="text-xs text-emerald-600 font-medium mb-1">
+                          Total Inflow
+                        </p>
+                        <p className="text-sm font-bold text-emerald-800">
+                          {formatCurrency(grossProfitData.totalInflow)}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 bg-red-50 rounded-lg">
+                        <p className="text-xs text-red-600 font-medium mb-1">
+                          Total Outflow
+                        </p>
+                        <p className="text-sm font-bold text-red-800">
+                          {formatCurrency(grossProfitData.totalOutflow)}
                         </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                    <div className="mt-4 p-4 bg-slate-50 rounded-lg">
+                      <p className="text-xs text-slate-500 font-medium mb-1">
+                        Formula
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        {grossProfitData.calculation.formula}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-                {/* Key Metrics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {/* Total Net Capital */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <DollarSign className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">
-                          Total Net Capital
+            {/* Fixed Rate Tab */}
+            <TabsContent value="fixed-rate" className="space-y-6">
+              {principleData && cofData && (
+                <>
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Gross Capital</p>
+                        <p className="text-xl font-bold mt-1">
+                          {formatCurrency(principleData.totalGrossCapital)}
                         </p>
-                        <p className="text-sm font-bold text-gray-900">
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Admin Fees</p>
+                        <p className="text-xl font-bold text-amber-600 mt-1">
+                          {formatCurrency(principleData.totalAdminFees)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Net Capital</p>
+                        <p className="text-xl font-bold mt-1">
+                          {formatCurrency(principleData.totalNetCapital)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Total Gain</p>
+                        <p className="text-xl font-bold text-emerald-600 mt-1">
+                          {formatCurrency(cofData.totalGainFund)}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Accounts Table */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Active Accounts</CardTitle>
+                      <CardDescription>
+                        {principleData.activeAccountsCount} fixed rate accounts
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
+                                Account
+                              </th>
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
+                                Investor
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Net Capital
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Rate
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Gain
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {principleData.accounts
+                              .slice(0, 10)
+                              .map((account: any, index: number) => {
+                                const cofAccount = cofData.accounts.find(
+                                  (c: any) =>
+                                    c.accountNumber === account.accountNumber
+                                );
+                                return (
+                                  <tr
+                                    key={account.id}
+                                    className="border-b border-slate-100"
+                                  >
+                                    <td className="py-3">
+                                      <div>
+                                        <p className="font-medium text-sm">
+                                          {account.accountNumber}
+                                        </p>
+                                        {account.isRollover && (
+                                          <Badge
+                                            variant="secondary"
+                                            className="text-xs"
+                                          >
+                                            Rollover
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="py-3 text-sm text-slate-600">
+                                      {account.investorEmail || "-"}
+                                    </td>
+                                    <td className="py-3 text-sm text-right font-medium">
+                                      {formatCurrency(account.netCapital)}
+                                    </td>
+                                    <td className="py-3 text-sm text-right">
+                                      {cofAccount
+                                        ? `${(cofAccount.annualRate * 100).toFixed(1)}%`
+                                        : "-"}
+                                    </td>
+                                    <td className="py-3 text-sm text-right font-medium text-emerald-600">
+                                      {cofAccount
+                                        ? formatCurrency(cofAccount.totalGain)
+                                        : "-"}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                          </tbody>
+                        </table>
+                        {principleData.accounts.length > 10 && (
+                          <p className="text-sm text-slate-500 text-center py-4">
+                            Showing 10 of {principleData.accounts.length}{" "}
+                            accounts
+                          </p>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            {/* Floating Rate Tab */}
+            <TabsContent value="floating-rate" className="space-y-6">
+              {floatingRatePrincipleData && (
+                <>
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Gross Capital</p>
+                        <p className="text-xl font-bold mt-1">
+                          {formatCurrency(
+                            floatingRatePrincipleData.totalGrossCapital
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Admin Fees</p>
+                        <p className="text-xl font-bold text-amber-600 mt-1">
+                          {formatCurrency(
+                            floatingRatePrincipleData.totalAdminFees
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Net Capital</p>
+                        <p className="text-xl font-bold mt-1">
                           {formatCurrency(
                             floatingRatePrincipleData.totalNetCapital
                           )}
                         </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Allocated Profit */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-green-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">
                           Allocated Profit
                         </p>
-                        <p className="text-sm font-bold text-gray-900">
+                        <p className="text-xl font-bold text-emerald-600 mt-1">
                           {formatCurrency(
-                            floatingRateAllocatedProfitData.floatingRateAllocatedProfit
+                            floatingRateAllocatedProfitData?.floatingRateAllocatedProfit ||
+                              0
                           )}
                         </p>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   </div>
 
-                  {/* Active Accounts */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Users className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">
-                          Active Accounts
-                        </p>
-                        <p className="text-sm font-bold text-gray-900">
-                          {floatingRatePrincipleData.activeAccountsCount}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Performance Percentage */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-yellow-100 rounded-lg">
-                        <PieChart className="h-5 w-5 text-yellow-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">
-                          Performance Rate
-                        </p>
-                        <p className="text-sm font-bold text-gray-900">
-                          {formatPercentage(
-                            floatingRateAllocatedProfitData.performancePercentage
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Growth Percentage */}
-                  <div className="bg-gray-50 p-4 rounded-lg border">
-                    <div className="flex items-center">
-                      <div className="p-2 bg-indigo-100 rounded-lg">
-                        <TrendingUp className="h-5 w-5 text-indigo-600" />
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-xs font-medium text-gray-600">
-                          Investor Growth Rate
-                        </p>
-                        <p className="text-sm font-bold text-gray-900">
-                          {formatPercentage(
-                            floatingRateGrowthData.growthPercentage
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detailed Information */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Principle Data */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Net Investor Funds (Principle)
-                    </h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="text-sm text-gray-600">
-                            Total Gross Capital
-                          </p>
-                          <p className="font-medium">
-                            {formatCurrency(
-                              floatingRatePrincipleData.totalGrossCapital
-                            )}
-                          </p>
+                  {/* Growth Performance */}
+                  {floatingRateGrowthData && (
+                    <Card className="border-0 shadow-sm">
+                      <CardHeader>
+                        <CardTitle>Growth Performance</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="text-center p-4 bg-slate-50 rounded-lg">
+                            <p className="text-xs text-slate-500 font-medium mb-1">
+                              Performance %
+                            </p>
+                            <p className="text-lg font-bold">
+                              {formatPercentage(
+                                floatingRateGrowthData.performancePercentage
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-emerald-50 rounded-lg">
+                            <p className="text-xs text-emerald-600 font-medium mb-1">
+                              Growth %
+                            </p>
+                            <p className="text-lg font-bold text-emerald-700">
+                              {formatPercentage(
+                                floatingRateGrowthData.growthPercentage
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-center p-4 bg-blue-50 rounded-lg">
+                            <p className="text-xs text-blue-600 font-medium mb-1">
+                              Calculation Rule
+                            </p>
+                            <p className="text-sm text-blue-700">
+                              {floatingRateGrowthData.calculation.rule}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm text-gray-600">
-                            Total Admin Fees
-                          </p>
-                          <p className="font-medium text-orange-600">
-                            {formatCurrency(
-                              floatingRatePrincipleData.totalAdminFees
-                            )}
-                          </p>
-                        </div>
-                      </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
+                  {/* Accounts Table */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Active Accounts</CardTitle>
+                      <CardDescription>
+                        {floatingRatePrincipleData.activeAccountsCount} floating
+                        rate accounts
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
                       <div className="overflow-x-auto">
-                        <table className="min-w-full">
+                        <table className="w-full">
                           <thead>
                             <tr className="border-b">
-                              <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
                                 Account
                               </th>
-                              <th className="text-left text-xs font-medium text-gray-500 uppercase pb-2">
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
                                 Investor
                               </th>
-                              <th className="text-right text-xs font-medium text-gray-500 uppercase pb-2">
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
                                 Net Capital
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Date
                               </th>
                             </tr>
                           </thead>
-                          <tbody className="space-y-2">
+                          <tbody>
                             {floatingRatePrincipleData.accounts
-                              .slice(0, 5)
-                              .map((account) => (
+                              .slice(0, 10)
+                              .map((account: any) => (
                                 <tr
                                   key={account.id}
-                                  className="border-b border-gray-100"
+                                  className="border-b border-slate-100"
                                 >
-                                  <td className="py-2 text-sm">
-                                    <div>
-                                      <p className="font-medium">
-                                        {account.accountNumber}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        {format(
-                                          account.transactionDate,
-                                          "d MMMM yyyy"
-                                        )}
-                                      </p>
-                                    </div>
+                                  <td className="py-3">
+                                    <p className="font-medium text-sm">
+                                      {account.accountNumber}
+                                    </p>
                                   </td>
-                                  <td className="py-2 text-sm text-gray-600">
-                                    {account.investorEmail}
+                                  <td className="py-3 text-sm text-slate-600">
+                                    {account.investorEmail || "-"}
                                   </td>
-                                  <td className="py-2 text-sm text-right font-medium">
+                                  <td className="py-3 text-sm text-right font-medium">
                                     {formatCurrency(account.netCapital)}
+                                  </td>
+                                  <td className="py-3 text-sm text-right text-slate-500">
+                                    {format(
+                                      new Date(account.transactionDate),
+                                      "dd MMM yyyy"
+                                    )}
                                   </td>
                                 </tr>
                               ))}
                           </tbody>
                         </table>
-                        {floatingRatePrincipleData.accounts.length > 5 && (
-                          <p className="text-sm text-gray-500 text-center mt-4">
-                            ... and{" "}
-                            {floatingRatePrincipleData.accounts.length - 5} more
-                            accounts
+                        {floatingRatePrincipleData.accounts.length > 10 && (
+                          <p className="text-sm text-slate-500 text-center py-4">
+                            Showing 10 of{" "}
+                            {floatingRatePrincipleData.accounts.length} accounts
                           </p>
                         )}
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+
+            {/* Installment Tab */}
+            <TabsContent value="installment" className="space-y-6">
+              {installmentPrincipleData && installmentCoFData && (
+                <>
+                  {/* KPI Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Gross Capital</p>
+                        <p className="text-xl font-bold mt-1">
+                          {formatCurrency(
+                            installmentPrincipleData.totalGrossCapital
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Admin Fees</p>
+                        <p className="text-xl font-bold text-amber-600 mt-1">
+                          {formatCurrency(
+                            installmentPrincipleData.totalAdminFees
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Net Capital</p>
+                        <p className="text-xl font-bold mt-1">
+                          {formatCurrency(
+                            installmentPrincipleData.totalNetCapital
+                          )}
+                        </p>
+                      </CardContent>
+                    </Card>
+                    <Card className="border-0 shadow-sm">
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-slate-500">Gained Funds</p>
+                        <p className="text-xl font-bold text-emerald-600 mt-1">
+                          {formatCurrency(installmentCoFData.totalGainedFunds)}
+                        </p>
+                      </CardContent>
+                    </Card>
                   </div>
 
-                  {/* Allocated Profit Calculation */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Profit Allocation Calculation
-                    </h3>
-                    <div className="space-y-4">
-                      {/* Formula */}
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Formula:
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {floatingRateAllocatedProfitData.calculation.formula}
-                        </p>
-                      </div>
-
-                      {/* Breakdown */}
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Profit Calculation:
-                        </p>
-                        <p className="text-sm text-gray-600 ">
-                          {
-                            floatingRateAllocatedProfitData.calculation
-                              .breakdown
-                          }
-                        </p>
-                      </div>
-
-                      {/* Performance Calculation */}
-                      <div className="p-4 bg-yellow-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Performance Formula:
-                        </p>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {
-                            floatingRateAllocatedProfitData.calculation
-                              .performanceFormula
-                          }
-                        </p>
-                        <p className="text-sm text-gray-600 ">
-                          {
-                            floatingRateAllocatedProfitData.calculation
-                              .performanceBreakdown
-                          }
-                        </p>
-                      </div>
-
-                      {/* Component Breakdown */}
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">
-                            Total Gross Profit
-                          </span>
-                          <span className="text-sm font-medium">
-                            {formatCurrency(
-                              floatingRateAllocatedProfitData.totalGrossProfit
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">
-                            - Fixed Rate CoF
-                          </span>
-                          <span className="text-sm font-medium text-red-600">
-                            {formatCurrency(
-                              floatingRateAllocatedProfitData.fixRateCoF
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">
-                            - Installment CoF
-                          </span>
-                          <span className="text-sm font-medium text-red-600">
-                            {formatCurrency(
-                              floatingRateAllocatedProfitData.installmentCoF
-                            )}
-                          </span>
-                        </div>
-                        <div className="border-t pt-2 space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-900">
-                              Floating Rate Allocated Profit
-                            </span>
-                            <span className="text-sm font-bold text-green-600">
-                              {formatCurrency(
-                                floatingRateAllocatedProfitData.floatingRateAllocatedProfit
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-gray-900">
-                              Performance Percentage
-                            </span>
-                            <span className="text-sm font-bold text-yellow-600">
-                              {formatPercentage(
-                                floatingRateAllocatedProfitData.performancePercentage
-                              )}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Growth Rate Calculation */}
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                      Investor Growth Rate Calculation
-                    </h3>
-                    <div className="space-y-4">
-                      {/* Business Rule */}
-                      <div className="p-4 bg-indigo-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Applied Rule:
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {floatingRateGrowthData.calculation.rule}
-                        </p>
-                      </div>
-
-                      {/* Formula */}
-                      <div className="p-4 bg-gray-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Formula:
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {floatingRateGrowthData.calculation.formula}
-                        </p>
-                      </div>
-
-                      {/* Calculation Breakdown */}
-                      <div className="p-4 bg-blue-50 rounded-lg">
-                        <p className="text-sm font-medium text-gray-900 mb-2">
-                          Calculation:
-                        </p>
-                        <p className="text-sm text-gray-600 ">
-                          {floatingRateGrowthData.calculation.breakdown}
-                        </p>
-                      </div>
-
-                      {/* Business Rules Explanation */}
-                      <div className="space-y-3">
-                        <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400">
-                          <p className="text-sm font-medium text-yellow-800">
-                            Business Rules:
+                  {/* Accounts Table */}
+                  <Card className="border-0 shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Active Accounts</CardTitle>
+                      <CardDescription>
+                        {installmentPrincipleData.activeAccountsCount}{" "}
+                        installment accounts
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
+                                Account
+                              </th>
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
+                                Investor
+                              </th>
+                              <th className="text-left text-xs font-medium text-slate-500 uppercase py-3">
+                                Type
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Net Capital
+                              </th>
+                              <th className="text-right text-xs font-medium text-slate-500 uppercase py-3">
+                                Monthly CoF
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {installmentPrincipleData.accounts
+                              .slice(0, 10)
+                              .map((account: any) => (
+                                <tr
+                                  key={account.id}
+                                  className="border-b border-slate-100"
+                                >
+                                  <td className="py-3">
+                                    <p className="font-medium text-sm">
+                                      {account.accountNumber}
+                                    </p>
+                                  </td>
+                                  <td className="py-3 text-sm text-slate-600">
+                                    {account.investorEmail || "-"}
+                                  </td>
+                                  <td className="py-3">
+                                    <Badge
+                                      variant={
+                                        account.investmentType === "principle"
+                                          ? "default"
+                                          : "secondary"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {account.investmentType === "principle"
+                                        ? "Principle"
+                                        : "Interest Only"}
+                                    </Badge>
+                                  </td>
+                                  <td className="py-3 text-sm text-right font-medium">
+                                    {formatCurrency(account.netCapital)}
+                                  </td>
+                                  <td className="py-3 text-sm text-right text-emerald-600">
+                                    {formatCurrency(account.monthlyCof)}
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
+                        {installmentPrincipleData.accounts.length > 10 && (
+                          <p className="text-sm text-slate-500 text-center py-4">
+                            Showing 10 of{" "}
+                            {installmentPrincipleData.accounts.length} accounts
                           </p>
-                          <ul className="text-sm text-yellow-700 mt-1 space-y-1">
-                            <li>
-                              • If performance &lt; 24%: Growth = Performance ÷
-                              12
-                            </li>
-                            <li>
-                              • If performance ≥ 24%: Growth = 1.42% (fixed)
-                            </li>
-                          </ul>
-                        </div>
-
-                        <div className="flex justify-between items-center pt-2 border-t">
-                          <span className="text-sm font-medium text-gray-900">
-                            Current Performance
-                          </span>
-                          <span className="text-sm font-medium">
-                            {formatPercentage(
-                              floatingRateGrowthData.performancePercentage
-                            )}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-900">
-                            Investor Growth Rate
-                          </span>
-                          <span className="text-sm font-bold text-indigo-600">
-                            {formatPercentage(
-                              floatingRateGrowthData.growthPercentage
-                            )}
-                          </span>
-                        </div>
+                        )}
                       </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-        </>
-      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
     </div>
   );
 }

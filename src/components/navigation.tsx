@@ -152,6 +152,12 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                       >
                         Mutations
                       </Link>
+                      <Link
+                        href="/admin/reports"
+                        className={getLinkClasses("/admin/reports")}
+                      >
+                        Reports
+                      </Link>
                     </>
                   ) : (
                     // Regular user navigation
