@@ -1,14 +1,6 @@
 "use client";
 
 import Auth from "@/components/Auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { User } from "@supabase/supabase-js";
 import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
@@ -26,6 +18,7 @@ import {
   Percent,
   Calendar,
   Activity,
+  ChevronRight,
 } from "lucide-react";
 
 interface HomeViewProps {
@@ -47,6 +40,26 @@ function formatPercent(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
 }
 
+// Mini chart SVG component for stat cards
+function MiniChart({ trend = "up" }: { trend?: "up" | "down" }) {
+  return (
+    <svg viewBox="0 0 60 30" className="w-16 h-8 opacity-60">
+      <path
+        d={
+          trend === "up"
+            ? "M0 25 L10 20 L20 22 L30 15 L40 18 L50 10 L60 5"
+            : "M0 5 L10 10 L20 8 L30 15 L40 12 L50 20 L60 25"
+        }
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function HomeView({ user, isAdmin, portfolioSummary }: HomeViewProps) {
   if (!user) {
     return <Auth />;
@@ -56,459 +69,399 @@ export function HomeView({ user, isAdmin, portfolioSummary }: HomeViewProps) {
   const gainLossIsPositive = (portfolioSummary?.totalGainLoss ?? 0) >= 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="container mx-auto py-8 px-4">
-        {/* Welcome Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-slate-900">
-              Welcome back{user.email ? `, ${user.email.split("@")[0]}` : ""}
-            </h1>
-            {isAdmin && (
-              <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
-                Admin
-              </Badge>
-            )}
-          </div>
-          <p className="text-slate-600">
-            Here&apos;s an overview of your investment portfolio
-          </p>
-        </div>
-
-        {/* Portfolio Summary Section */}
-        {hasInvestments ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-            {/* Total Invested */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Total Invested
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {formatCurrency(portfolioSummary.totalNetInvestedFund)}
-                    </p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Wallet className="h-6 w-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Current Value */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Current Value
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {formatCurrency(portfolioSummary.totalNetPresentValue)}
-                    </p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-indigo-50 flex items-center justify-center">
-                    <PiggyBank className="h-6 w-6 text-indigo-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Total Gain/Loss */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Total Gain/Loss
-                    </p>
-                    <p
-                      className={`text-2xl font-bold mt-1 ${
-                        gainLossIsPositive ? "text-emerald-600" : "text-red-600"
-                      }`}
-                    >
-                      {formatCurrency(portfolioSummary.totalGainLoss)}
-                    </p>
-                  </div>
-                  <div
-                    className={`h-12 w-12 rounded-full flex items-center justify-center ${
-                      gainLossIsPositive ? "bg-emerald-50" : "bg-red-50"
-                    }`}
-                  >
-                    {gainLossIsPositive ? (
-                      <TrendingUp className="h-6 w-6 text-emerald-600" />
-                    ) : (
-                      <TrendingDown className="h-6 w-6 text-red-600" />
-                    )}
-                  </div>
-                </div>
-                <p
-                  className={`text-sm mt-2 ${
-                    gainLossIsPositive ? "text-emerald-600" : "text-red-600"
-                  }`}
-                >
-                  {formatPercent(portfolioSummary.totalGainLossPercentage)}
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Active Investments */}
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">
-                      Active Investments
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">
-                      {portfolioSummary.activeInvestments}
-                    </p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-amber-50 flex items-center justify-center">
-                    <Activity className="h-6 w-6 text-amber-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <Card className="border-0 shadow-sm bg-white mb-8">
-            <CardContent className="py-12 text-center">
-              <div className="h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
-                <PiggyBank className="h-8 w-8 text-slate-400" />
+    <div className="space-y-8">
+      {/* Portfolio Summary Cards - Like reference design with gradients */}
+      {hasInvestments ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Invested Card */}
+          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-navy text-white shadow-soft-lg hover-lift">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-white/70">Total Invested</span>
+                <Badge className="bg-white/20 text-white border-0 text-xs">
+                  {gainLossIsPositive ? "+" : ""}{portfolioSummary.totalGainLossPercentage.toFixed(1)}%
+                </Badge>
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                No investments yet
-              </h3>
-              <p className="text-slate-500 mb-4">
-                Your portfolio is empty. Check your investment summary for more
-                details.
+              <p className="text-2xl font-bold mb-1">
+                {formatCurrency(portfolioSummary.totalNetInvestedFund)}
               </p>
-              <Button asChild>
-                <Link href="/investor/summary">View Investment Summary</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Investment Breakdown */}
-        {hasInvestments && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
-            {/* Flat Rate */}
-            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Percent className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Flat Rate</CardTitle>
-                      <CardDescription>Fixed return investments</CardDescription>
-                    </div>
-                  </div>
-                  {portfolioSummary.flatRateInvestments.hasData && (
-                    <Badge variant="secondary">
-                      {portfolioSummary.flatRateInvestments.activeInvestments} active
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {portfolioSummary.flatRateInvestments.hasData ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Invested</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          portfolioSummary.flatRateInvestments.totalNetInvestedFund
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Current Value</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          portfolioSummary.flatRateInvestments.totalNetPresentValue
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Return</span>
-                      <span
-                        className={`font-medium ${
-                          portfolioSummary.flatRateInvestments.totalGainLoss >= 0
-                            ? "text-emerald-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {formatPercent(
-                          portfolioSummary.flatRateInvestments.totalGainLossPercentage
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400">No flat rate investments</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Floating Rate */}
-            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <BarChart3 className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Floating Rate</CardTitle>
-                      <CardDescription>Variable return investments</CardDescription>
-                    </div>
-                  </div>
-                  {portfolioSummary.floatingRateInvestments.hasData && (
-                    <Badge variant="secondary">
-                      {portfolioSummary.floatingRateInvestments.activeInvestments} active
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {portfolioSummary.floatingRateInvestments.hasData ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Net Capital</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          portfolioSummary.floatingRateInvestments.totalNetCapital
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Gained Fund</span>
-                      <span className="font-medium text-emerald-600">
-                        {formatCurrency(
-                          portfolioSummary.floatingRateInvestments.totalGainedFund
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Admin Fees</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          portfolioSummary.floatingRateInvestments.totalAdminFees
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400">
-                    No floating rate investments
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Installment */}
-            <Card className="border-0 shadow-sm bg-white hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Calendar className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-base">Installment</CardTitle>
-                      <CardDescription>Periodic payment investments</CardDescription>
-                    </div>
-                  </div>
-                  {portfolioSummary.installmentInvestments.hasData && (
-                    <Badge variant="secondary">
-                      {portfolioSummary.installmentInvestments.activeInvestments} active
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {portfolioSummary.installmentInvestments.hasData ? (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Net Invested</span>
-                      <span className="font-medium">
-                        {formatCurrency(
-                          portfolioSummary.installmentInvestments.totalNetInvestorFund
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Redeemed</span>
-                      <span className="font-medium text-emerald-600">
-                        {formatCurrency(
-                          portfolioSummary.installmentInvestments.totalRedeemedAmount
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400">No installment investments</p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Button
-            asChild
-            variant="outline"
-            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
-          >
-            <Link href="/investor/summary" className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-900">Investment Summary</div>
-                <div className="text-sm text-slate-500">View all investments</div>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
-          >
-            <Link href="/investor/floating-rate" className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-900">Floating Rate</div>
-                <div className="text-sm text-slate-500">Variable investments</div>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
-          >
-            <Link href="/investor/installment" className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-900">Installments</div>
-                <div className="text-sm text-slate-500">Periodic payments</div>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant="outline"
-            className="h-auto py-4 justify-start border-slate-200 hover:bg-slate-50"
-          >
-            <Link href="/investor/capital-market" className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                <TrendingUp className="h-5 w-5 text-amber-600" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-900">Capital Market</div>
-                <div className="text-sm text-slate-500">Market investments</div>
-              </div>
-              <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-            </Link>
-          </Button>
-        </div>
-
-        {/* Admin Quick Actions */}
-        {isAdmin && (
-          <div className="mt-8">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">
-              Admin Actions
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
-              >
-                <Link href="/admin/dashboard" className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <BarChart3 className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-slate-900">Dashboard</div>
-                    <div className="text-sm text-slate-500">Admin overview</div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-                </Link>
-              </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
-              >
-                <Link href="/admin/user-management" className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-slate-900">Users</div>
-                    <div className="text-sm text-slate-500">Manage users</div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-                </Link>
-              </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
-              >
-                <Link href="/admin/reports" className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-slate-900">Reports</div>
-                    <div className="text-sm text-slate-500">Generate reports</div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-                </Link>
-              </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                className="h-auto py-4 justify-start border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100"
-              >
-                <Link href="/flat-rate" className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                    <Settings className="h-5 w-5 text-emerald-600" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium text-slate-900">Calculator</div>
-                    <div className="text-sm text-slate-500">Flat rate calc</div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 ml-auto text-slate-400" />
-                </Link>
-              </Button>
+              <p className="text-xs text-white/60">Net invested fund</p>
+            </div>
+            <div className="absolute right-4 bottom-4 text-white/30">
+              <MiniChart trend="up" />
             </div>
           </div>
-        )}
+
+          {/* Current Value Card */}
+          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-success text-white shadow-soft-lg hover-lift">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-white/70">Current Value</span>
+                <Badge className="bg-white/20 text-white border-0 text-xs">
+                  +{((portfolioSummary.totalNetPresentValue / portfolioSummary.totalNetInvestedFund - 1) * 100).toFixed(1)}%
+                </Badge>
+              </div>
+              <p className="text-2xl font-bold mb-1">
+                {formatCurrency(portfolioSummary.totalNetPresentValue)}
+              </p>
+              <p className="text-xs text-white/60">Present portfolio value</p>
+            </div>
+            <div className="absolute right-4 bottom-4 text-white/30">
+              <MiniChart trend="up" />
+            </div>
+          </div>
+
+          {/* Total Gain/Loss Card */}
+          <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-soft-lg hover-lift ${gainLossIsPositive ? "card-gradient-gold" : "card-gradient-danger"}`}>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-sm font-medium ${gainLossIsPositive ? "text-[#192473]/70" : "text-white/70"}`}>
+                  Total Gain/Loss
+                </span>
+                <Badge className={`border-0 text-xs ${gainLossIsPositive ? "bg-[#192473]/20 text-[#192473]" : "bg-white/20 text-white"}`}>
+                  {formatPercent(portfolioSummary.totalGainLossPercentage)}
+                </Badge>
+              </div>
+              <p className={`text-2xl font-bold mb-1 ${gainLossIsPositive ? "text-[#192473]" : "text-white"}`}>
+                {formatCurrency(portfolioSummary.totalGainLoss)}
+              </p>
+              <p className={`text-xs ${gainLossIsPositive ? "text-[#192473]/60" : "text-white/60"}`}>
+                Overall return
+              </p>
+            </div>
+            <div className={`absolute right-4 bottom-4 ${gainLossIsPositive ? "text-[#192473]/30" : "text-white/30"}`}>
+              <MiniChart trend={gainLossIsPositive ? "up" : "down"} />
+            </div>
+          </div>
+
+          {/* Active Investments Card */}
+          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-warning text-white shadow-soft-lg hover-lift">
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-white/70">Active Investments</span>
+                <Badge className="bg-white/20 text-white border-0 text-xs">
+                  Active
+                </Badge>
+              </div>
+              <p className="text-2xl font-bold mb-1">
+                {portfolioSummary.activeInvestments}
+              </p>
+              <p className="text-xs text-white/60">Investment accounts</p>
+            </div>
+            <div className="absolute right-4 bottom-4 text-white/30">
+              <Activity className="w-12 h-12" />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-card rounded-2xl shadow-soft p-12 text-center">
+          <div className="w-20 h-20 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-6">
+            <PiggyBank className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">
+            No investments yet
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Your portfolio is empty. Check your investment summary for more details or contact your administrator.
+          </p>
+          <Link
+            href="/investor/summary"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#192473] text-white font-semibold rounded-xl hover:bg-[#192473]/90 transition-colors"
+          >
+            View Investment Summary
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      )}
+
+      {/* Investment Breakdown */}
+      {hasInvestments && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Flat Rate */}
+          <div className="bg-card rounded-2xl shadow-soft p-6 hover-lift">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center">
+                  <Percent className="w-6 h-6 text-[#192473]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Flat Rate</h3>
+                  <p className="text-sm text-muted-foreground">Fixed return investments</p>
+                </div>
+              </div>
+              {portfolioSummary.flatRateInvestments.hasData && (
+                <Badge className="bg-[#192473]/10 text-[#192473] border-0">
+                  {portfolioSummary.flatRateInvestments.activeInvestments} active
+                </Badge>
+              )}
+            </div>
+            {portfolioSummary.flatRateInvestments.hasData ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Invested</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(portfolioSummary.flatRateInvestments.totalNetInvestedFund)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Current Value</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(portfolioSummary.flatRateInvestments.totalNetPresentValue)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">Return</span>
+                  <span className={`font-semibold ${portfolioSummary.flatRateInvestments.totalGainLoss >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    {formatPercent(portfolioSummary.flatRateInvestments.totalGainLossPercentage)}
+                  </span>
+                </div>
+                <Link
+                  href="/investor/flat-rate"
+                  className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-muted/50 text-foreground font-medium rounded-xl hover:bg-muted transition-colors"
+                >
+                  View Details
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8 text-center">No flat rate investments</p>
+            )}
+          </div>
+
+          {/* Floating Rate */}
+          <div className="bg-card rounded-2xl shadow-soft p-6 hover-lift">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Floating Rate</h3>
+                  <p className="text-sm text-muted-foreground">Variable return investments</p>
+                </div>
+              </div>
+              {portfolioSummary.floatingRateInvestments.hasData && (
+                <Badge className="bg-emerald-500/10 text-emerald-600 border-0">
+                  {portfolioSummary.floatingRateInvestments.activeInvestments} active
+                </Badge>
+              )}
+            </div>
+            {portfolioSummary.floatingRateInvestments.hasData ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Net Capital</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(portfolioSummary.floatingRateInvestments.totalNetCapital)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Gained Fund</span>
+                  <span className="font-semibold text-emerald-600">
+                    {formatCurrency(portfolioSummary.floatingRateInvestments.totalGainedFund)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">Admin Fees</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(portfolioSummary.floatingRateInvestments.totalAdminFees)}
+                  </span>
+                </div>
+                <Link
+                  href="/investor/floating-rate"
+                  className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-muted/50 text-foreground font-medium rounded-xl hover:bg-muted transition-colors"
+                >
+                  View Details
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8 text-center">No floating rate investments</p>
+            )}
+          </div>
+
+          {/* Installment */}
+          <div className="bg-card rounded-2xl shadow-soft p-6 hover-lift">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-[#FFEB7A]/30 flex items-center justify-center">
+                  <Calendar className="w-6 h-6 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Installment</h3>
+                  <p className="text-sm text-muted-foreground">Periodic payment investments</p>
+                </div>
+              </div>
+              {portfolioSummary.installmentInvestments.hasData && (
+                <Badge className="bg-[#FFEB7A]/30 text-amber-700 border-0">
+                  {portfolioSummary.installmentInvestments.activeInvestments} active
+                </Badge>
+              )}
+            </div>
+            {portfolioSummary.installmentInvestments.hasData ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Net Invested</span>
+                  <span className="font-semibold text-foreground">
+                    {formatCurrency(portfolioSummary.installmentInvestments.totalNetInvestorFund)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-border/50">
+                  <span className="text-sm text-muted-foreground">Redeemed</span>
+                  <span className="font-semibold text-emerald-600">
+                    {formatCurrency(portfolioSummary.installmentInvestments.totalRedeemedAmount)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-sm text-muted-foreground">Accounts</span>
+                  <span className="font-semibold text-foreground">
+                    {portfolioSummary.installmentInvestments.activeInvestments}
+                  </span>
+                </div>
+                <Link
+                  href="/investor/installments"
+                  className="flex items-center justify-center gap-2 w-full py-3 mt-2 bg-muted/50 text-foreground font-medium rounded-xl hover:bg-muted transition-colors"
+                >
+                  View Details
+                  <ChevronRight className="w-4 h-4" />
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground py-8 text-center">No installment investments</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Quick Actions */}
+      <div className="bg-card rounded-2xl shadow-soft p-6">
+        <h2 className="text-lg font-bold text-foreground mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link
+            href="/investor/summary"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-[#192473]/30 hover:bg-[#192473]/5 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center group-hover:bg-[#192473] group-hover:text-white transition-colors">
+              <FileText className="w-5 h-5 text-[#192473] group-hover:text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Investment Summary</p>
+              <p className="text-xs text-muted-foreground">View all investments</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-[#192473]" />
+          </Link>
+
+          <Link
+            href="/investor/floating-rate"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+              <BarChart3 className="w-5 h-5 text-emerald-600 group-hover:text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Floating Rate</p>
+              <p className="text-xs text-muted-foreground">Variable investments</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-emerald-600" />
+          </Link>
+
+          <Link
+            href="/investor/installments"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors">
+              <Calendar className="w-5 h-5 text-amber-600 group-hover:text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Installments</p>
+              <p className="text-xs text-muted-foreground">Periodic payments</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-amber-600" />
+          </Link>
+
+          <Link
+            href="/investor/capital-market"
+            className="flex items-center gap-4 p-4 rounded-xl border border-border/50 hover:border-[#FFEB7A]/50 hover:bg-[#FFEB7A]/10 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-[#FFEB7A]/30 flex items-center justify-center group-hover:bg-[#FFEB7A] transition-colors">
+              <TrendingUp className="w-5 h-5 text-amber-700 group-hover:text-[#192473]" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-foreground">Capital Market</p>
+              <p className="text-xs text-muted-foreground">Market investments</p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-amber-600" />
+          </Link>
+        </div>
       </div>
+
+      {/* Admin Quick Actions */}
+      {isAdmin && (
+        <div className="bg-[#192473]/5 rounded-2xl p-6 border border-[#192473]/10">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-[#192473] flex items-center justify-center">
+              <Settings className="w-4 h-4 text-white" />
+            </div>
+            <h2 className="text-lg font-bold text-foreground">Admin Actions</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href="/admin/dashboard"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-soft hover:shadow-soft-lg transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#192473] flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Dashboard</p>
+                <p className="text-xs text-muted-foreground">Admin overview</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Link>
+
+            <Link
+              href="/admin/user-management"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-soft hover:shadow-soft-lg transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#192473] flex items-center justify-center">
+                <Users className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Users</p>
+                <p className="text-xs text-muted-foreground">Manage users</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Link>
+
+            <Link
+              href="/admin/reports"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-soft hover:shadow-soft-lg transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#192473] flex items-center justify-center">
+                <FileText className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Reports</p>
+                <p className="text-xs text-muted-foreground">Generate reports</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Link>
+
+            <Link
+              href="/admin/performance"
+              className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-soft hover:shadow-soft-lg transition-all group"
+            >
+              <div className="w-10 h-10 rounded-lg bg-[#192473] flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-foreground">Performance</p>
+                <p className="text-xs text-muted-foreground">Track metrics</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { Navigation } from "@/components/navigation";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import TanstackQueryProvider from "@/lib/tanstack-query/provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
@@ -39,15 +39,26 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} antialiased`}>
-        <NextTopLoader />
+      <body className={`${inter.variable} font-sans antialiased min-h-screen bg-background`}>
+        <NextTopLoader color="#FFEB7A" showSpinner={false} />
         <TanstackQueryProvider>
-          {user && (
-            <Navigation user={user} isAdmin={isAdmin} authError={authError} />
+          {user ? (
+            <div className="flex min-h-screen">
+              {/* Sidebar Navigation */}
+              <Navigation user={user} isAdmin={isAdmin} authError={authError} />
+
+              {/* Main Content Area */}
+              <main className="flex-1 ml-64 min-h-screen bg-background">
+                <div className="p-8">
+                  {children}
+                </div>
+              </main>
+            </div>
+          ) : (
+            <main className="min-h-screen">
+              {children}
+            </main>
           )}
-          <main className={user ? "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" : ""}>
-            {children}
-          </main>
         </TanstackQueryProvider>
       </body>
     </html>

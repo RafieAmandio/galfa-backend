@@ -5,14 +5,21 @@ import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
-import { ChevronDown } from "lucide-react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
+  LayoutDashboard,
+  TrendingUp,
+  Wallet,
+  FileText,
+  Users,
+  Settings,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  Activity,
+  Bell,
+  Search,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NavigationProps {
   user: User | null;
@@ -20,47 +27,34 @@ interface NavigationProps {
   authError?: string;
 }
 
+interface NavItem {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  children?: { label: string; href: string }[];
+}
+
 export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   const [loading, setLoading] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<string[]>(["investments"]);
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createBrowserClient();
 
-  // Helper function to determine if a route is active
+  const toggleMenu = (menu: string) => {
+    setExpandedMenus((prev) =>
+      prev.includes(menu)
+        ? prev.filter((m) => m !== menu)
+        : [...prev, menu]
+    );
+  };
+
   const isActiveRoute = (path: string) => {
     return pathname === path;
   };
 
-  // Helper function to get link classes based on active state
-  const getLinkClasses = (path: string) => {
-    const baseClasses =
-      "text-sm font-medium px-3 py-2 rounded-md transition-colors duration-200";
-    const activeClasses =
-      "bg-blue-100 text-blue-700 border-b-2 border-blue-500";
-    const inactiveClasses =
-      "text-gray-900 hover:text-gray-500 hover:bg-gray-50";
-
-    return `${baseClasses} ${
-      isActiveRoute(path) ? activeClasses : inactiveClasses
-    }`;
-  };
-
-  // Helper function to check if any investment route is active
-  const isAnyInvestmentRouteActive = () => {
-    const investmentRoutes = isAdmin
-      ? [
-          "/admin/flat-rate",
-          "/admin/floating-rate",
-          "/admin/installments",
-          "/admin/capital-market",
-        ]
-      : [
-          "/investor/flat-rate",
-          "/investor/floating-rate",
-          "/investor/installments",
-          "/investor/capital-market",
-        ];
-    return investmentRoutes.some((route) => isActiveRoute(route));
+  const isActiveParent = (children: { href: string }[]) => {
+    return children.some((child) => pathname === child.href);
   };
 
   const handleSignOut = async () => {
@@ -68,7 +62,7 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
     try {
       await supabase.auth.signOut();
       router.push("/");
-      router.refresh(); // Refresh to update server-side auth state
+      router.refresh();
     } catch (error) {
       console.error("Sign out error:", error);
     } finally {
@@ -76,165 +70,250 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
     }
   };
 
+  const adminNavItems: NavItem[] = [
+    {
+      label: "Dashboard",
+      href: "/admin/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Investments",
+      href: "#",
+      icon: Wallet,
+      children: [
+        { label: "Flat Rate", href: "/admin/flat-rate" },
+        { label: "Floating Rate", href: "/admin/floating-rate" },
+        { label: "Installments", href: "/admin/installments" },
+        { label: "Capital Market", href: "/admin/capital-market" },
+      ],
+    },
+    {
+      label: "User Management",
+      href: "/admin/user-management",
+      icon: Users,
+    },
+    {
+      label: "Performance",
+      href: "/admin/performance",
+      icon: TrendingUp,
+    },
+    {
+      label: "Mutations",
+      href: "/admin/mutations",
+      icon: Activity,
+    },
+    {
+      label: "Reports",
+      href: "/admin/reports",
+      icon: FileText,
+    },
+  ];
+
+  const investorNavItems: NavItem[] = [
+    {
+      label: "Dashboard",
+      href: "/investor/summary",
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Investments",
+      href: "#",
+      icon: Wallet,
+      children: [
+        { label: "Flat Rate", href: "/investor/flat-rate" },
+        { label: "Floating Rate", href: "/investor/floating-rate" },
+        { label: "Installments", href: "/investor/installments" },
+        { label: "Capital Market", href: "/investor/capital-market" },
+      ],
+    },
+  ];
+
+  const navItems = isAdmin ? adminNavItems : investorNavItems;
+
   return (
-    <nav className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Galfa
-              </Link>
+    <>
+      {/* Fixed Sidebar */}
+      <aside className="fixed left-0 top-0 h-screen w-64 sidebar flex flex-col z-50">
+        {/* Logo Section */}
+        <div className="p-6 border-b border-white/10">
+          <Link href="/" className="flex items-center gap-3">
+            {/* Logo Placeholder - Replace with actual logo */}
+            <div className="w-10 h-10 rounded-xl bg-[#FFEB7A] flex items-center justify-center overflow-hidden">
+              {/* TODO: Replace with <Image src="/logo.png" /> */}
+              <span className="text-lg font-bold text-[#192473]">G</span>
+            </div>
+            <span className="text-xl font-semibold text-white tracking-tight">Galfa</span>
+          </Link>
+        </div>
 
-              {/* Navigation Links - Left side */}
-              {user && (
-                <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-                  {isAdmin ? (
-                    // Admin navigation links
-                    <>
-                      <Link
-                        href="/admin/dashboard"
-                        className={getLinkClasses("/admin/dashboard")}
-                      >
-                        Dashboard
-                      </Link>
+        {/* Navigation Menu */}
+        <nav className="flex-1 py-6 px-4 overflow-y-auto scrollbar-thin">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 px-4">
+            Menu
+          </p>
 
-                      {/* Investments Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className={`h-auto p-2 text-sm font-medium ${
-                              isAnyInvestmentRouteActive()
-                                ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
-                                : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
-                            }`}
-                          >
-                            Investments
-                            <ChevronDown className="ml-1 h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48" align="start">
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/flat-rate">Flat Rate</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/floating-rate">
-                              Floating Rate
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/installments">Installments</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/admin/capital-market">
-                              Capital Market
-                            </Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.label}>
+                {item.children ? (
+                  <>
+                    <button
+                      onClick={() => toggleMenu(item.label.toLowerCase())}
+                      className={cn(
+                        "sidebar-item w-full text-left",
+                        isActiveParent(item.children)
+                          ? "bg-white/10 text-white"
+                          : "text-white/70 hover:text-white"
+                      )}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="flex-1 text-sm font-medium">
+                        {item.label}
+                      </span>
+                      {expandedMenus.includes(item.label.toLowerCase()) ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </button>
 
-                      <Link
-                        href="/admin/user-management"
-                        className={getLinkClasses("/admin/user-management")}
-                      >
-                        User Management
-                      </Link>
-                      <Link
-                        href="/admin/performance"
-                        className={getLinkClasses("/admin/performance")}
-                      >
-                        Performance
-                      </Link>
-                      <Link
-                        href="/admin/mutations"
-                        className={getLinkClasses("/admin/mutations")}
-                      >
-                        Mutations
-                      </Link>
-                      <Link
-                        href="/admin/reports"
-                        className={getLinkClasses("/admin/reports")}
-                      >
-                        Reports
-                      </Link>
-                    </>
-                  ) : (
-                    // Regular user navigation
-                    <>
-                      <Link
-                        href="/investor/summary"
-                        className={getLinkClasses("/investor/summary")}
-                      >
-                        Dashboard
-                      </Link>
+                    {expandedMenus.includes(item.label.toLowerCase()) && (
+                      <ul className="mt-1 ml-4 pl-4 border-l border-white/10 space-y-1">
+                        {item.children.map((child) => (
+                          <li key={child.href}>
+                            <Link
+                              href={child.href}
+                              className={cn(
+                                "sidebar-item text-sm",
+                                isActiveRoute(child.href)
+                                  ? "active"
+                                  : "text-white/60 hover:text-white"
+                              )}
+                            >
+                              <span>{child.label}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "sidebar-item",
+                      isActiveRoute(item.href)
+                        ? "active"
+                        : "text-white/70 hover:text-white"
+                    )}
+                  >
+                    <item.icon className="w-5 h-5" />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </Link>
+                )}
+              </li>
+            ))}
+          </ul>
 
-                      {/* Investments Dropdown */}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className={`h-auto p-2 text-sm font-medium ${
-                              isAnyInvestmentRouteActive()
-                                ? "bg-blue-100 text-blue-700 border-b-2 border-blue-500"
-                                : "text-gray-900 hover:text-gray-500 hover:bg-gray-50"
-                            }`}
-                          >
-                            Investments
-                            <ChevronDown className="ml-1 h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-48" align="start">
-                          <DropdownMenuItem asChild>
-                            <Link href="/investor/flat-rate">Flat Rate</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/investor/floating-rate">
-                              Floating Rate
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/investor/installments">
-                              Installments
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/investor/capital-market">
-                              Capital Market
-                            </Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </>
-                  )}
-                </div>
-              )}
+          {/* Bottom Section */}
+          <div className="mt-8 pt-6 border-t border-white/10">
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 px-4">
+              Account
+            </p>
+
+            <ul className="space-y-1">
+              <li>
+                <Link
+                  href="/"
+                  className="sidebar-item text-white/70 hover:text-white"
+                >
+                  <Settings className="w-5 h-5" />
+                  <span className="text-sm font-medium">Settings</span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        {/* User Profile & Sign Out */}
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-10 h-10 rounded-full bg-[#FFEB7A] flex items-center justify-center text-[#192473] font-bold text-sm">
+              {user?.email?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">
+                {user?.email?.split("@")[0] || "User"}
+              </p>
+              <p className="text-xs text-white/50 truncate">
+                {isAdmin ? "Administrator" : "Investor"}
+              </p>
             </div>
           </div>
 
-          {/* Right side - User menu */}
-          <div className="flex items-center">
-            {authError && (
-              <div className="text-sm text-red-600 mr-4">Auth Error</div>
-            )}
+          <button
+            onClick={handleSignOut}
+            disabled={loading}
+            className="sidebar-item w-full mt-2 text-red-300 hover:text-red-200 hover:bg-red-500/10"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="text-sm font-medium">
+              {loading ? "Signing Out..." : "Sign Out"}
+            </span>
+          </button>
+        </div>
+      </aside>
 
-            {user ? (
-              <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-500">{user.email}</span>
-                <button
-                  onClick={handleSignOut}
-                  disabled={loading}
-                  className="bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-800 text-sm font-medium py-1 px-3 rounded transition-colors duration-200"
-                >
-                  {loading ? "Signing Out..." : "Sign Out"}
-                </button>
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500">Not authenticated</div>
-            )}
+      {/* Top Header Bar (for search and notifications) */}
+      <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-border/50 flex items-center justify-between px-8 z-40">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-foreground">
+            Welcome, {user?.email?.split("@")[0] || "User"}!
+          </h1>
+          {isAdmin && (
+            <span className="px-3 py-1 text-xs font-semibold bg-[#192473] text-white rounded-full">
+              Admin
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search your items"
+              className="w-64 h-10 pl-10 pr-4 text-sm bg-muted/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            />
+          </div>
+
+          {/* Notification Bell */}
+          <button className="relative p-2 hover:bg-muted rounded-xl transition-colors">
+            <Bell className="w-5 h-5 text-muted-foreground" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-[#FFEB7A] rounded-full" />
+          </button>
+
+          {/* User Avatar */}
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#192473] to-[#2a3a9e] flex items-center justify-center">
+            <span className="text-sm font-bold text-white">
+              {user?.email?.charAt(0).toUpperCase() || "U"}
+            </span>
           </div>
         </div>
-      </div>
-    </nav>
+      </header>
+
+      {/* Spacer for fixed header */}
+      <div className="h-16" />
+
+      {/* Error Banner */}
+      {authError && (
+        <div className="fixed top-16 left-64 right-0 bg-red-50 border-b border-red-200 px-8 py-3 z-30">
+          <p className="text-sm text-red-700">
+            Authentication Error: {authError}
+          </p>
+        </div>
+      )}
+    </>
   );
 }
