@@ -13,13 +13,44 @@ export function ReportHeader({ investorEmail, reportDate }: ReportHeaderProps) {
     day: "numeric",
   });
 
+  const formattedTime = reportDate.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
   return (
     <View style={styles.header}>
-      <Text style={styles.title}>Investment Portfolio Report</Text>
-      <Text style={styles.subtitle}>Galfa Investment Platform</Text>
+      {/* Top row with logo and badge */}
+      <View style={styles.headerTop}>
+        <View style={styles.logoSection}>
+          {/* Logo placeholder */}
+          <View style={styles.logoBox}>
+            <Text style={styles.logoText}>G</Text>
+          </View>
+          <Text style={styles.brandName}>Galfa</Text>
+        </View>
+        <View style={styles.reportBadge}>
+          <Text style={styles.reportBadgeText}>Investment Report</Text>
+        </View>
+      </View>
+
+      {/* Title */}
+      <Text style={styles.title}>Portfolio Statement</Text>
+      <Text style={styles.subtitle}>
+        Comprehensive overview of your investment portfolio
+      </Text>
+
+      {/* Investor info */}
       <View style={styles.investorInfo}>
-        <Text style={styles.investorEmail}>Investor: {investorEmail}</Text>
-        <Text style={styles.reportDate}>Generated: {formattedDate}</Text>
+        <View>
+          <Text style={styles.investorLabel}>Investor</Text>
+          <Text style={styles.investorEmail}>{investorEmail}</Text>
+        </View>
+        <View>
+          <Text style={styles.investorLabel}>Report Generated</Text>
+          <Text style={styles.reportDate}>{formattedDate}</Text>
+          <Text style={styles.reportDate}>{formattedTime}</Text>
+        </View>
       </View>
     </View>
   );

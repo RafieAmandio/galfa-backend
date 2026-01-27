@@ -407,19 +407,11 @@ export function AdminDashboardView({
       {/* Investment Type Tabs */}
       {!isLoading && (
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="bg-card border border-border/50 rounded-xl p-1 shadow-soft">
-            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-[#192473] data-[state=active]:text-white">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="fixed-rate" className="rounded-lg data-[state=active]:bg-[#192473] data-[state=active]:text-white">
-              Fixed Rate
-            </TabsTrigger>
-            <TabsTrigger value="floating-rate" className="rounded-lg data-[state=active]:bg-[#192473] data-[state=active]:text-white">
-              Floating Rate
-            </TabsTrigger>
-            <TabsTrigger value="installment" className="rounded-lg data-[state=active]:bg-[#192473] data-[state=active]:text-white">
-              Installment
-            </TabsTrigger>
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="fixed-rate">Fixed Rate</TabsTrigger>
+            <TabsTrigger value="floating-rate">Floating Rate</TabsTrigger>
+            <TabsTrigger value="installment">Installment</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}

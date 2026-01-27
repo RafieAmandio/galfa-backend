@@ -303,9 +303,6 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
         </div>
       </header>
 
-      {/* Spacer for fixed header */}
-      <div className="h-16" />
-
       {/* Error Banner */}
       {authError && (
         <div className="fixed top-16 left-64 right-0 bg-red-50 border-b border-red-200 px-8 py-3 z-30">

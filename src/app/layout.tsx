@@ -6,6 +6,9 @@ import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import TanstackQueryProvider from "@/lib/tanstack-query/provider";
 
+// Force dynamic rendering to ensure fresh auth checks
+export const dynamic = "force-dynamic";
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -48,7 +51,7 @@ export default async function RootLayout({
               <Navigation user={user} isAdmin={isAdmin} authError={authError} />
 
               {/* Main Content Area */}
-              <main className="flex-1 ml-64 min-h-screen bg-background">
+              <main className="flex-1 ml-64 min-h-screen bg-background pt-16">
                 <div className="p-8">
                   {children}
                 </div>

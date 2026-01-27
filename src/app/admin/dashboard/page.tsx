@@ -23,19 +23,5 @@ export default async function AdminDashboardPage() {
     },
   };
 
-  return (
-    <div className="container mx-auto px-4 py-8 rounded-lg">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Admin Dashboard
-        </h1>
-        <p className="text-gray-600">
-          Monthly analytics and insights for all investment types including
-          floating rate performance
-        </p>
-      </div>
-
-      <AdminDashboardView user={user} dashboardData={dashboardData} />
-    </div>
-  );
+  return <AdminDashboardView user={user} dashboardData={dashboardData} />;
 }
