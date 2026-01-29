@@ -22,10 +22,8 @@ import {
   Wallet,
   Activity,
   AlertTriangle,
-  Calendar,
-  BarChart3,
   Percent,
-  ChevronRight,
+  BarChart3,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getFloatingRatePrincipleByMonthQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-principle-by-month/query-options";
@@ -101,7 +99,7 @@ export function AdminDashboardView({
       : currentDate.getFullYear().toString()
   );
 
-  // Fetch all dashboard data using Tanstack React Query
+  // Fetch all dashboard data
   const { data: principleResult, isLoading: isPrincipleLoading } = useQuery(
     getFixRatePrincipleByMonthQueryOptions(selectedMonth)
   );
@@ -138,7 +136,6 @@ export function AdminDashboardView({
     isLoading: isFloatingRateGrowthLoading,
   } = useQuery(getFloatingRateGrowthPercentageQueryOptions(selectedMonth));
 
-  // Extract all data
   const principleData = principleResult?.data || null;
   const cofData = cofResult?.data || null;
   const inflowData = inflowResult?.data || null;
@@ -188,7 +185,6 @@ export function AdminDashboardView({
 
   const warnings = dashboardData?.warnings;
 
-  // Calculate totals
   const totalNetCapital =
     (principleData?.totalNetCapital || 0) +
     (installmentPrincipleData?.totalNetCapital || 0) +
@@ -200,165 +196,136 @@ export function AdminDashboardView({
     (floatingRatePrincipleData?.activeAccountsCount || 0);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monthly analytics and performance overview
-          </p>
+          <h1 className="text-xl font-semibold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Monthly overview</p>
         </div>
 
         {/* Period Selector */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-card rounded-xl border border-border/50 p-1 shadow-soft">
-            <Select
-              value={selectedMonthNumber}
-              onValueChange={handleMonthChange}
-            >
-              <SelectTrigger className="w-[130px] border-0 shadow-none bg-transparent">
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                {monthOptions.map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedYear} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-[90px] border-0 shadow-none bg-transparent">
-                <SelectValue placeholder="Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Badge className="px-4 py-2 bg-[#192473] text-white border-0">
-            <Calendar className="h-4 w-4 mr-2" />
-            {format(selectedMonth, "MMMM yyyy")}
-          </Badge>
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedMonthNumber}
+            onValueChange={handleMonthChange}
+          >
+            <SelectTrigger className="w-[120px] h-9 text-sm">
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {monthOptions.map((month) => (
+                <SelectItem key={month.value} value={month.value}>
+                  {month.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={selectedYear} onValueChange={handleYearChange}>
+            <SelectTrigger className="w-[80px] h-9 text-sm">
+              <SelectValue placeholder="Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {yearOptions.map((year) => (
+                <SelectItem key={year} value={year}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* Loading State */}
+      {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="flex items-center gap-3 bg-card rounded-xl border border-border/50 px-6 py-4 shadow-soft">
-            <Loader2 className="h-5 w-5 text-[#192473] animate-spin" />
-            <span className="text-muted-foreground">Loading dashboard data...</span>
-          </div>
+          <Loader2 className="h-5 w-5 text-[#192473] animate-spin" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
         </div>
       )}
 
       {/* Warnings */}
       {!isLoading && warnings && (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {warnings.vcPerformanceWarning && (
-            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
-              </div>
-              <p className="text-sm text-amber-800">
-                {warnings.vcPerformanceWarning}
-              </p>
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+              <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+              {warnings.vcPerformanceWarning}
             </div>
           )}
           {warnings.grossProfitWarning && (
-            <div className="flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-5 py-4">
-              <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="h-5 w-5 text-orange-600" />
-              </div>
-              <p className="text-sm text-orange-800">
-                {warnings.grossProfitWarning}
-              </p>
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-lg px-4 py-3 text-sm text-orange-800">
+              <AlertTriangle className="h-4 w-4 text-orange-600 flex-shrink-0" />
+              {warnings.grossProfitWarning}
             </div>
           )}
         </div>
       )}
 
-      {/* Main KPIs */}
+      {/* KPIs */}
       {!isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Total Net Capital */}
-          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-navy text-white shadow-soft-lg">
+          <div className="bg-[#192473] rounded-xl p-5 text-white">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70 mb-2">
-                  Total Net Capital
-                </p>
-                <p className="text-2xl font-bold mb-1">
+                <p className="text-xs font-medium text-white/60 mb-1">Net Capital</p>
+                <p className="text-xl font-semibold">
                   {formatCurrency(totalNetCapital)}
                 </p>
-                <p className="text-xs text-white/60">All investment types</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                <Wallet className="h-6 w-6 text-white" />
+              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+                <Wallet className="h-4 w-4 text-white/80" />
               </div>
             </div>
           </div>
 
           {/* Gross Profit */}
-          <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-soft-lg ${(grossProfitData?.grossProfit || 0) >= 0 ? "card-gradient-success" : "card-gradient-danger"}`}>
+          <div className={`rounded-xl p-5 text-white ${(grossProfitData?.grossProfit || 0) >= 0 ? "bg-emerald-500" : "bg-red-500"}`}>
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70 mb-2">
-                  Gross Profit
-                </p>
-                <p className="text-2xl font-bold mb-1">
+                <p className="text-xs font-medium text-white/60 mb-1">Gross Profit</p>
+                <p className="text-xl font-semibold">
                   {formatCurrency(grossProfitData?.grossProfit || 0)}
                 </p>
-                <p className="text-xs text-white/60">
+                <p className="text-xs text-white/70 mt-0.5">
                   {formatPercentage(grossProfitData?.grossProfitPercentage || 0)}
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
                 {(grossProfitData?.grossProfit || 0) >= 0 ? (
-                  <TrendingUp className="h-6 w-6 text-white" />
+                  <TrendingUp className="h-4 w-4 text-white/80" />
                 ) : (
-                  <TrendingDown className="h-6 w-6 text-white" />
+                  <TrendingDown className="h-4 w-4 text-white/80" />
                 )}
               </div>
             </div>
           </div>
 
           {/* AUM */}
-          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-gold shadow-soft-lg">
+          <div className="bg-[#FFEB7A] rounded-xl p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-[#192473]/70 mb-2">
-                  Assets Under Management
-                </p>
-                <p className="text-2xl font-bold text-[#192473] mb-1">
+                <p className="text-xs font-medium text-[#192473]/60 mb-1">AUM</p>
+                <p className="text-xl font-semibold text-[#192473]">
                   {formatCurrency(vcPerformanceData?.latestAUM || 0)}
                 </p>
-                <p className="text-xs text-[#192473]/60">Current AUM</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-[#192473]/20 flex items-center justify-center">
-                <PieChart className="h-6 w-6 text-[#192473]" />
+              <div className="w-9 h-9 rounded-lg bg-[#192473]/10 flex items-center justify-center">
+                <PieChart className="h-4 w-4 text-[#192473]/80" />
               </div>
             </div>
           </div>
 
           {/* Active Accounts */}
-          <div className="relative overflow-hidden rounded-2xl p-6 card-gradient-warning text-white shadow-soft-lg">
+          <div className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-white/70 mb-2">
-                  Active Accounts
-                </p>
-                <p className="text-2xl font-bold mb-1">{totalActiveAccounts}</p>
-                <p className="text-xs text-white/60">Total accounts</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">Accounts</p>
+                <p className="text-xl font-semibold text-foreground">{totalActiveAccounts}</p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
+              <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                <Users className="h-4 w-4 text-muted-foreground" />
               </div>
             </div>
           </div>
@@ -367,46 +334,46 @@ export function AdminDashboardView({
 
       {/* Cash Flow */}
       {!isLoading && inflowData && outflowData && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-card rounded-2xl shadow-soft p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Inflow</p>
-                <p className="text-2xl font-bold text-emerald-600 mb-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Inflow</p>
+                <p className="text-lg font-semibold text-emerald-600">
                   {formatCurrency(inflowData.totalNetInflowFunds)}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {inflowData.newAccountsCount} new accounts
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
-                <ArrowUpRight className="h-6 w-6 text-emerald-600" />
+              <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <ArrowUpRight className="h-4 w-4 text-emerald-600" />
               </div>
             </div>
           </div>
 
-          <div className="bg-card rounded-2xl shadow-soft p-6">
+          <div className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-2">Outflow</p>
-                <p className="text-2xl font-bold text-red-600 mb-1">
+                <p className="text-xs font-medium text-muted-foreground mb-1">Outflow</p>
+                <p className="text-lg font-semibold text-red-600">
                   {formatCurrency(outflowData.totalOutflow)}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground mt-0.5">
                   {outflowData.outflowCount} transactions
                 </p>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
-                <ArrowDownRight className="h-6 w-6 text-red-600" />
+              <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center">
+                <ArrowDownRight className="h-4 w-4 text-red-600" />
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Investment Type Tabs */}
+      {/* Investment Types */}
       {!isLoading && (
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="fixed-rate">Fixed Rate</TabsTrigger>
@@ -414,208 +381,133 @@ export function AdminDashboardView({
             <TabsTrigger value="installment">Installment</TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Fixed Rate Card */}
-              <div className="bg-card rounded-2xl shadow-soft overflow-hidden hover-lift">
-                <div className="p-6 border-b border-border/50">
+          <TabsContent value="overview" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {/* Fixed Rate */}
+              <div className="bg-white border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center">
-                      <Percent className="w-6 h-6 text-[#192473]" />
+                    <div className="w-8 h-8 rounded-lg bg-[#192473]/10 flex items-center justify-center">
+                      <Percent className="w-4 h-4 text-[#192473]" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground">Fixed Rate</h3>
+                      <h3 className="font-medium text-sm text-foreground">Fixed Rate</h3>
                       <p className="text-xs text-muted-foreground">
                         {principleData?.activeAccountsCount || 0} accounts
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Net Capital</span>
-                    <span className="font-semibold text-foreground">
+                    <span className="text-xs text-muted-foreground">Net Capital</span>
+                    <span className="text-sm font-medium">
                       {formatCurrency(principleData?.totalNetCapital || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Total Gain (CoF)</span>
-                    <span className="font-semibold text-emerald-600">
+                    <span className="text-xs text-muted-foreground">Total Gain</span>
+                    <span className="text-sm font-medium text-emerald-600">
                       {formatCurrency(cofData?.totalGainFund || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Avg Return</span>
-                    <span className="font-semibold text-foreground">
-                      {formatPercentage(cofData?.averageReturnPercentage || 0)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Floating Rate Card */}
-              <div className="bg-card rounded-2xl shadow-soft overflow-hidden hover-lift">
-                <div className="p-6 border-b border-border/50">
+              {/* Floating Rate */}
+              <div className="bg-white border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-                      <BarChart3 className="w-6 h-6 text-emerald-600" />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground">Floating Rate</h3>
+                      <h3 className="font-medium text-sm text-foreground">Floating Rate</h3>
                       <p className="text-xs text-muted-foreground">
                         {floatingRatePrincipleData?.activeAccountsCount || 0} accounts
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Net Capital</span>
-                    <span className="font-semibold text-foreground">
+                    <span className="text-xs text-muted-foreground">Net Capital</span>
+                    <span className="text-sm font-medium">
                       {formatCurrency(floatingRatePrincipleData?.totalNetCapital || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Allocated Profit</span>
-                    <span className="font-semibold text-emerald-600">
+                    <span className="text-xs text-muted-foreground">Allocated Profit</span>
+                    <span className="text-sm font-medium text-emerald-600">
                       {formatCurrency(floatingRateAllocatedProfitData?.floatingRateAllocatedProfit || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Growth</span>
-                    <span className="font-semibold text-foreground">
-                      {formatPercentage(floatingRateGrowthData?.growthPercentage || 0)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Installment Card */}
-              <div className="bg-card rounded-2xl shadow-soft overflow-hidden hover-lift">
-                <div className="p-6 border-b border-border/50">
+              {/* Installment */}
+              <div className="bg-white border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#FFEB7A]/30 flex items-center justify-center">
-                      <Activity className="w-6 h-6 text-amber-600" />
+                    <div className="w-8 h-8 rounded-lg bg-[#FFEB7A]/30 flex items-center justify-center">
+                      <Activity className="w-4 h-4 text-amber-600" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-foreground">Installment</h3>
+                      <h3 className="font-medium text-sm text-foreground">Installment</h3>
                       <p className="text-xs text-muted-foreground">
                         {installmentPrincipleData?.activeAccountsCount || 0} accounts
                       </p>
                     </div>
                   </div>
                 </div>
-                <div className="p-6 space-y-4">
+                <div className="p-4 space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Net Capital</span>
-                    <span className="font-semibold text-foreground">
+                    <span className="text-xs text-muted-foreground">Net Capital</span>
+                    <span className="text-sm font-medium">
                       {formatCurrency(installmentPrincipleData?.totalNetCapital || 0)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Gained Funds</span>
-                    <span className="font-semibold text-emerald-600">
+                    <span className="text-xs text-muted-foreground">Gained Funds</span>
+                    <span className="text-sm font-medium text-emerald-600">
                       {formatCurrency(installmentCoFData?.totalGainedFunds || 0)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Avg Return</span>
-                    <span className="font-semibold text-foreground">
-                      {formatPercentage(installmentCoFData?.averageReturnPercentage || 0)}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Gross Profit Breakdown */}
-            {grossProfitData && (
-              <div className="bg-card rounded-2xl shadow-soft p-6">
-                <div className="mb-6">
-                  <h3 className="text-lg font-bold text-foreground">Gross Profit Breakdown</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {format(selectedMonth, "MMMM yyyy")} portfolio performance
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                  <div className="text-center p-4 bg-[#192473]/5 rounded-xl">
-                    <p className="text-xs text-[#192473] font-medium mb-1">Current AUM</p>
-                    <p className="text-sm font-bold text-[#192473]">
-                      {formatCurrency(grossProfitData.currentMonthAUM)}
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-muted/50 rounded-xl">
-                    <p className="text-xs text-muted-foreground font-medium mb-1">Previous AUM</p>
-                    <p className="text-sm font-bold text-foreground">
-                      {formatCurrency(grossProfitData.previousMonthAUM)}
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-emerald-50 rounded-xl">
-                    <p className="text-xs text-emerald-600 font-medium mb-1">Total Inflow</p>
-                    <p className="text-sm font-bold text-emerald-700">
-                      {formatCurrency(grossProfitData.totalInflow)}
-                    </p>
-                  </div>
-                  <div className="text-center p-4 bg-red-50 rounded-xl">
-                    <p className="text-xs text-red-600 font-medium mb-1">Total Outflow</p>
-                    <p className="text-sm font-bold text-red-700">
-                      {formatCurrency(grossProfitData.totalOutflow)}
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4 bg-muted/30 rounded-xl">
-                  <p className="text-xs text-muted-foreground font-medium mb-1">Formula</p>
-                  <p className="text-sm text-foreground">{grossProfitData.calculation.formula}</p>
-                </div>
-              </div>
-            )}
           </TabsContent>
 
-          {/* Fixed Rate Tab */}
-          <TabsContent value="fixed-rate" className="space-y-6">
+          <TabsContent value="fixed-rate" className="space-y-4">
             {principleData && cofData && (
               <>
-                {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Gross Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(principleData.totalGrossCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(principleData.totalGrossCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Admin Fees</p>
-                    <p className="text-xl font-bold text-amber-600">
-                      {formatCurrency(principleData.totalAdminFees)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Admin Fees</p>
+                    <p className="text-lg font-semibold text-amber-600">{formatCurrency(principleData.totalAdminFees)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Net Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(principleData.totalNetCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Net Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(principleData.totalNetCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Total Gain</p>
-                    <p className="text-xl font-bold text-emerald-600">
-                      {formatCurrency(cofData.totalGainFund)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Total Gain</p>
+                    <p className="text-lg font-semibold text-emerald-600">{formatCurrency(cofData.totalGainFund)}</p>
                   </div>
                 </div>
 
-                {/* Accounts Table */}
-                <div className="bg-card rounded-2xl shadow-soft overflow-hidden">
-                  <div className="p-6 border-b border-border/50">
-                    <h3 className="font-bold text-foreground">Active Accounts</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {principleData.activeAccountsCount} fixed rate accounts
-                    </p>
+                <div className="bg-white border border-border rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-border">
+                    <h3 className="font-medium text-sm">Active Accounts</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="data-table">
                       <thead>
-                        <tr className="bg-muted/30">
+                        <tr>
                           <th>Account</th>
                           <th>Investor</th>
                           <th className="text-right">Net Capital</th>
@@ -634,21 +526,15 @@ export function AdminDashboardView({
                                 <div className="flex items-center gap-2">
                                   <span className="font-medium">{account.accountNumber}</span>
                                   {account.isRollover && (
-                                    <Badge className="bg-[#FFEB7A] text-[#192473] border-0 text-xs">
+                                    <Badge className="bg-[#FFEB7A] text-[#192473] border-0 text-[10px] px-1.5 py-0">
                                       Rollover
                                     </Badge>
                                   )}
                                 </div>
                               </td>
-                              <td className="text-muted-foreground">
-                                {account.investorEmail || "-"}
-                              </td>
-                              <td className="text-right font-medium">
-                                {formatCurrency(account.netCapital)}
-                              </td>
-                              <td className="text-right">
-                                {cofAccount ? `${(cofAccount.annualRate * 100).toFixed(1)}%` : "-"}
-                              </td>
+                              <td className="text-muted-foreground">{account.investorEmail || "-"}</td>
+                              <td className="text-right font-medium">{formatCurrency(account.netCapital)}</td>
+                              <td className="text-right">{cofAccount ? `${(cofAccount.annualRate * 100).toFixed(1)}%` : "-"}</td>
                               <td className="text-right font-medium text-emerald-600">
                                 {cofAccount ? formatCurrency(cofAccount.totalGain) : "-"}
                               </td>
@@ -657,90 +543,61 @@ export function AdminDashboardView({
                         })}
                       </tbody>
                     </table>
-                    {principleData.accounts.length > 10 && (
-                      <div className="p-4 text-center border-t border-border/50">
-                        <p className="text-sm text-muted-foreground">
-                          Showing 10 of {principleData.accounts.length} accounts
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </>
             )}
           </TabsContent>
 
-          {/* Floating Rate Tab */}
-          <TabsContent value="floating-rate" className="space-y-6">
+          <TabsContent value="floating-rate" className="space-y-4">
             {floatingRatePrincipleData && (
               <>
-                {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Gross Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(floatingRatePrincipleData.totalGrossCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(floatingRatePrincipleData.totalGrossCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Admin Fees</p>
-                    <p className="text-xl font-bold text-amber-600">
-                      {formatCurrency(floatingRatePrincipleData.totalAdminFees)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Admin Fees</p>
+                    <p className="text-lg font-semibold text-amber-600">{formatCurrency(floatingRatePrincipleData.totalAdminFees)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Net Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(floatingRatePrincipleData.totalNetCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Net Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(floatingRatePrincipleData.totalNetCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Allocated Profit</p>
-                    <p className="text-xl font-bold text-emerald-600">
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Allocated Profit</p>
+                    <p className="text-lg font-semibold text-emerald-600">
                       {formatCurrency(floatingRateAllocatedProfitData?.floatingRateAllocatedProfit || 0)}
                     </p>
                   </div>
                 </div>
 
-                {/* Growth Performance */}
                 {floatingRateGrowthData && (
-                  <div className="bg-card rounded-2xl shadow-soft p-6">
-                    <h3 className="font-bold text-foreground mb-4">Growth Performance</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-muted/30 rounded-xl">
-                        <p className="text-xs text-muted-foreground font-medium mb-1">Performance %</p>
-                        <p className="text-lg font-bold text-foreground">
-                          {formatPercentage(floatingRateGrowthData.performancePercentage)}
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-emerald-50 rounded-xl">
-                        <p className="text-xs text-emerald-600 font-medium mb-1">Growth %</p>
-                        <p className="text-lg font-bold text-emerald-700">
-                          {formatPercentage(floatingRateGrowthData.growthPercentage)}
-                        </p>
-                      </div>
-                      <div className="text-center p-4 bg-[#192473]/5 rounded-xl">
-                        <p className="text-xs text-[#192473] font-medium mb-1">Calculation Rule</p>
-                        <p className="text-sm text-[#192473]">
-                          {floatingRateGrowthData.calculation.rule}
-                        </p>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white border border-border rounded-xl p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Performance %</p>
+                      <p className="text-lg font-semibold">{formatPercentage(floatingRateGrowthData.performancePercentage)}</p>
+                    </div>
+                    <div className="bg-white border border-border rounded-xl p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Growth %</p>
+                      <p className="text-lg font-semibold text-emerald-600">{formatPercentage(floatingRateGrowthData.growthPercentage)}</p>
+                    </div>
+                    <div className="bg-white border border-border rounded-xl p-4 text-center">
+                      <p className="text-xs text-muted-foreground mb-1">Rule</p>
+                      <p className="text-sm text-[#192473]">{floatingRateGrowthData.calculation.rule}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Accounts Table */}
-                <div className="bg-card rounded-2xl shadow-soft overflow-hidden">
-                  <div className="p-6 border-b border-border/50">
-                    <h3 className="font-bold text-foreground">Active Accounts</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {floatingRatePrincipleData.activeAccountsCount} floating rate accounts
-                    </p>
+                <div className="bg-white border border-border rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-border">
+                    <h3 className="font-medium text-sm">Active Accounts</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="data-table">
                       <thead>
-                        <tr className="bg-muted/30">
+                        <tr>
                           <th>Account</th>
                           <th>Investor</th>
                           <th className="text-right">Net Capital</th>
@@ -752,9 +609,7 @@ export function AdminDashboardView({
                           <tr key={account.id}>
                             <td className="font-medium">{account.accountNumber}</td>
                             <td className="text-muted-foreground">{account.investorEmail || "-"}</td>
-                            <td className="text-right font-medium">
-                              {formatCurrency(account.netCapital)}
-                            </td>
+                            <td className="text-right font-medium">{formatCurrency(account.netCapital)}</td>
                             <td className="text-right text-muted-foreground">
                               {format(new Date(account.transactionDate), "dd MMM yyyy")}
                             </td>
@@ -762,63 +617,42 @@ export function AdminDashboardView({
                         ))}
                       </tbody>
                     </table>
-                    {floatingRatePrincipleData.accounts.length > 10 && (
-                      <div className="p-4 text-center border-t border-border/50">
-                        <p className="text-sm text-muted-foreground">
-                          Showing 10 of {floatingRatePrincipleData.accounts.length} accounts
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </>
             )}
           </TabsContent>
 
-          {/* Installment Tab */}
-          <TabsContent value="installment" className="space-y-6">
+          <TabsContent value="installment" className="space-y-4">
             {installmentPrincipleData && installmentCoFData && (
               <>
-                {/* KPI Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Gross Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(installmentPrincipleData.totalGrossCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Gross Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(installmentPrincipleData.totalGrossCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Admin Fees</p>
-                    <p className="text-xl font-bold text-amber-600">
-                      {formatCurrency(installmentPrincipleData.totalAdminFees)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Admin Fees</p>
+                    <p className="text-lg font-semibold text-amber-600">{formatCurrency(installmentPrincipleData.totalAdminFees)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Net Capital</p>
-                    <p className="text-xl font-bold text-foreground">
-                      {formatCurrency(installmentPrincipleData.totalNetCapital)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Net Capital</p>
+                    <p className="text-lg font-semibold">{formatCurrency(installmentPrincipleData.totalNetCapital)}</p>
                   </div>
-                  <div className="bg-card rounded-2xl shadow-soft p-5">
-                    <p className="text-sm text-muted-foreground mb-1">Gained Funds</p>
-                    <p className="text-xl font-bold text-emerald-600">
-                      {formatCurrency(installmentCoFData.totalGainedFunds)}
-                    </p>
+                  <div className="bg-white border border-border rounded-xl p-4">
+                    <p className="text-xs text-muted-foreground mb-1">Gained Funds</p>
+                    <p className="text-lg font-semibold text-emerald-600">{formatCurrency(installmentCoFData.totalGainedFunds)}</p>
                   </div>
                 </div>
 
-                {/* Accounts Table */}
-                <div className="bg-card rounded-2xl shadow-soft overflow-hidden">
-                  <div className="p-6 border-b border-border/50">
-                    <h3 className="font-bold text-foreground">Active Accounts</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {installmentPrincipleData.activeAccountsCount} installment accounts
-                    </p>
+                <div className="bg-white border border-border rounded-xl overflow-hidden">
+                  <div className="p-4 border-b border-border">
+                    <h3 className="font-medium text-sm">Active Accounts</h3>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="data-table">
                       <thead>
-                        <tr className="bg-muted/30">
+                        <tr>
                           <th>Account</th>
                           <th>Investor</th>
                           <th>Type</th>
@@ -835,30 +669,19 @@ export function AdminDashboardView({
                               <Badge
                                 className={
                                   account.investmentType === "principle"
-                                    ? "bg-[#192473] text-white border-0"
-                                    : "bg-muted text-muted-foreground border-0"
+                                    ? "bg-[#192473] text-white border-0 text-[10px]"
+                                    : "bg-muted text-muted-foreground border-0 text-[10px]"
                                 }
                               >
                                 {account.investmentType === "principle" ? "Principle" : "Interest Only"}
                               </Badge>
                             </td>
-                            <td className="text-right font-medium">
-                              {formatCurrency(account.netCapital)}
-                            </td>
-                            <td className="text-right text-emerald-600">
-                              {formatCurrency(account.monthlyCof)}
-                            </td>
+                            <td className="text-right font-medium">{formatCurrency(account.netCapital)}</td>
+                            <td className="text-right text-emerald-600">{formatCurrency(account.monthlyCof)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                    {installmentPrincipleData.accounts.length > 10 && (
-                      <div className="p-4 text-center border-t border-border/50">
-                        <p className="text-sm text-muted-foreground">
-                          Showing 10 of {installmentPrincipleData.accounts.length} accounts
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </>

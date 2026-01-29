@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
+import type { FundAllocation } from "@/features/fund-allocations/actions/get-fund-allocations";
 import { DownloadPdfButton } from "@/features/reports/components/download-pdf-button";
 import Link from "next/link";
 import {
@@ -21,6 +22,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  Building2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -39,6 +41,17 @@ import {
   Legend,
 } from "recharts";
 
+interface FundAllocationsSummary {
+  totalAum: number;
+  totalAllocations: number;
+  allocations: FundAllocation[];
+}
+
+interface VCPerformanceData {
+  date: Date;
+  aum: number;
+}
+
 interface InvestorSummaryViewProps {
   user: {
     id: string;
@@ -46,12 +59,16 @@ interface InvestorSummaryViewProps {
     [key: string]: any;
   };
   summary: ComprehensiveInvestorSummary | null;
+  fundAllocations: FundAllocationsSummary | null;
+  vcPerformance: VCPerformanceData[];
   error?: string;
 }
 
 export function InvestorSummaryView({
   user,
   summary,
+  fundAllocations,
+  vcPerformance,
   error,
 }: InvestorSummaryViewProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -91,19 +108,18 @@ export function InvestorSummaryView({
     return formatCurrency(amount);
   };
 
-  // Generate mock AUM performance data based on actual investment values
-  const generatePerformanceData = () => {
-    if (!summary) return [];
-    const baseValue = summary.totalNetInvestedFund;
-    const currentValue = summary.totalNetPresentValue;
-    const months = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const growthRate = (currentValue - baseValue) / baseValue / 6;
+  // Format real VC performance data for the chart
+  const formatPerformanceData = () => {
+    if (!vcPerformance || vcPerformance.length === 0) return [];
 
-    return months.map((month, index) => ({
-      month,
-      aum: Math.round(baseValue * (1 + growthRate * (index + 1))),
-      invested: Math.round(baseValue * (1 + (index * 0.02))),
-    }));
+    return vcPerformance.map((record) => {
+      const date = new Date(record.date);
+      const month = date.toLocaleDateString("en-US", { month: "short" });
+      return {
+        month,
+        aum: record.aum,
+      };
+    });
   };
 
   // Generate portfolio allocation data
@@ -136,7 +152,7 @@ export function InvestorSummaryView({
     return data;
   };
 
-  const performanceData = generatePerformanceData();
+  const performanceData = formatPerformanceData();
   const portfolioAllocation = getPortfolioAllocation();
   const COLORS = ["#192473", "#10b981", "#FFEB7A", "#f59e0b"];
 
@@ -270,90 +286,112 @@ export function InvestorSummaryView({
             </div>
           </div>
 
-          {/* Investment Performance Chart (AUM) */}
+          {/* Total Company AUM Card */}
+          {fundAllocations && (
+            <div className="relative overflow-hidden rounded-2xl p-6 bg-gradient-to-br from-[#192473] via-[#1e2d8a] to-[#2a3a9e] text-white shadow-soft-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-white/70 uppercase tracking-wide mb-2">
+                    Total Company AUM
+                  </p>
+                  <p className="text-3xl font-bold mb-1">
+                    {formatCompactCurrency(fundAllocations.totalAum)}
+                  </p>
+                  <p className="text-sm text-white/60">
+                    {fundAllocations.totalAllocations} portfolio companies
+                  </p>
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <Building2 className="w-8 h-8 text-white" />
+                </div>
+              </div>
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 rounded-full bg-white/5" />
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 rounded-full bg-white/5" />
+            </div>
+          )}
+
+          {/* Company AUM Performance Chart */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* AUM Performance Chart */}
             <div className="lg:col-span-2 bg-card rounded-2xl shadow-soft p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-foreground">Investment Performance (AUM)</h3>
-                  <p className="text-sm text-muted-foreground">Assets Under Management over time</p>
+                  <h3 className="text-lg font-semibold text-foreground">Company AUM Performance</h3>
+                  <p className="text-sm text-muted-foreground">Total Assets Under Management over time</p>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200">
-                  <ArrowUpRight className="w-4 h-4 text-emerald-600" />
-                  <span className="text-sm font-medium text-emerald-600">
-                    {formatPercent(summary.totalGainLossPercentage)}
-                  </span>
-                </div>
+                {fundAllocations && (
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Current Total</p>
+                    <p className="text-lg font-bold text-[#192473]">
+                      {formatCompactCurrency(fundAllocations.totalAum)}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorAum" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#192473" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#192473" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#FFEB7A" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#FFEB7A" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#5a6785", fontSize: 12 }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: "#5a6785", fontSize: 12 }}
-                      tickFormatter={(value) => formatCompactCurrency(value)}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: "#fff",
-                        border: "1px solid #e2e8f0",
-                        borderRadius: "12px",
-                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                      }}
-                      formatter={(value: number) => [formatCurrency(value), ""]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="aum"
-                      stroke="#192473"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorAum)"
-                      name="Current AUM"
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="invested"
-                      stroke="#FFEB7A"
-                      strokeWidth={2}
-                      fillOpacity={1}
-                      fill="url(#colorInvested)"
-                      name="Invested Amount"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              {performanceData.length > 0 ? (
+                <>
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={performanceData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorAum" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#192473" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#192473" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                        <XAxis
+                          dataKey="month"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "#5a6785", fontSize: 12 }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: "#5a6785", fontSize: 12 }}
+                          tickFormatter={(value) => formatCompactCurrency(value)}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#fff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "12px",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                          }}
+                          formatter={(value: number) => [formatCurrency(value), ""]}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="aum"
+                          stroke="#192473"
+                          strokeWidth={2}
+                          fillOpacity={1}
+                          fill="url(#colorAum)"
+                          name="Company AUM"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
 
-              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border/50">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#192473]" />
-                  <span className="text-sm text-muted-foreground">Current AUM</span>
+                  <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-[#192473]" />
+                      <span className="text-sm text-muted-foreground">Company AUM</span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="h-72 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+                      <BarChart3 className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm text-muted-foreground">No AUM performance data available</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#FFEB7A]" />
-                  <span className="text-sm text-muted-foreground">Invested Amount</span>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Portfolio Allocation */}
@@ -447,6 +485,64 @@ export function InvestorSummaryView({
               </p>
             </div>
           </div>
+
+          {/* Company AUM / Fund Allocations */}
+          {fundAllocations && fundAllocations.allocations.length > 0 && (
+            <div className="bg-card rounded-2xl shadow-soft overflow-hidden">
+              <div className="p-6 border-b border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-[#192473]" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Company AUM</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Portfolio company allocations - {fundAllocations.totalAllocations} companies
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Total AUM</p>
+                    <p className="text-xl font-bold text-[#192473]">
+                      {formatCompactCurrency(fundAllocations.totalAum)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="space-y-3">
+                  {fundAllocations.allocations.slice(0, 6).map((allocation) => (
+                    <div
+                      key={allocation.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">{allocation.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {allocation.description || "No description"}
+                        </p>
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="font-semibold text-foreground">
+                          {formatCompactCurrency(allocation.aum)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {allocation.rate_label ||
+                            `${allocation.rate_type === "loan" ? "Loan" : "ROE"}: ${allocation.rate_value}%`}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {fundAllocations.allocations.length > 6 && (
+                  <p className="text-center text-sm text-muted-foreground mt-4">
+                    + {fundAllocations.allocations.length - 6} more companies
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Investment Type Breakdown */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

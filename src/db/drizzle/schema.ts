@@ -262,3 +262,16 @@ export const mutationsRelations = relations(mutations, ({ one }) => ({
     references: [accounts.id],
   }),
 }));
+
+// Fund Allocations table - Portfolio company allocations
+export const fundAllocations = pgTable("fund_allocations", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  aum: numeric("aum").notNull(),
+  rate_type: varchar("rate_type", { length: 50 }).notNull(), // 'loan' or 'roe'
+  rate_value: decimal("rate_value").notNull(),
+  rate_label: varchar("rate_label", { length: 100 }), // e.g., "Loan: 2% p.m." or "ROE: 29% (Fixed Income & Div.)"
+  created_at: timestamp("created_at", { withTimezone: true }).notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
+});

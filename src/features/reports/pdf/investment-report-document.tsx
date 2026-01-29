@@ -6,6 +6,7 @@ import { PerformanceChart } from "./pdf-components/performance-chart";
 import { FlatRateTable } from "./pdf-components/flat-rate-table";
 import { FloatingRateTable } from "./pdf-components/floating-rate-table";
 import { InstallmentTable } from "./pdf-components/installment-table";
+import { FundAllocationsTable } from "./pdf-components/fund-allocations-table";
 import { ReportFooter } from "./pdf-components/report-footer";
 import type { InvestorReportData } from "../actions/get-report-data";
 
@@ -39,6 +40,8 @@ export function InvestmentReportDocument({
         <FloatingRateTable investments={data.floatingRateInvestments} />
 
         <InstallmentTable investments={data.installmentInvestments} />
+
+        <FundAllocationsTable allocations={data.fundAllocations} />
 
         <ReportFooter generatedAt={reportDate} />
       </Page>

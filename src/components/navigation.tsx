@@ -11,13 +11,11 @@ import {
   Wallet,
   FileText,
   Users,
-  Settings,
   LogOut,
   ChevronDown,
   ChevronRight,
   Activity,
-  Bell,
-  Search,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +86,11 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       ],
     },
     {
+      label: "Fund Allocations",
+      href: "/admin/fund-allocations",
+      icon: Building2,
+    },
+    {
       label: "User Management",
       href: "/admin/user-management",
       icon: Users,
@@ -132,27 +135,25 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
 
   return (
     <>
-      {/* Fixed Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-64 sidebar flex flex-col z-50">
-        {/* Logo Section */}
-        <div className="p-6 border-b border-white/10">
-          <Link href="/" className="flex items-center gap-3">
-            {/* Logo Placeholder - Replace with actual logo */}
-            <div className="w-10 h-10 rounded-xl bg-[#FFEB7A] flex items-center justify-center overflow-hidden">
-              {/* TODO: Replace with <Image src="/logo.png" /> */}
-              <span className="text-lg font-bold text-[#192473]">G</span>
+      {/* Sidebar */}
+      <aside className="fixed left-0 top-0 h-screen w-60 sidebar flex flex-col z-50">
+        {/* Logo */}
+        <div className="p-5 border-b border-white/10">
+          <Link href={isAdmin ? "/admin/dashboard" : "/investor/summary"} className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#FFEB7A] flex items-center justify-center">
+              <span className="text-base font-bold text-[#192473]">G</span>
             </div>
-            <span className="text-xl font-semibold text-white tracking-tight">Galfa</span>
+            <span className="text-lg font-semibold text-white">Galfa</span>
           </Link>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="flex-1 py-6 px-4 overflow-y-auto scrollbar-thin">
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 px-4">
+        {/* Navigation */}
+        <nav className="flex-1 py-4 px-3 overflow-y-auto scrollbar-thin">
+          <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-3 px-3">
             Menu
           </p>
 
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {navItems.map((item) => (
               <li key={item.label}>
                 {item.children ? (
@@ -166,25 +167,23 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                           : "text-white/70 hover:text-white"
                       )}
                     >
-                      <item.icon className="w-5 h-5" />
-                      <span className="flex-1 text-sm font-medium">
-                        {item.label}
-                      </span>
+                      <item.icon className="w-4 h-4" />
+                      <span className="flex-1">{item.label}</span>
                       {expandedMenus.includes(item.label.toLowerCase()) ? (
-                        <ChevronDown className="w-4 h-4" />
+                        <ChevronDown className="w-3.5 h-3.5" />
                       ) : (
-                        <ChevronRight className="w-4 h-4" />
+                        <ChevronRight className="w-3.5 h-3.5" />
                       )}
                     </button>
 
                     {expandedMenus.includes(item.label.toLowerCase()) && (
-                      <ul className="mt-1 ml-4 pl-4 border-l border-white/10 space-y-1">
+                      <ul className="mt-1 ml-3 pl-4 border-l border-white/10 space-y-0.5">
                         {item.children.map((child) => (
                           <li key={child.href}>
                             <Link
                               href={child.href}
                               className={cn(
-                                "sidebar-item text-sm",
+                                "sidebar-item text-sm py-2",
                                 isActiveRoute(child.href)
                                   ? "active"
                                   : "text-white/60 hover:text-white"
@@ -207,46 +206,27 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                         : "text-white/70 hover:text-white"
                     )}
                   >
-                    <item.icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{item.label}</span>
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.label}</span>
                   </Link>
                 )}
               </li>
             ))}
           </ul>
-
-          {/* Bottom Section */}
-          <div className="mt-8 pt-6 border-t border-white/10">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 px-4">
-              Account
-            </p>
-
-            <ul className="space-y-1">
-              <li>
-                <Link
-                  href="/"
-                  className="sidebar-item text-white/70 hover:text-white"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="text-sm font-medium">Settings</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
         </nav>
 
-        {/* User Profile & Sign Out */}
-        <div className="p-4 border-t border-white/10">
-          <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-10 h-10 rounded-full bg-[#FFEB7A] flex items-center justify-center text-[#192473] font-bold text-sm">
+        {/* User section */}
+        <div className="p-3 border-t border-white/10">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-[#FFEB7A] flex items-center justify-center text-[#192473] font-semibold text-sm">
               {user?.email?.charAt(0).toUpperCase() || "U"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-white truncate">
                 {user?.email?.split("@")[0] || "User"}
               </p>
-              <p className="text-xs text-white/50 truncate">
-                {isAdmin ? "Administrator" : "Investor"}
+              <p className="text-xs text-white/50">
+                {isAdmin ? "Admin" : "Investor"}
               </p>
             </div>
           </div>
@@ -254,58 +234,31 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
           <button
             onClick={handleSignOut}
             disabled={loading}
-            className="sidebar-item w-full mt-2 text-red-300 hover:text-red-200 hover:bg-red-500/10"
+            className="sidebar-item w-full text-red-300 hover:text-red-200 hover:bg-red-500/10"
           >
-            <LogOut className="w-5 h-5" />
-            <span className="text-sm font-medium">
-              {loading ? "Signing Out..." : "Sign Out"}
-            </span>
+            <LogOut className="w-4 h-4" />
+            <span>{loading ? "Signing out..." : "Sign out"}</span>
           </button>
         </div>
       </aside>
 
-      {/* Top Header Bar (for search and notifications) */}
-      <header className="fixed top-0 left-64 right-0 h-16 bg-white border-b border-border/50 flex items-center justify-between px-8 z-40">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-foreground">
-            Welcome, {user?.email?.split("@")[0] || "User"}!
+      {/* Top header */}
+      <header className="fixed top-0 left-60 right-0 h-14 bg-white border-b border-border flex items-center justify-between px-6 z-40">
+        <div className="flex items-center gap-3">
+          <h1 className="text-base font-semibold text-foreground">
+            Welcome back, {user?.email?.split("@")[0] || "User"}
           </h1>
           {isAdmin && (
-            <span className="px-3 py-1 text-xs font-semibold bg-[#192473] text-white rounded-full">
+            <span className="px-2 py-0.5 text-[10px] font-medium bg-[#192473] text-white rounded">
               Admin
             </span>
           )}
         </div>
-
-        <div className="flex items-center gap-4">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search your items"
-              className="w-64 h-10 pl-10 pr-4 text-sm bg-muted/50 border border-border/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-
-          {/* Notification Bell */}
-          <button className="relative p-2 hover:bg-muted rounded-xl transition-colors">
-            <Bell className="w-5 h-5 text-muted-foreground" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-[#FFEB7A] rounded-full" />
-          </button>
-
-          {/* User Avatar */}
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#192473] to-[#2a3a9e] flex items-center justify-center">
-            <span className="text-sm font-bold text-white">
-              {user?.email?.charAt(0).toUpperCase() || "U"}
-            </span>
-          </div>
-        </div>
       </header>
 
-      {/* Error Banner */}
+      {/* Error banner */}
       {authError && (
-        <div className="fixed top-16 left-64 right-0 bg-red-50 border-b border-red-200 px-8 py-3 z-30">
+        <div className="fixed top-14 left-60 right-0 bg-red-50 border-b border-red-200 px-6 py-2 z-30">
           <p className="text-sm text-red-700">
             Authentication Error: {authError}
           </p>

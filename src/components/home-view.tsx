@@ -8,12 +8,9 @@ import Link from "next/link";
 import {
   TrendingUp,
   TrendingDown,
-  Wallet,
   PiggyBank,
   BarChart3,
   FileText,
-  Users,
-  Settings,
   ArrowRight,
   Percent,
   Calendar,

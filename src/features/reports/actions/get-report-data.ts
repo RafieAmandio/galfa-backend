@@ -4,6 +4,7 @@ import { getInvestorSummary } from "@/features/investor/actions/get-investor-sum
 import { getInvestorFloatingRateInvestments } from "@/features/floating-rate/actions/get-investor-floating-rate-investments";
 import { getInvestorInstallmentInvestments } from "@/features/installment/actions/get-installments";
 import { getAllVCPerformance } from "@/features/investments/actions/get-all-vc-performance";
+import { getFundAllocations } from "@/features/fund-allocations/actions/get-fund-allocations";
 
 interface FlatRateInvestmentData {
   accountNumber: string;
@@ -44,6 +45,16 @@ export interface VCPerformanceDataPoint {
   profitTaken: number;
 }
 
+export interface FundAllocationData {
+  id: number;
+  name: string;
+  description: string | null;
+  aum: number;
+  rateType: string;
+  rateValue: number;
+  rateLabel: string | null;
+}
+
 export interface InvestorReportData {
   email: string;
   summary: {
@@ -59,6 +70,7 @@ export interface InvestorReportData {
   floatingRateInvestments: FloatingRateInvestmentData[];
   installmentInvestments: InstallmentInvestmentData[];
   vcPerformance: VCPerformanceDataPoint[];
+  fundAllocations: FundAllocationData[];
 }
 
 export async function getReportData(
@@ -66,12 +78,13 @@ export async function getReportData(
 ): Promise<{ success: boolean; data?: InvestorReportData; error?: string }> {
   try {
     // Fetch all investment data in parallel
-    const [flatRateData, floatingRateResult, installmentData, vcPerformanceResult] =
+    const [flatRateData, floatingRateResult, installmentData, vcPerformanceResult, fundAllocationsResult] =
       await Promise.all([
         getInvestorSummary(investorEmail),
         getInvestorFloatingRateInvestments(investorEmail),
         getInvestorInstallmentInvestments(investorEmail),
         getAllVCPerformance(),
+        getFundAllocations(),
       ]);
 
     // Process flat rate investments
@@ -128,6 +141,20 @@ export async function getReportData(
               aum: record.aum,
               profitTaken: record.profitTaken,
             }))
+        : [];
+
+    // Process fund allocations
+    const fundAllocations: FundAllocationData[] =
+      fundAllocationsResult.success && fundAllocationsResult.data
+        ? fundAllocationsResult.data.map((allocation) => ({
+            id: allocation.id,
+            name: allocation.name,
+            description: allocation.description,
+            aum: allocation.aum,
+            rateType: allocation.rate_type,
+            rateValue: allocation.rate_value,
+            rateLabel: allocation.rate_label,
+          }))
         : [];
 
     // Calculate summary totals
@@ -194,6 +221,7 @@ export async function getReportData(
       floatingRateInvestments,
       installmentInvestments,
       vcPerformance,
+      fundAllocations,
     };
 
     return { success: true, data: reportData };

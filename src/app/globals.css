@@ -3,8 +3,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Modern sans-serif font setup */
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -43,318 +41,127 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-
-  /* Custom Galfa brand colors */
-  --color-galfa-navy: #192473;
-  --color-galfa-gold: #FFEB7A;
-  --color-galfa-navy-light: #2a3a9e;
-  --color-galfa-navy-dark: #0f1647;
-  --color-galfa-gold-light: #fff5b3;
-  --color-galfa-gold-dark: #e6d356;
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 
-  /* Primary: Dark Navy Blue #192473 */
+  /* Primary: Dark Navy Blue */
   --primary: #192473;
   --primary-foreground: #ffffff;
 
-  /* Background and surface colors */
-  --background: #f8f9fc;
-  --foreground: #0f1729;
+  /* Clean, minimal backgrounds */
+  --background: #fafbfc;
+  --foreground: #111827;
 
-  /* Card colors - clean white with subtle shadows */
+  /* Card: Pure white */
   --card: #ffffff;
-  --card-foreground: #0f1729;
+  --card-foreground: #111827;
 
   /* Popover */
   --popover: #ffffff;
-  --popover-foreground: #0f1729;
+  --popover-foreground: #111827;
 
-  /* Secondary - Light gray/blue tint */
-  --secondary: #eef1f8;
+  /* Secondary */
+  --secondary: #f3f4f6;
   --secondary-foreground: #192473;
 
-  /* Muted - Softer backgrounds */
-  --muted: #f1f4f9;
-  --muted-foreground: #5a6785;
+  /* Muted */
+  --muted: #f9fafb;
+  --muted-foreground: #6b7280;
 
-  /* Accent - Golden Yellow #FFEB7A */
+  /* Accent */
   --accent: #FFEB7A;
-  --accent-foreground: #0f1729;
+  --accent-foreground: #111827;
 
-  /* Destructive - Red */
-  --destructive: #dc2626;
+  /* Destructive */
+  --destructive: #ef4444;
 
-  /* Border and input */
-  --border: #e2e8f0;
-  --input: #e2e8f0;
+  /* Border */
+  --border: #e5e7eb;
+  --input: #e5e7eb;
   --ring: #192473;
 
-  /* Chart colors - Galfa themed */
+  /* Chart colors */
   --chart-1: #192473;
   --chart-2: #FFEB7A;
   --chart-3: #10b981;
   --chart-4: #f59e0b;
   --chart-5: #ef4444;
 
-  /* Sidebar - Dark navy theme */
+  /* Sidebar */
   --sidebar: #192473;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #FFEB7A;
-  --sidebar-primary-foreground: #0f1729;
-  --sidebar-accent: rgba(255, 235, 122, 0.15);
+  --sidebar-primary-foreground: #111827;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(255, 255, 255, 0.1);
   --sidebar-ring: #FFEB7A;
-
-  /* Custom semantic colors */
-  --success: #10b981;
-  --success-foreground: #ffffff;
-  --warning: #f59e0b;
-  --warning-foreground: #0f1729;
-  --info: #3b82f6;
-  --info-foreground: #ffffff;
-
 }
 
 .dark {
   --primary: #FFEB7A;
-  --primary-foreground: #0f1729;
-
+  --primary-foreground: #111827;
   --background: #0a0f1f;
-  --foreground: #f8f9fc;
-
-  --card: #141b2d;
-  --card-foreground: #f8f9fc;
-
-  --popover: #141b2d;
-  --popover-foreground: #f8f9fc;
-
-  --secondary: #1e2742;
-  --secondary-foreground: #f8f9fc;
-
-  --muted: #1e2742;
-  --muted-foreground: #94a3b8;
-
+  --foreground: #f9fafb;
+  --card: #111827;
+  --card-foreground: #f9fafb;
+  --popover: #111827;
+  --popover-foreground: #f9fafb;
+  --secondary: #1f2937;
+  --secondary-foreground: #f9fafb;
+  --muted: #1f2937;
+  --muted-foreground: #9ca3af;
   --accent: #192473;
-  --accent-foreground: #f8f9fc;
-
+  --accent-foreground: #f9fafb;
   --destructive: #ef4444;
-
   --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.15);
+  --input: rgba(255, 255, 255, 0.1);
   --ring: #FFEB7A;
-
-  --chart-1: #FFEB7A;
-  --chart-2: #192473;
-  --chart-3: #10b981;
-  --chart-4: #f59e0b;
-  --chart-5: #ef4444;
-
   --sidebar: #0a0f1f;
-  --sidebar-foreground: #f8f9fc;
-  --sidebar-primary: #FFEB7A;
-  --sidebar-primary-foreground: #0f1729;
-  --sidebar-accent: rgba(255, 235, 122, 0.1);
-  --sidebar-accent-foreground: #f8f9fc;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
-  --sidebar-ring: #FFEB7A;
+  --sidebar-foreground: #f9fafb;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
+    @apply bg-background text-foreground antialiased;
   }
 }
 
-/* Custom utility classes for Galfa brand */
-@layer utilities {
-  .bg-galfa-navy {
-    background-color: #192473;
-  }
-
-  .bg-galfa-gold {
-    background-color: #FFEB7A;
-  }
-
-  .text-galfa-navy {
-    color: #192473;
-  }
-
-  .text-galfa-gold {
-    color: #FFEB7A;
-  }
-
-  .border-galfa-navy {
-    border-color: #192473;
-  }
-
-  .border-galfa-gold {
-    border-color: #FFEB7A;
-  }
-
-  /* Gradient backgrounds */
-  .bg-galfa-gradient {
-    background: linear-gradient(135deg, #192473 0%, #0f1647 100%);
-  }
-
-  .bg-galfa-gradient-gold {
-    background: linear-gradient(135deg, #FFEB7A 0%, #e6d356 100%);
-  }
-
-  .bg-galfa-gradient-light {
-    background: linear-gradient(135deg, #f8f9fc 0%, #eef1f8 100%);
-  }
-
-  /* Card gradient styles like the reference */
-  .card-gradient-navy {
-    background: linear-gradient(135deg, #192473 0%, #2a3a9e 100%);
-  }
-
-  .card-gradient-gold {
-    background: linear-gradient(135deg, #FFEB7A 0%, #fff5b3 100%);
-  }
-
-  .card-gradient-success {
-    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  }
-
-  .card-gradient-warning {
-    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-  }
-
-  .card-gradient-danger {
-    background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-  }
-
-  /* Glassmorphism effect */
-  .glass {
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  .glass-dark {
-    background: rgba(25, 36, 115, 0.9);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-  }
-
-  /* Smooth shadows */
-  .shadow-soft {
-    box-shadow: 0 4px 20px rgba(25, 36, 115, 0.08);
-  }
-
-  .shadow-soft-lg {
-    box-shadow: 0 8px 30px rgba(25, 36, 115, 0.12);
-  }
-
-  .shadow-gold {
-    box-shadow: 0 4px 20px rgba(255, 235, 122, 0.3);
-  }
-
-  /* Animation utilities */
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
-  }
-
-  @keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
-  }
-
-  .animate-pulse-soft {
-    animation: pulse-soft 2s ease-in-out infinite;
-  }
-
-  @keyframes pulse-soft {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
-  }
-
-  /* Hover transitions */
-  .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .hover-lift:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(25, 36, 115, 0.15);
-  }
-
-  /* Custom scrollbar */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f1f4f9;
-    border-radius: 3px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #192473;
-    border-radius: 3px;
-  }
-
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #2a3a9e;
-  }
-}
-
-/* Sidebar specific styles */
+/* Sidebar */
 .sidebar {
-  background: linear-gradient(180deg, #192473 0%, #0f1647 100%);
+  background: #192473;
 }
 
 .sidebar-item {
-  @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200;
+  @apply flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors text-sm;
 }
 
 .sidebar-item:hover {
-  background: rgba(255, 235, 122, 0.1);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sidebar-item.active {
   background: #ffffff;
   color: #192473;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-item.active svg {
   color: #192473;
 }
 
-/* Stat card mini chart decoration */
-.stat-card-chart {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 60px;
-  height: 30px;
-  opacity: 0.6;
-}
-
-/* Table styles */
+/* Data table */
 .data-table {
   @apply w-full;
 }
 
 .data-table th {
-  @apply text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider py-3 px-4;
+  @apply text-left text-xs font-medium text-muted-foreground uppercase tracking-wide py-3 px-4 bg-muted/50;
 }
 
 .data-table td {
@@ -362,34 +169,67 @@
 }
 
 .data-table tbody tr {
-  @apply border-b border-border/50 transition-colors;
+  @apply border-b border-border transition-colors;
 }
 
 .data-table tbody tr:hover {
-  @apply bg-muted/50;
+  @apply bg-muted/30;
 }
 
-/* Badge variants */
-.badge-success {
-  @apply bg-emerald-100 text-emerald-700 border-emerald-200;
+/* Utility classes */
+.shadow-soft {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.badge-warning {
-  @apply bg-amber-100 text-amber-700 border-amber-200;
+.shadow-soft-lg {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.04), 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-.badge-danger {
-  @apply bg-red-100 text-red-700 border-red-200;
+.hover-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.badge-info {
-  @apply bg-blue-100 text-blue-700 border-blue-200;
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-.badge-navy {
-  @apply bg-[#192473] text-white border-[#192473];
+/* Gradient cards */
+.card-gradient-navy {
+  background: linear-gradient(135deg, #192473 0%, #1e2d8f 100%);
 }
 
-.badge-gold {
-  @apply bg-[#FFEB7A] text-[#0f1729] border-[#e6d356];
+.card-gradient-gold {
+  background: linear-gradient(135deg, #FFEB7A 0%, #fff2a8 100%);
+}
+
+.card-gradient-success {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+}
+
+.card-gradient-warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+}
+
+.card-gradient-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+}
+
+/* Scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

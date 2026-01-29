@@ -1,5 +1,6 @@
 import { createServerClient } from "@/db/supabase/server";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
+import { redirect } from "next/navigation";
 import { HomeView } from "@/components/home-view";
 import { getComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
 
@@ -18,7 +19,12 @@ export default async function Home() {
     const adminCheck = await checkAdminAccess();
     isAdmin = adminCheck.isAdmin;
 
-    // Fetch portfolio summary for authenticated users
+    // If user is admin, redirect to admin dashboard
+    if (isAdmin) {
+      redirect("/admin/dashboard");
+    }
+
+    // Fetch portfolio summary for authenticated investors
     if (user.email) {
       portfolioSummary = await getComprehensiveInvestorSummary(user.email);
     }
