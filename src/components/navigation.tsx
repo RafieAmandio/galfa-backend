@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { User } from "@supabase/supabase-js";
@@ -139,11 +140,15 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       <aside className="fixed left-0 top-0 h-screen w-60 sidebar flex flex-col z-50">
         {/* Logo */}
         <div className="p-5 border-b border-white/10">
-          <Link href={isAdmin ? "/admin/dashboard" : "/investor/summary"} className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#FFEB7A] flex items-center justify-center">
-              <span className="text-base font-bold text-[#192473]">G</span>
-            </div>
-            <span className="text-lg font-semibold text-white">Galfa</span>
+          <Link href={isAdmin ? "/admin/dashboard" : "/investor/summary"} className="flex items-center">
+            <Image
+              src="/logo_galfa.png"
+              alt="Galfa Logo"
+              width={120}
+              height={40}
+              className="object-contain"
+              priority
+            />
           </Link>
         </div>
 
