@@ -9,6 +9,7 @@ interface CreateVCPerformanceRequest {
   date: Date;
   aum: number;
   profitTaken: number;
+  ihsgValue?: number;
 }
 
 interface CreateVCPerformanceResponse {
@@ -18,6 +19,7 @@ interface CreateVCPerformanceResponse {
     date: Date;
     aum: number;
     profitTaken: number;
+    ihsgValue: number | null;
   };
   message: string;
 }
@@ -27,7 +29,7 @@ export async function createVCPerformance(
 ): Promise<CreateVCPerformanceResponse> {
   try {
     const db = createDrizzleConnection();
-    const { date, aum, profitTaken } = request;
+    const { date, aum, profitTaken, ihsgValue } = request;
 
     // Validation
     if (!date) {
@@ -83,6 +85,7 @@ export async function createVCPerformance(
         date,
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
+        ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
         created_at: new Date(),
         updated_at: new Date(),
       })
@@ -91,6 +94,7 @@ export async function createVCPerformance(
         date: vcPerformance.date,
         aum: vcPerformance.aum,
         profitTaken: vcPerformance.profitTaken,
+        ihsgValue: vcPerformance.ihsgValue,
       });
 
     return {
@@ -100,6 +104,7 @@ export async function createVCPerformance(
         date: newRecord.date,
         aum: Number(newRecord.aum),
         profitTaken: Number(newRecord.profitTaken),
+        ihsgValue: newRecord.ihsgValue ? Number(newRecord.ihsgValue) : null,
       },
       message: `Successfully created performance record for ${format(
         monthStart,

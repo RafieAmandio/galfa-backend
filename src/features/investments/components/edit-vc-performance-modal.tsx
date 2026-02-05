@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Edit, DollarSign, TrendingUp } from "lucide-react";
+import { CalendarIcon, Edit, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { updateVCPerformance } from "../actions/update-vc-performance";
@@ -27,6 +27,7 @@ interface VCPerformanceRecord {
   date: Date;
   aum: number;
   profitTaken: number;
+  ihsgValue?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +53,7 @@ export function EditVCPerformanceModal({
   );
   const [aum, setAum] = useState(record.aum.toString());
   const [profitTaken, setProfitTaken] = useState(record.profitTaken.toString());
+  const [ihsgValue, setIhsgValue] = useState(record.ihsgValue?.toString() || "");
 
   // Reset form when record changes or modal opens
   useEffect(() => {
@@ -59,6 +61,7 @@ export function EditVCPerformanceModal({
       setSelectedDate(new Date(record.date));
       setAum(record.aum.toString());
       setProfitTaken(record.profitTaken.toString());
+      setIhsgValue(record.ihsgValue?.toString() || "");
       setError(null);
     }
   }, [open, record]);
@@ -67,6 +70,7 @@ export function EditVCPerformanceModal({
     setSelectedDate(new Date(record.date));
     setAum(record.aum.toString());
     setProfitTaken(record.profitTaken.toString());
+    setIhsgValue(record.ihsgValue?.toString() || "");
     setError(null);
   };
 
@@ -81,6 +85,10 @@ export function EditVCPerformanceModal({
 
   const handleProfitTakenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProfitTaken(e.target.value);
+  };
+
+  const handleIhsgValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIhsgValue(e.target.value);
   };
 
   const validateForm = (): string | null => {
@@ -120,6 +128,7 @@ export function EditVCPerformanceModal({
         date: selectedDate!,
         aum: parseFloat(aum) || 0,
         profitTaken: parseFloat(profitTaken) || 0,
+        ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
       });
 
       if (result.success) {
@@ -241,6 +250,28 @@ export function EditVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               Total profit realized (in IDR)
+            </p>
+          </div>
+
+          {/* IHSG Value */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="ihsgValue"
+              className="flex items-center space-x-1"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>IHSG Index Value (Optional)</span>
+            </Label>
+            <Input
+              id="ihsgValue"
+              type="number"
+              step="0.01"
+              placeholder="Enter IHSG index value..."
+              value={ihsgValue}
+              onChange={handleIhsgValueChange}
+            />
+            <p className="text-xs text-gray-500">
+              IHSG closing value for comparison chart
             </p>
           </div>
 

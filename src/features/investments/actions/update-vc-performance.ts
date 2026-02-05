@@ -10,6 +10,7 @@ interface UpdateVCPerformanceRequest {
   date: Date;
   aum: number;
   profitTaken: number;
+  ihsgValue?: number;
 }
 
 interface UpdateVCPerformanceResponse {
@@ -19,6 +20,7 @@ interface UpdateVCPerformanceResponse {
     date: Date;
     aum: number;
     profitTaken: number;
+    ihsgValue: number | null;
   };
   message: string;
 }
@@ -28,7 +30,7 @@ export async function updateVCPerformance(
 ): Promise<UpdateVCPerformanceResponse> {
   try {
     const db = createDrizzleConnection();
-    const { id, date, aum, profitTaken } = request;
+    const { id, date, aum, profitTaken, ihsgValue } = request;
 
     // Validation
     if (!date) {
@@ -102,6 +104,7 @@ export async function updateVCPerformance(
         date,
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
+        ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
         updated_at: new Date(),
       })
       .where(eq(vcPerformance.id, id))
@@ -110,6 +113,7 @@ export async function updateVCPerformance(
         date: vcPerformance.date,
         aum: vcPerformance.aum,
         profitTaken: vcPerformance.profitTaken,
+        ihsgValue: vcPerformance.ihsgValue,
       });
 
     return {
@@ -119,6 +123,7 @@ export async function updateVCPerformance(
         date: updatedRecord.date,
         aum: Number(updatedRecord.aum),
         profitTaken: Number(updatedRecord.profitTaken),
+        ihsgValue: updatedRecord.ihsgValue ? Number(updatedRecord.ihsgValue) : null,
       },
       message: `Successfully updated performance record for ${format(
         monthStart,

@@ -3,6 +3,7 @@ import { styles } from "./pdf-styles";
 import { ReportHeader } from "./pdf-components/report-header";
 import { PortfolioSummary } from "./pdf-components/portfolio-summary";
 import { PerformanceChart } from "./pdf-components/performance-chart";
+import { IHSGComparisonChart } from "./pdf-components/ihsg-comparison-chart";
 import { FlatRateTable } from "./pdf-components/flat-rate-table";
 import { FloatingRateTable } from "./pdf-components/floating-rate-table";
 import { InstallmentTable } from "./pdf-components/installment-table";
@@ -35,6 +36,8 @@ export function InvestmentReportDocument({
         />
 
         <PerformanceChart data={data.vcPerformance} />
+
+        <IHSGComparisonChart data={data.vcPerformance} />
 
         <FlatRateTable investments={data.flatRateInvestments} />
 

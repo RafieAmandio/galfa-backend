@@ -51,6 +51,7 @@ export interface VCPerformanceDataPoint {
   date: Date;
   aum: number;
   profitTaken: number;
+  ihsgValue: number | null;
 }
 
 export interface FundAllocationData {
@@ -161,6 +162,7 @@ export async function getReportData(
               date: record.date,
               aum: record.aum,
               profitTaken: record.profitTaken,
+              ihsgValue: record.ihsgValue,
             }))
         : [];
 

@@ -135,6 +135,7 @@ export const vcPerformance = pgTable("vc_performance", {
   date: timestamp("date", { withTimezone: true }).notNull(),
   aum: numeric("aum").notNull(),
   profitTaken: numeric("profit_taken").notNull(),
+  ihsgValue: numeric("ihsg_value"), // IHSG index value for comparison
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

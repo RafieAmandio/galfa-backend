@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus, DollarSign, TrendingUp } from "lucide-react";
+import { CalendarIcon, Plus, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createVCPerformance } from "../actions/create-vc-performance";
@@ -41,11 +41,13 @@ export function CreateVCPerformanceModal({
   );
   const [aum, setAum] = useState("");
   const [profitTaken, setProfitTaken] = useState("");
+  const [ihsgValue, setIhsgValue] = useState("");
 
   const resetForm = () => {
     setSelectedDate(new Date());
     setAum("");
     setProfitTaken("");
+    setIhsgValue("");
     setError(null);
   };
 
@@ -60,6 +62,10 @@ export function CreateVCPerformanceModal({
 
   const handleProfitTakenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setProfitTaken(e.target.value);
+  };
+
+  const handleIhsgValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIhsgValue(e.target.value);
   };
 
   const validateForm = (): string | null => {
@@ -98,6 +104,7 @@ export function CreateVCPerformanceModal({
         date: selectedDate!,
         aum: parseFloat(aum) || 0,
         profitTaken: parseFloat(profitTaken) || 0,
+        ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
       });
 
       if (result.success) {
@@ -207,6 +214,28 @@ export function CreateVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               Total profit realized (in IDR)
+            </p>
+          </div>
+
+          {/* IHSG Value */}
+          <div className="space-y-2">
+            <Label
+              htmlFor="ihsgValue"
+              className="flex items-center space-x-1"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>IHSG Index Value (Optional)</span>
+            </Label>
+            <Input
+              id="ihsgValue"
+              type="number"
+              step="0.01"
+              placeholder="Enter IHSG index value..."
+              value={ihsgValue}
+              onChange={handleIhsgValueChange}
+            />
+            <p className="text-xs text-gray-500">
+              IHSG closing value for comparison chart
             </p>
           </div>
 

@@ -21,6 +21,7 @@ interface PerformanceRecord {
   date: Date;
   aum: number;
   profitTaken: number;
+  ihsgValue: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -240,6 +241,7 @@ export function PerformanceTable() {
                     Assets Under Management
                   </TableHead>
                   <TableHead className="text-right">Profit Taken</TableHead>
+                  <TableHead className="text-right">IHSG</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="w-[100px]">Status</TableHead>
@@ -274,6 +276,9 @@ export function PerformanceTable() {
                       </TableCell>
                       <TableCell className="text-right ">
                         {formatCurrency(record.profitTaken)}
+                      </TableCell>
+                      <TableCell className="text-right text-sm">
+                        {record.ihsgValue ? record.ihsgValue.toLocaleString("id-ID", { minimumFractionDigits: 2 }) : "-"}
                       </TableCell>
                       <TableCell className="text-sm text-gray-500">
                         {formatDateTime(record.createdAt)}
@@ -312,6 +317,7 @@ export function PerformanceTable() {
                   <TableCell className="text-right  font-bold text-green-600">
                     {formatCurrency(totals.totalProfitTaken)}
                   </TableCell>
+                  <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
