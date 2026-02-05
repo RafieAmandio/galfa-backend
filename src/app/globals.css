@@ -215,6 +215,10 @@
   background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
 }
 
+.bg-galfa-gradient {
+  background: linear-gradient(135deg, #192473 0%, #1e2d8f 100%);
+}
+
 /* Scrollbar */
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;
