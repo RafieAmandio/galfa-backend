@@ -25,7 +25,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { DashboardSkeleton } from "./dashboard-skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { getFloatingRatePrincipleByMonthQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-principle-by-month/query-options";
 import { getFloatingRateAllocatedProfitQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-allocated-profit/query-options";
 import { getFloatingRateGrowthPercentageQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage/query-options";
@@ -99,68 +99,51 @@ export function AdminDashboardView({
       : currentDate.getFullYear().toString()
   );
 
-  // Fetch all dashboard data
-  const { data: principleResult, isLoading: isPrincipleLoading } = useQuery(
-    getFixRatePrincipleByMonthQueryOptions(selectedMonth)
-  );
-  const { data: cofResult, isLoading: isCoFLoading } = useQuery(
-    getFixRateCoFByMonthQueryOptions(selectedMonth)
-  );
-  const { data: inflowResult, isLoading: isInflowLoading } = useQuery(
-    getInflowByMonthQueryOptions(selectedMonth)
-  );
-  const { data: outflowResult, isLoading: isOutflowLoading } = useQuery(
-    getOutflowByMonthQueryOptions(selectedMonth)
-  );
-  const { data: vcPerformanceResult, isLoading: isVCPerformanceLoading } =
-    useQuery(getVCPerformanceByMonthQueryOptions(selectedMonth));
-  const { data: grossProfitResult, isLoading: isGrossProfitLoading } = useQuery(
-    getGrossProfitByMonthQueryOptions(selectedMonth)
-  );
-  const {
-    data: installmentPrincipleResult,
-    isLoading: isInstallmentPrincipleLoading,
-  } = useQuery(getInstallmentPrincipleByMonthQueryOptions(selectedMonth));
-  const { data: installmentCoFResult, isLoading: isInstallmentCoFLoading } =
-    useQuery(getInstallmentCoFByMonthQueryOptions(selectedMonth));
-  const {
-    data: floatingRatePrincipleResult,
-    isLoading: isFloatingRatePrincipleLoading,
-  } = useQuery(getFloatingRatePrincipleByMonthQueryOptions(selectedMonth));
-  const {
-    data: floatingRateAllocatedProfitResult,
-    isLoading: isFloatingRateAllocatedProfitLoading,
-  } = useQuery(getFloatingRateAllocatedProfitQueryOptions(selectedMonth));
-  const {
-    data: floatingRateGrowthResult,
-    isLoading: isFloatingRateGrowthLoading,
-  } = useQuery(getFloatingRateGrowthPercentageQueryOptions(selectedMonth));
+  // Fetch all dashboard data in parallel using useQueries
+  const results = useQueries({
+    queries: [
+      getFixRatePrincipleByMonthQueryOptions(selectedMonth),
+      getFixRateCoFByMonthQueryOptions(selectedMonth),
+      getInflowByMonthQueryOptions(selectedMonth),
+      getOutflowByMonthQueryOptions(selectedMonth),
+      getVCPerformanceByMonthQueryOptions(selectedMonth),
+      getGrossProfitByMonthQueryOptions(selectedMonth),
+      getInstallmentPrincipleByMonthQueryOptions(selectedMonth),
+      getInstallmentCoFByMonthQueryOptions(selectedMonth),
+      getFloatingRatePrincipleByMonthQueryOptions(selectedMonth),
+      getFloatingRateAllocatedProfitQueryOptions(selectedMonth),
+      getFloatingRateGrowthPercentageQueryOptions(selectedMonth),
+    ],
+  });
 
-  const principleData = principleResult?.data || null;
-  const cofData = cofResult?.data || null;
-  const inflowData = inflowResult?.data || null;
-  const outflowData = outflowResult?.data || null;
-  const vcPerformanceData = vcPerformanceResult?.data || null;
-  const grossProfitData = grossProfitResult?.data || null;
-  const installmentPrincipleData = installmentPrincipleResult?.data || null;
-  const installmentCoFData = installmentCoFResult?.data || null;
-  const floatingRatePrincipleData = floatingRatePrincipleResult?.data || null;
-  const floatingRateAllocatedProfitData =
-    floatingRateAllocatedProfitResult?.data || null;
-  const floatingRateGrowthData = floatingRateGrowthResult?.data || null;
+  // Destructure results
+  const [
+    principleResult,
+    cofResult,
+    inflowResult,
+    outflowResult,
+    vcPerformanceResult,
+    grossProfitResult,
+    installmentPrincipleResult,
+    installmentCoFResult,
+    floatingRatePrincipleResult,
+    floatingRateAllocatedProfitResult,
+    floatingRateGrowthResult,
+  ] = results;
 
-  const isLoading =
-    isPrincipleLoading ||
-    isCoFLoading ||
-    isInflowLoading ||
-    isOutflowLoading ||
-    isVCPerformanceLoading ||
-    isGrossProfitLoading ||
-    isInstallmentPrincipleLoading ||
-    isInstallmentCoFLoading ||
-    isFloatingRatePrincipleLoading ||
-    isFloatingRateAllocatedProfitLoading ||
-    isFloatingRateGrowthLoading;
+  const principleData = principleResult?.data?.data || null;
+  const cofData = cofResult?.data?.data || null;
+  const inflowData = inflowResult?.data?.data || null;
+  const outflowData = outflowResult?.data?.data || null;
+  const vcPerformanceData = vcPerformanceResult?.data?.data || null;
+  const grossProfitData = grossProfitResult?.data?.data || null;
+  const installmentPrincipleData = installmentPrincipleResult?.data?.data || null;
+  const installmentCoFData = installmentCoFResult?.data?.data || null;
+  const floatingRatePrincipleData = floatingRatePrincipleResult?.data?.data || null;
+  const floatingRateAllocatedProfitData = floatingRateAllocatedProfitResult?.data?.data || null;
+  const floatingRateGrowthData = floatingRateGrowthResult?.data?.data || null;
+
+  const isLoading = results.some((result) => result.isLoading);
 
   const handleMonthChange = (month: string) => {
     setSelectedMonthNumber(month);
