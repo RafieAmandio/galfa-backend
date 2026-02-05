@@ -215,23 +215,6 @@ export default function Auth() {
             </p>
           </div>
 
-          {/* Decorative Elements */}
-          <div className="mt-12 pt-8 border-t border-border/50">
-            <div className="flex items-center justify-center gap-8 text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-xs">Secure</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#FFEB7A]" />
-                <span className="text-xs">Trusted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-[#192473]" />
-                <span className="text-xs">Professional</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

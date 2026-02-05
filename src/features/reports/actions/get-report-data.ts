@@ -5,6 +5,7 @@ import { getInvestorFloatingRateInvestments } from "@/features/floating-rate/act
 import { getInvestorInstallmentInvestments } from "@/features/installment/actions/get-installments";
 import { getAllVCPerformance } from "@/features/investments/actions/get-all-vc-performance";
 import { getFundAllocations } from "@/features/fund-allocations/actions/get-fund-allocations";
+import { getInvestorCapitalMarketInvestments } from "@/features/capital-market/actions/get-investor-capital-market-investments";
 
 interface FlatRateInvestmentData {
   accountNumber: string;
@@ -39,6 +40,13 @@ interface InstallmentInvestmentData {
   totalRedeemedAmount: number;
 }
 
+interface CapitalMarketInvestmentData {
+  performanceDate: Date;
+  totalInvested: number;
+  grossPerformance: number;
+  netPerformance: number;
+}
+
 export interface VCPerformanceDataPoint {
   date: Date;
   aum: number;
@@ -69,6 +77,7 @@ export interface InvestorReportData {
   flatRateInvestments: FlatRateInvestmentData[];
   floatingRateInvestments: FloatingRateInvestmentData[];
   installmentInvestments: InstallmentInvestmentData[];
+  capitalMarketInvestments: CapitalMarketInvestmentData[];
   vcPerformance: VCPerformanceDataPoint[];
   fundAllocations: FundAllocationData[];
 }
@@ -78,11 +87,12 @@ export async function getReportData(
 ): Promise<{ success: boolean; data?: InvestorReportData; error?: string }> {
   try {
     // Fetch all investment data in parallel
-    const [flatRateData, floatingRateResult, installmentData, vcPerformanceResult, fundAllocationsResult] =
+    const [flatRateData, floatingRateResult, installmentData, capitalMarketResult, vcPerformanceResult, fundAllocationsResult] =
       await Promise.all([
         getInvestorSummary(investorEmail),
         getInvestorFloatingRateInvestments(investorEmail),
         getInvestorInstallmentInvestments(investorEmail),
+        getInvestorCapitalMarketInvestments(investorEmail),
         getAllVCPerformance(),
         getFundAllocations(),
       ]);
@@ -129,6 +139,17 @@ export async function getReportData(
           totalRedeemedAmount: inv.totalRedeemedAmount,
         }))
       : [];
+
+    // Process capital market investments
+    const capitalMarketInvestments: CapitalMarketInvestmentData[] =
+      capitalMarketResult.hasData
+        ? capitalMarketResult.investments.map((inv) => ({
+            performanceDate: inv.performanceDate,
+            totalInvested: inv.totalInvested,
+            grossPerformance: inv.grossPerformance,
+            netPerformance: inv.netPerformance,
+          }))
+        : [];
 
     // Process VC performance data (last 12 months, sorted by date ascending)
     const vcPerformance: VCPerformanceDataPoint[] =
@@ -200,6 +221,15 @@ export async function getReportData(
       activeInvestments += installmentData.investments.length;
     }
 
+    // Add capital market totals (using latest record values)
+    if (capitalMarketResult.hasData) {
+      totalNetInvestedFund += capitalMarketResult.latestTotalInvested;
+      totalGrossInvestedFund += capitalMarketResult.latestTotalInvested;
+      // Net performance is the current value
+      totalNetPresentValue += capitalMarketResult.latestTotalInvested + capitalMarketResult.latestNetPerformance;
+      activeInvestments += 1; // Capital market counts as 1 account
+    }
+
     const totalGainLoss = totalNetPresentValue - totalNetInvestedFund;
     const totalGainLossPercentage =
       totalNetInvestedFund > 0
@@ -220,6 +250,7 @@ export async function getReportData(
       flatRateInvestments,
       floatingRateInvestments,
       installmentInvestments,
+      capitalMarketInvestments,
       vcPerformance,
       fundAllocations,
     };

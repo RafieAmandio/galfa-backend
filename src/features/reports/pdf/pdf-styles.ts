@@ -464,4 +464,10 @@ export const columnWidths = {
     type: "14%",
     redeemed: "12%",
   },
+  capitalMarket: {
+    date: "25%",
+    totalInvested: "25%",
+    grossPerformance: "25%",
+    netPerformance: "25%",
+  },
 };
