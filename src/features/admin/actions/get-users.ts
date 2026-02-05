@@ -3,7 +3,7 @@
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { authUsers, profiles, roleAssignments } from "@/db/drizzle/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc, count } from "drizzle-orm";
 
 export interface UserWithDetails {
   id: string;
@@ -18,10 +18,23 @@ export interface UserWithDetails {
 export interface GetUsersResult {
   success: boolean;
   users?: UserWithDetails[];
+  totalCount?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
   message?: string;
 }
 
-export async function getAllUsers(): Promise<GetUsersResult> {
+export interface GetUsersPaginatedParams {
+  page?: number;
+  pageSize?: number;
+}
+
+export async function getAllUsers(
+  params: GetUsersPaginatedParams = {}
+): Promise<GetUsersResult> {
+  const { page = 1, pageSize = 20 } = params;
+
   try {
     // Check if current user is admin
     const adminCheck = await checkAdminAccess();
@@ -34,7 +47,15 @@ export async function getAllUsers(): Promise<GetUsersResult> {
 
     const db = createDrizzleConnection();
 
-    // Get all users with their profiles and roles
+    // Get total count
+    const totalResult = await db
+      .select({ count: count() })
+      .from(authUsers);
+    const totalCount = totalResult[0]?.count || 0;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
+    // Get paginated users with their profiles
+    const offset = (page - 1) * pageSize;
     const usersWithProfiles = await db
       .select({
         id: authUsers.id,
@@ -47,15 +68,22 @@ export async function getAllUsers(): Promise<GetUsersResult> {
       })
       .from(authUsers)
       .leftJoin(profiles, eq(authUsers.id, profiles.id))
-      .orderBy(authUsers.created_at);
+      .orderBy(desc(authUsers.created_at))
+      .limit(pageSize)
+      .offset(offset);
 
-    // Get all role assignments
-    const roleData = await db
-      .select({
-        userId: roleAssignments.user_id,
-        roleName: roleAssignments.role_name,
-      })
-      .from(roleAssignments);
+    // Get role assignments only for the fetched users
+    const userIds = usersWithProfiles.map((u) => u.id);
+    const roleData =
+      userIds.length > 0
+        ? await db
+            .select({
+              userId: roleAssignments.user_id,
+              roleName: roleAssignments.role_name,
+            })
+            .from(roleAssignments)
+            .where(sql`${roleAssignments.user_id} IN ${userIds}`)
+        : [];
 
     // Create a map of user roles
     const userRoles: Record<string, string[]> = {};
@@ -82,6 +110,10 @@ export async function getAllUsers(): Promise<GetUsersResult> {
     return {
       success: true,
       users,
+      totalCount,
+      page,
+      pageSize,
+      totalPages,
     };
   } catch (error) {
     console.error("Get users error:", error);

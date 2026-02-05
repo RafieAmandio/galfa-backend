@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getAllUsers, type UserWithDetails } from "../actions/get-users";
 import {
   Table,
@@ -10,26 +10,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 
 interface UsersTableProps {
   onRefresh?: () => void;
 }
 
+const PAGE_SIZE = 20;
+
 export function UsersTable({ onRefresh }: UsersTableProps) {
   const [users, setUsers] = useState<UserWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async (pageNum: number = page) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await getAllUsers();
+      const result = await getAllUsers({ page: pageNum, pageSize: PAGE_SIZE });
 
       if (result.success && result.users) {
         setUsers(result.users);
+        setTotalCount(result.totalCount || 0);
+        setTotalPages(result.totalPages || 1);
+        setPage(result.page || 1);
       } else {
         setError(result.message || "Failed to fetch users");
       }
@@ -38,19 +48,25 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
     }
 
     setLoading(false);
-  };
+  }, [page]);
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(1);
   }, []);
 
   // Allow parent component to trigger refresh
   useEffect(() => {
     if (onRefresh) {
       // This is a bit of a hack to allow parent to trigger refresh
-      (window as any).__refreshUsersTable = fetchUsers;
+      (window as any).__refreshUsersTable = () => fetchUsers(1);
     }
-  }, [onRefresh]);
+  }, [onRefresh, fetchUsers]);
+
+  const goToPage = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      fetchUsers(newPage);
+    }
+  };
 
   const formatDate = (date: Date | null) => {
     if (!date) return "Never";
@@ -91,20 +107,23 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
     );
   }
 
+  const startItem = (page - 1) * PAGE_SIZE + 1;
+  const endItem = Math.min(page * PAGE_SIZE, totalCount);
+
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">All Users</h2>
           <button
-            onClick={fetchUsers}
+            onClick={() => fetchUsers(page)}
             className="px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
           >
             Refresh
           </button>
         </div>
         <p className="text-sm text-gray-600 mt-1">
-          Total: {users.length} user{users.length !== 1 ? "s" : ""}
+          Showing {startItem}-{endItem} of {totalCount} user{totalCount !== 1 ? "s" : ""}
         </p>
       </div>
 
@@ -175,6 +194,56 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
           )}
         </TableBody>
       </Table>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Page {page} of {totalPages}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(1)}
+              disabled={page === 1 || loading}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1 || loading}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-3 text-sm text-gray-600">
+              {page}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages || loading}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => goToPage(totalPages)}
+              disabled={page === totalPages || loading}
+              className="h-8 w-8 p-0"
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
