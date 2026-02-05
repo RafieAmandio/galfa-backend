@@ -36,7 +36,6 @@ import {
 import { format } from "date-fns";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 
 interface CreateFlatRateModalProps {
   onAccountCreated?: () => void;
@@ -165,23 +164,16 @@ export function CreateFlatRateModal({
     }
   }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
 
-  // Calculate admin fee and net capital
+  // Flat rate investments have no admin fee
   const calculateFinancials = () => {
     const capitalAmount = parseFloat(capital || "0");
     if (isNaN(capitalAmount) || capitalAmount <= 0) {
-      return { adminFee: 0, netCapital: 0 };
+      return { netCapital: 0 };
     }
-
-    if (isRollover) {
-      return { adminFee: 0, netCapital: capitalAmount };
-    }
-
-    const adminFee = capitalAmount * ADMIN_FEE_PERCENTAGE;
-    const netCapital = capitalAmount - adminFee;
-    return { adminFee, netCapital };
+    return { netCapital: capitalAmount };
   };
 
-  const { adminFee, netCapital } = calculateFinancials();
+  const { netCapital } = calculateFinancials();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -333,7 +325,6 @@ export function CreateFlatRateModal({
           </DialogTitle>
           <DialogDescription>
             Create a new fixed annual rate investment account for an investor.
-            Admin fees will be calculated automatically.
           </DialogDescription>
         </DialogHeader>
 
@@ -725,10 +716,10 @@ export function CreateFlatRateModal({
                   <h3 className="font-medium text-gray-900 mb-3">
                     {isRollover ? "New Investment Period" : "Financial Summary"}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">
-                        {isRollover ? "Rollover Capital:" : "Gross Capital:"}
+                        {isRollover ? "Rollover Capital:" : "Investment Capital:"}
                       </span>
                       <p className="font-medium">
                         {formatCurrency(parseFloat(capital))}
@@ -736,17 +727,7 @@ export function CreateFlatRateModal({
                     </div>
                     <div>
                       <span className="text-gray-600">
-                        Admin Fee ({(ADMIN_FEE_PERCENTAGE * 100).toFixed(1)}%):
-                      </span>
-                      <p className="font-medium text-orange-600">
-                        {isRollover
-                          ? "Rp 0 (Rollover)"
-                          : formatCurrency(adminFee)}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">
-                        Net Capital Working:
+                        Capital Working:
                       </span>
                       <p className="font-medium text-green-600">
                         {formatCurrency(netCapital)}

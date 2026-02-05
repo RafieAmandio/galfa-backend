@@ -131,9 +131,7 @@ export function FlatRateInvestmentsTable() {
   const getColumnDisplayName = (columnId: string) => {
     const displayNames: Record<string, string> = {
       name: "Account Name",
-      grossCapital: "Gross Capital",
-      adminFee: "Admin Fee",
-      netCapital: "Net Capital",
+      grossCapital: "Capital",
       rate: "Rate",
       transDate: "Transaction Date",
       endDate: "End Date",
@@ -449,7 +447,7 @@ export function FlatRateInvestmentsTable() {
                 }
                 className="h-auto p-0 font-semibold"
               >
-                Gross Capital
+                Capital
                 {column.getIsSorted() === "asc" ? (
                   <ArrowUp className="ml-2 h-4 w-4" />
                 ) : column.getIsSorted() === "desc" ? (
@@ -463,56 +461,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="">{formatCurrency(getValue() as number)}</div>
-        ),
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "adminFee",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <span className="font-semibold">Admin Fee</span>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className=" text-red-600">
-            -{formatCurrency(getValue() as number)}
-          </div>
-        ),
-        filterFn: numberRangeFilter,
-      },
-      {
-        accessorKey: "netCapital",
-        header: ({ column }) => {
-          return (
-            <div className="flex items-center">
-              <Button
-                variant="ghost"
-                onClick={() =>
-                  column.toggleSorting(column.getIsSorted() === "asc")
-                }
-                className="h-auto p-0 font-semibold"
-              >
-                Net Capital
-                {column.getIsSorted() === "asc" ? (
-                  <ArrowUp className="ml-2 h-4 w-4" />
-                ) : column.getIsSorted() === "desc" ? (
-                  <ArrowDown className="ml-2 h-4 w-4" />
-                ) : (
-                  <ArrowUpDown className="ml-2 h-4 w-4" />
-                )}
-              </Button>
-              <NumberRangeFilter column={column} />
-            </div>
-          );
-        },
-        cell: ({ getValue }) => (
-          <div className=" text-green-600 font-medium">
-            {formatCurrency(getValue() as number)}
-          </div>
+          <div className=" text-green-600 font-medium">{formatCurrency(getValue() as number)}</div>
         ),
         filterFn: numberRangeFilter,
       },
@@ -759,15 +708,11 @@ export function FlatRateInvestmentsTable() {
   const totals = filteredData.reduce(
     (acc, investment) => ({
       grossCapital: acc.grossCapital + investment.grossCapital,
-      adminFee: acc.adminFee + investment.adminFee,
-      netCapital: acc.netCapital + investment.netCapital,
       currentValue: acc.currentValue + investment.currentValue,
       totalRedemptions: acc.totalRedemptions + investment.totalRedemptions,
     }),
     {
       grossCapital: 0,
-      adminFee: 0,
-      netCapital: 0,
       currentValue: 0,
       totalRedemptions: 0,
     }
@@ -1098,14 +1043,8 @@ export function FlatRateInvestmentsTable() {
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                         <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>
-                        <TableCell className=" font-bold">
-                          {formatCurrency(totals.grossCapital)}
-                        </TableCell>
-                        <TableCell className=" font-bold text-red-600">
-                          -{formatCurrency(totals.adminFee)}
-                        </TableCell>
                         <TableCell className=" font-bold text-green-600">
-                          {formatCurrency(totals.netCapital)}
+                          {formatCurrency(totals.grossCapital)}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           -

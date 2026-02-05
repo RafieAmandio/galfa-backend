@@ -69,13 +69,8 @@ export async function calculateNetPresentValueWithRedemptions(
   isRollover: boolean = false,
   adminFeeApplied: boolean = true
 ): Promise<NPVWithRedemptions> {
-  // Calculate initial net capital
-  let netCapital: number;
-  if (isRollover && !adminFeeApplied) {
-    netCapital = grossCapital;
-  } else {
-    netCapital = grossCapital - grossCapital * ADMIN_FEE_PERCENTAGE;
-  }
+  // For flat rate investments, use gross capital directly (no admin fee)
+  const netCapital = grossCapital;
 
   // Get all redemptions for this account
   const redemptions = await getAccountRedemptions(accountId);

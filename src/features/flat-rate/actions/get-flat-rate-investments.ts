@@ -4,7 +4,6 @@ import { createDrizzleConnection, getDbConnectionDebug } from "@/db/drizzle/conn
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq, and, lt, isNotNull } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { format } from "date-fns";
 
@@ -114,19 +113,9 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
       const isRollover = result.isRollover || false;
       const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
 
-      // Calculate admin fee and net capital based on account type
-      let adminFee: number;
-      let netCapital: number;
-
-      if (isRollover && !adminFeeApplied) {
-        // Rollover account: no additional admin fee, use full capital
-        adminFee = 0;
-        netCapital = grossCapital;
-      } else {
-        // Regular account: apply admin fee
-        adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
-        netCapital = grossCapital - adminFee;
-      }
+      // Flat rate investments have no admin fee - use gross capital directly
+      const adminFee = 0;
+      const netCapital = grossCapital;
 
       // Calculate NPV with redemptions
       const npvWithRedemptions = await calculateNetPresentValueWithRedemptions(

@@ -11,7 +11,6 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, isNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
 interface CreateFlatRateAccountRequest {
@@ -179,17 +178,12 @@ export async function createFlatRateAccount(
     // Get account type
     const accountTypeId = await getFlatRateAccountTypeId();
 
-    // Calculate admin fee and net capital
+    // Flat rate investments have no admin fee
     const isRollover = request.isRollover || false;
-    const adminFeeApplied = !isRollover; // Regular investments get admin fee, rollovers don't
+    const adminFeeApplied = false; // No admin fee for flat rate investments
 
-    let adminFee = 0;
-    let netCapital = request.capital;
-
-    if (adminFeeApplied) {
-      adminFee = request.capital * ADMIN_FEE_PERCENTAGE;
-      netCapital = request.capital - adminFee;
-    }
+    const adminFee = 0;
+    const netCapital = request.capital;
 
     // Create the main account record
     const newAccount = await db

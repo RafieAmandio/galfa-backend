@@ -8,7 +8,6 @@ import {
   authUsers,
 } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 
 interface InvestorSummary {
@@ -110,16 +109,7 @@ export async function getInvestorSummary(
   let totalAdminFees = 0;
   let totalNetPresentValue = 0;
 
-  // First, calculate admin fees from parent accounts (not included in active investments)
-  parentAccounts.forEach((result) => {
-    const grossCapital = Number(result.grossCapital);
-    const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
-
-    if (adminFeeApplied) {
-      const adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
-      totalAdminFees += adminFee;
-    }
-  });
+  // Flat rate investments have no admin fee - skip parent account fee calculation
 
   const investmentPromises = activeAccounts.map(
     async (result, index: number) => {
@@ -128,19 +118,9 @@ export async function getInvestorSummary(
       const isRollover = result.isRollover || false;
       const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
 
-      // Calculate admin fee and net capital based on account type
-      let adminFee: number;
-      let netCapital: number;
-
-      if (isRollover && !adminFeeApplied) {
-        // Rollover account: no additional admin fee, use full capital
-        adminFee = 0;
-        netCapital = grossCapital;
-      } else {
-        // Regular account: apply admin fee
-        adminFee = grossCapital * ADMIN_FEE_PERCENTAGE;
-        netCapital = grossCapital - adminFee;
-      }
+      // Flat rate investments have no admin fee - use gross capital directly
+      const adminFee = 0;
+      const netCapital = grossCapital;
 
       // Calculate Net Present Value using redemption-aware utility
       const npvResult = await calculateNetPresentValueWithRedemptions(
