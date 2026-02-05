@@ -70,18 +70,15 @@ export default function Auth() {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl overflow-hidden">
-              <Image
-                src="/logo_galfa.png"
-                alt="Galfa Logo"
-                width={48}
-                height={48}
-                className="object-contain"
-                priority
-              />
-            </div>
-            <span className="text-2xl font-semibold text-white tracking-tight">Galfa</span>
+          <div className="flex items-center">
+            <Image
+              src="/logo_galfa.png"
+              alt="Galfa Logo"
+              width={120}
+              height={48}
+              className="object-contain"
+              priority
+            />
           </div>
 
           {/* Main Content */}
@@ -106,18 +103,15 @@ export default function Auth() {
       <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-xl overflow-hidden">
-              <Image
-                src="/logo_galfa.png"
-                alt="Galfa Logo"
-                width={48}
-                height={48}
-                className="object-contain"
-                priority
-              />
-            </div>
-            <span className="text-2xl font-semibold text-foreground tracking-tight">Galfa</span>
+          <div className="lg:hidden flex items-center justify-center mb-8">
+            <Image
+              src="/logo_galfa.png"
+              alt="Galfa Logo"
+              width={120}
+              height={48}
+              className="object-contain"
+              priority
+            />
           </div>
 
           {/* Welcome Text */}

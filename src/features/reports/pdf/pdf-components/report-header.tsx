@@ -30,9 +30,8 @@ export function ReportHeader({ investorEmail, reportDate }: ReportHeaderProps) {
           {/* Logo */}
           <Image
             src={logoPath}
-            style={{ width: 36, height: 36, borderRadius: 6 }}
+            style={{ width: 100, height: 40, objectFit: "contain" }}
           />
-          <Text style={styles.brandName}>Galfa</Text>
         </View>
         <View style={styles.reportBadge}>
           <Text style={styles.reportBadgeText}>Investment Report</Text>

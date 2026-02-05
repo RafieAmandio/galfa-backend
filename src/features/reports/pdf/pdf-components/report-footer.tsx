@@ -24,10 +24,10 @@ export function ReportFooter({ generatedAt }: ReportFooterProps) {
         {/* Logo */}
         <Image
           src={logoPath}
-          style={{ width: 16, height: 16, borderRadius: 3, marginRight: 6 }}
+          style={{ width: 50, height: 20, objectFit: "contain", marginRight: 6 }}
         />
         <View>
-          <Text style={styles.footerBrand}>Galfa Investment Platform</Text>
+          <Text style={styles.footerBrand}>Investment Platform</Text>
           <Text style={styles.footerText}>Report generated {formattedDateTime}</Text>
         </View>
       </View>
