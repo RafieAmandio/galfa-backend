@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createBrowserClient } from "@/db/supabase/browser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,14 +55,31 @@ export default function Auth() {
           <div className="absolute top-1/2 left-1/3 w-48 h-48 rounded-full bg-white/10 blur-2xl" />
         </div>
 
+        {/* Background Vector */}
+        <div className="absolute bottom-0 left-0 w-full h-auto opacity-30">
+          <Image
+            src="/bg_vector.png"
+            alt="Background decoration"
+            width={800}
+            height={600}
+            className="object-contain"
+            priority
+          />
+        </div>
+
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            {/* Logo Placeholder - Replace with actual logo */}
-            <div className="w-12 h-12 rounded-xl bg-[#FFEB7A] flex items-center justify-center overflow-hidden">
-              {/* TODO: Replace with <Image src="/logo.png" /> */}
-              <span className="text-2xl font-bold text-[#192473]">G</span>
+            <div className="w-12 h-12 rounded-xl overflow-hidden">
+              <Image
+                src="/logo_galfa.png"
+                alt="Galfa Logo"
+                width={48}
+                height={48}
+                className="object-contain"
+                priority
+              />
             </div>
             <span className="text-2xl font-semibold text-white tracking-tight">Galfa</span>
           </div>
@@ -89,10 +107,15 @@ export default function Auth() {
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            {/* Logo Placeholder - Replace with actual logo */}
-            <div className="w-12 h-12 rounded-xl bg-[#192473] flex items-center justify-center overflow-hidden">
-              {/* TODO: Replace with <Image src="/logo.png" /> */}
-              <span className="text-2xl font-bold text-[#FFEB7A]">G</span>
+            <div className="w-12 h-12 rounded-xl overflow-hidden">
+              <Image
+                src="/logo_galfa.png"
+                alt="Galfa Logo"
+                width={48}
+                height={48}
+                className="object-contain"
+                priority
+              />
             </div>
             <span className="text-2xl font-semibold text-foreground tracking-tight">Galfa</span>
           </div>

@@ -1,5 +1,6 @@
-import { View, Text } from "@react-pdf/renderer";
+import { View, Text, Image } from "@react-pdf/renderer";
 import { styles } from "../pdf-styles";
+import path from "path";
 
 interface ReportFooterProps {
   generatedAt: Date;
@@ -14,13 +15,17 @@ export function ReportFooter({ generatedAt }: ReportFooterProps) {
     minute: "2-digit",
   });
 
+  // Get the absolute path to the logo
+  const logoPath = path.join(process.cwd(), "public", "logo_galfa.png");
+
   return (
     <View style={styles.footer} fixed>
       <View style={styles.footerLeft}>
         {/* Logo */}
-        <View style={styles.footerLogo}>
-          <Text style={styles.footerLogoText}>G</Text>
-        </View>
+        <Image
+          src={logoPath}
+          style={{ width: 16, height: 16, borderRadius: 3, marginRight: 6 }}
+        />
         <View>
           <Text style={styles.footerBrand}>Galfa Investment Platform</Text>
           <Text style={styles.footerText}>Report generated {formattedDateTime}</Text>

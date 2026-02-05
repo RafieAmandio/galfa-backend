@@ -1,5 +1,6 @@
-import { View, Text } from "@react-pdf/renderer";
+import { View, Text, Image } from "@react-pdf/renderer";
 import { styles } from "../pdf-styles";
+import path from "path";
 
 interface ReportHeaderProps {
   investorEmail: string;
@@ -18,15 +19,19 @@ export function ReportHeader({ investorEmail, reportDate }: ReportHeaderProps) {
     minute: "2-digit",
   });
 
+  // Get the absolute path to the logo
+  const logoPath = path.join(process.cwd(), "public", "logo_galfa.png");
+
   return (
     <View style={styles.header}>
       {/* Top row with logo and badge */}
       <View style={styles.headerTop}>
         <View style={styles.logoSection}>
-          {/* Logo placeholder */}
-          <View style={styles.logoBox}>
-            <Text style={styles.logoText}>G</Text>
-          </View>
+          {/* Logo */}
+          <Image
+            src={logoPath}
+            style={{ width: 36, height: 36, borderRadius: 6 }}
+          />
           <Text style={styles.brandName}>Galfa</Text>
         </View>
         <View style={styles.reportBadge}>
