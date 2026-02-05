@@ -139,21 +139,24 @@ export async function supabaseMiddleware(request: NextRequest) {
 
   // ADMIN-ONLY ROUTES - Flat Rate Page
   if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/flat-rate")) {
-    // Check if user is super admin in auth.users
-    const { data: authUser, error: authError } = await supabase
-      .from("auth.users")
-      .select("is_super_admin")
-      .eq("id", user.id)
-      .single();
+    // Check role assignments for admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from("role_assignments")
+      .select("role_name")
+      .eq("user_id", user.id);
 
-    // If not super admin, redirect to investor summary
-    if (authError || !authUser?.is_super_admin) {
+    const hasAdminRole = roleData?.some(
+      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
+    );
+
+    // If not admin, redirect to investor summary
+    if (roleError || !hasAdminRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
       console.info("redirect", {
         from: request.nextUrl.pathname,
         to: url.pathname,
-        reason: "not_super_admin",
+        reason: "not_admin_flat_rate",
       });
       return NextResponse.redirect(url);
     }
@@ -161,21 +164,35 @@ export async function supabaseMiddleware(request: NextRequest) {
 
   // ADMIN-ONLY ROUTES - Admin Pages
   if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/admin/")) {
-    // Check if user is super admin in auth.users
-    const { data: authUser, error: authError } = await supabase
-      .from("auth.users")
-      .select("is_super_admin")
-      .eq("id", user.id)
-      .single();
+    // Check role assignments for admin role
+    const { data: roleData, error: roleError } = await supabase
+      .from("role_assignments")
+      .select("role_name")
+      .eq("user_id", user.id);
 
-    // If not super admin, redirect to investor summary
-    if (authError || !authUser?.is_super_admin) {
+    console.info("admin_route_check", {
+      path: request.nextUrl.pathname,
+      userId: user.id,
+      userEmail: user.email,
+      roleData,
+      roleError: roleError?.message,
+      adminDisabled,
+    });
+
+    const hasAdminRole = roleData?.some(
+      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
+    );
+
+    // If not admin, redirect to investor summary
+    if (roleError || !hasAdminRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
       console.info("redirect", {
         from: request.nextUrl.pathname,
         to: url.pathname,
-        reason: "not_super_admin",
+        reason: "not_admin_role",
+        hasAdminRole,
+        roleError: roleError?.message,
       });
       return NextResponse.redirect(url);
     }
@@ -183,32 +200,33 @@ export async function supabaseMiddleware(request: NextRequest) {
 
   // REDIRECT ADMINS FROM HOME PAGE TO ADMIN DASHBOARD
   if (user && request.nextUrl.pathname === "/") {
-    // Check if user is super admin or has admin role
-    const { data: authUser } = await supabase
-      .from("auth.users")
-      .select("is_super_admin")
-      .eq("id", user.id)
-      .single();
-
     // Check role assignments
-    const { data: roleData } = await supabase
+    const { data: roleData, error: roleError } = await supabase
       .from("role_assignments")
       .select("role_name")
       .eq("user_id", user.id);
 
-    const isSuperAdmin = authUser?.is_super_admin === true;
+    console.info("home_page_admin_check", {
+      userId: user.id,
+      userEmail: user.email,
+      roleData,
+      roleError: roleError?.message,
+      adminDisabled,
+    });
+
     const hasAdminRole = roleData?.some(
       (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
     );
 
     // If admin, redirect to admin dashboard
-    if (adminDisabled || isSuperAdmin || hasAdminRole) {
+    if (adminDisabled || hasAdminRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/dashboard";
       console.info("redirect", {
         from: request.nextUrl.pathname,
         to: url.pathname,
         reason: "admin_to_dashboard",
+        hasAdminRole,
       });
       return NextResponse.redirect(url);
     }
