@@ -8,4 +8,5 @@ export const getFloatingRateGrowthPercentageQueryOptions = (month: Date) =>
       month.toISOString().split("T")[0],
     ],
     queryFn: () => getFloatingRateGrowthPercentage(month),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });

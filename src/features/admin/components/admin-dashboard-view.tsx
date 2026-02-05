@@ -16,7 +16,6 @@ import {
   TrendingDown,
   PieChart,
   Users,
-  Loader2,
   ArrowUpRight,
   ArrowDownRight,
   Wallet,
@@ -25,6 +24,7 @@ import {
   Percent,
   BarChart3,
 } from "lucide-react";
+import { DashboardSkeleton } from "./dashboard-skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { getFloatingRatePrincipleByMonthQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-principle-by-month/query-options";
 import { getFloatingRateAllocatedProfitQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-allocated-profit/query-options";
@@ -236,13 +236,8 @@ export function AdminDashboardView({
         </div>
       </div>
 
-      {/* Loading */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 text-[#192473] animate-spin" />
-          <span className="ml-2 text-sm text-muted-foreground">Loading...</span>
-        </div>
-      )}
+      {/* Loading Skeleton */}
+      {isLoading && <DashboardSkeleton />}
 
       {/* Warnings */}
       {!isLoading && warnings && (

@@ -5,4 +5,5 @@ export const getInflowByMonthQueryOptions = (month: Date) =>
   queryOptions({
     queryKey: ["inflow-by-month", month.toISOString().split("T")[0]],
     queryFn: () => getInflowByMonth(month),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });

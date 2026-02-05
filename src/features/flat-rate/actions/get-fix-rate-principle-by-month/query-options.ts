@@ -8,4 +8,5 @@ export const getFixRatePrincipleByMonthQueryOptions = (month: Date) =>
       month.toISOString().split("T")[0],
     ],
     queryFn: () => getFixRatePrincipleByMonth(month),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });

@@ -8,4 +8,5 @@ export const getInstallmentPrincipleByMonthQueryOptions = (month: Date) =>
       month.toISOString().split("T")[0],
     ],
     queryFn: () => getInstallmentPrincipleByMonth(month),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
