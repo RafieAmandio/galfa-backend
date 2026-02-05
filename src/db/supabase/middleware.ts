@@ -181,6 +181,39 @@ export async function supabaseMiddleware(request: NextRequest) {
     }
   }
 
+  // REDIRECT ADMINS FROM HOME PAGE TO ADMIN DASHBOARD
+  if (user && request.nextUrl.pathname === "/") {
+    // Check if user is super admin or has admin role
+    const { data: authUser } = await supabase
+      .from("auth.users")
+      .select("is_super_admin")
+      .eq("id", user.id)
+      .single();
+
+    // Check role assignments
+    const { data: roleData } = await supabase
+      .from("role_assignments")
+      .select("role_name")
+      .eq("user_id", user.id);
+
+    const isSuperAdmin = authUser?.is_super_admin === true;
+    const hasAdminRole = roleData?.some(
+      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
+    );
+
+    // If admin, redirect to admin dashboard
+    if (adminDisabled || isSuperAdmin || hasAdminRole) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/dashboard";
+      console.info("redirect", {
+        from: request.nextUrl.pathname,
+        to: url.pathname,
+        reason: "admin_to_dashboard",
+      });
+      return NextResponse.redirect(url);
+    }
+  }
+
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
   // 1. Pass the request in it, like so:

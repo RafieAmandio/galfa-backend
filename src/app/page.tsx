@@ -11,24 +11,22 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Check if user is admin on server side
-  let isAdmin = false;
-  let portfolioSummary = null;
-
-  if (user) {
-    const adminCheck = await checkAdminAccess();
-    isAdmin = adminCheck.isAdmin;
-
-    // If user is admin, redirect to admin dashboard
-    if (isAdmin) {
-      redirect("/admin/dashboard");
-    }
-
-    // Fetch portfolio summary for authenticated investors
-    if (user.email) {
-      portfolioSummary = await getComprehensiveInvestorSummary(user.email);
-    }
+  // If no user, show login
+  if (!user) {
+    return <HomeView user={null} isAdmin={false} portfolioSummary={null} />;
   }
 
-  return <HomeView user={user} isAdmin={isAdmin} portfolioSummary={portfolioSummary} />;
+  // Check if user is admin - redirect immediately if admin
+  const adminCheck = await checkAdminAccess();
+  if (adminCheck.isAdmin) {
+    redirect("/admin/dashboard");
+  }
+
+  // Only fetch portfolio for non-admin users
+  let portfolioSummary = null;
+  if (user.email) {
+    portfolioSummary = await getComprehensiveInvestorSummary(user.email);
+  }
+
+  return <HomeView user={user} isAdmin={false} portfolioSummary={portfolioSummary} />;
 }
