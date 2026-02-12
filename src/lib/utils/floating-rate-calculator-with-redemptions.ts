@@ -3,6 +3,7 @@ import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { format, startOfMonth, addMonths, isAfter } from "date-fns";
 import { getFloatingRateGrowthPercentage } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage";
+import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
 export interface Redemption {
   amount: number;
@@ -30,6 +31,13 @@ export interface MonthlyFloatingRateCalculation {
   appliedRule: string;
   hasData: boolean;
   redemptionDetails: Redemption[];
+}
+
+export interface GrowthData {
+  growthPercentage: number;
+  performancePercentage: number;
+  appliedRule: string;
+  hasData: boolean;
 }
 
 /**
@@ -68,10 +76,12 @@ export async function calculateFloatingRateValueWithRedemptions(
   accountId: number,
   netInvestorFund: number,
   transactionDate: Date,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
+  prefetchedRedemptions?: BatchRedemption[],
+  prefetchedGrowthRates?: Map<string, GrowthData>
 ): Promise<FloatingRateValueWithRedemptions> {
-  // Get all redemptions for this account
-  const redemptions = await getAccountRedemptions(accountId);
+  // Use pre-fetched redemptions if provided, otherwise query individually
+  const redemptions = prefetchedRedemptions ?? await getAccountRedemptions(accountId);
   const totalRedemptions = redemptions.reduce((sum, r) => sum + r.amount, 0);
 
   let currentValue = netInvestorFund;
@@ -95,27 +105,35 @@ export async function calculateFloatingRateValueWithRedemptions(
     );
 
     // Get growth rate data for this month
-    let growthData = {
+    let growthData: GrowthData = {
       growthPercentage: 0,
       performancePercentage: 0,
       appliedRule: "No data available",
       hasData: false,
     };
 
-    try {
-      const growthResult = await getFloatingRateGrowthPercentage(
-        calculationDate
-      );
-      if (growthResult.success && growthResult.data) {
-        growthData = {
-          growthPercentage: growthResult.data.growthPercentage,
-          performancePercentage: growthResult.data.performancePercentage,
-          appliedRule: growthResult.data.calculation.rule,
-          hasData: true,
-        };
+    if (prefetchedGrowthRates) {
+      const growthKey = format(calculationDate, "yyyy-MM");
+      const cached = prefetchedGrowthRates.get(growthKey);
+      if (cached) {
+        growthData = cached;
       }
-    } catch (error) {
-      console.error(`Error getting growth rate for ${calculationDate}:`, error);
+    } else {
+      try {
+        const growthResult = await getFloatingRateGrowthPercentage(
+          calculationDate
+        );
+        if (growthResult.success && growthResult.data) {
+          growthData = {
+            growthPercentage: growthResult.data.growthPercentage,
+            performancePercentage: growthResult.data.performancePercentage,
+            appliedRule: growthResult.data.calculation.rule,
+            hasData: true,
+          };
+        }
+      } catch (error) {
+        console.error(`Error getting growth rate for ${calculationDate}:`, error);
+      }
     }
 
     const startingBalance = currentValue;

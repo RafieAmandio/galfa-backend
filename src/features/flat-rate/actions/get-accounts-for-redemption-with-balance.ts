@@ -4,6 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq, and, not, exists, gt } from "drizzle-orm";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 
 interface AccountForRedemption {
@@ -63,7 +64,11 @@ export async function getAccountsForRedemptionWithBalance(
       )
     );
 
-  // Calculate current values for each account
+  // Batch-fetch all redemptions in a single query
+  const accountIds = results.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(accountIds);
+
+  // Calculate current values for each account with pre-fetched redemptions
   const accountsWithBalances = await Promise.all(
     results.map(async (account) => {
       const grossCapital = Number(account.grossCapital);
@@ -71,7 +76,7 @@ export async function getAccountsForRedemptionWithBalance(
       const isRollover = account.isRollover || false;
       const adminFeeApplied = account.adminFeeApplied !== false;
 
-      // Calculate NPV with redemptions up to the redemption date
+      // Calculate NPV with pre-fetched redemptions up to the redemption date
       const npvResult = await calculateNetPresentValueWithRedemptions(
         account.id,
         grossCapital,
@@ -79,7 +84,8 @@ export async function getAccountsForRedemptionWithBalance(
         account.startDate,
         redemptionDate,
         isRollover,
-        adminFeeApplied
+        adminFeeApplied,
+        redemptionMap.get(account.id)
       );
 
       // Only return accounts with positive balance

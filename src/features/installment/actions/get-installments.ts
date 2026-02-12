@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
 import { authUsers } from "@/db/drizzle/schema";
 import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 
 interface MonthlyInstallmentData {
   monthYear: string;
@@ -191,6 +192,10 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
   let totalNetPresentValueFund = 0;
   const monthlyGainedFunds: { [monthYear: string]: number } = {};
 
+  // Batch-fetch all redemptions in a single query
+  const accountIds = results.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(accountIds);
+
   const investments = await Promise.all(
     results.map(async (result) => {
       const grossCapital = Number(result.grossCapital);
@@ -207,7 +212,7 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
       const monthlyPrincipalPayment =
         investmentType === "principle" ? netCapital / durationMonths : null;
 
-      // Calculate current value with redemptions
+      // Calculate current value with pre-fetched redemptions
       const currentValueWithRedemptions =
         await calculateInstallmentValueWithRedemptions(
           result.id,
@@ -215,7 +220,8 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
           monthlyCof,
           investmentType,
           result.startDate,
-          new Date()
+          new Date(),
+          redemptionMap.get(result.id)
         );
 
       // Calculate monthly data
@@ -347,6 +353,10 @@ export async function getInvestorInstallmentInvestments(
   let totalRedeemedAmount = 0;
   let totalRedemptions = 0;
 
+  // Batch-fetch all redemptions in a single query
+  const installmentAccountIds = results.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(installmentAccountIds);
+
   const investments = await Promise.all(
     results.map(async (result) => {
       const grossCapital = Number(result.grossCapital);
@@ -363,7 +373,7 @@ export async function getInvestorInstallmentInvestments(
       const monthlyPrincipalPayment =
         investmentType === "principle" ? netCapital / durationMonths : null;
 
-      // Calculate current value with redemptions
+      // Calculate current value with pre-fetched redemptions
       const currentValueWithRedemptions =
         await calculateInstallmentValueWithRedemptions(
           result.id,
@@ -371,7 +381,8 @@ export async function getInvestorInstallmentInvestments(
           monthlyCof,
           investmentType,
           result.startDate,
-          new Date()
+          new Date(),
+          redemptionMap.get(result.id)
         );
 
       // Calculate monthly data

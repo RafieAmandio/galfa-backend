@@ -5,6 +5,7 @@ import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
 import { eq, and, lt, isNotNull } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { format } from "date-fns";
 
 interface MonthlyData {
@@ -105,7 +106,11 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
     });
   }
 
-  // Process each result and calculate NPV with redemptions
+  // Batch-fetch all redemptions in a single query
+  const accountIds = results.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(accountIds);
+
+  // Process each result and calculate NPV with pre-fetched redemptions
   const investments = await Promise.all(
     results.map(async (result) => {
       const grossCapital = Number(result.grossCapital);
@@ -117,7 +122,7 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
       const adminFee = 0;
       const netCapital = grossCapital;
 
-      // Calculate NPV with redemptions
+      // Calculate NPV with pre-fetched redemptions
       const npvWithRedemptions = await calculateNetPresentValueWithRedemptions(
         result.id,
         grossCapital,
@@ -125,7 +130,8 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
         result.transDate,
         new Date(),
         isRollover,
-        adminFeeApplied
+        adminFeeApplied,
+        redemptionMap.get(result.id)
       );
 
       return {

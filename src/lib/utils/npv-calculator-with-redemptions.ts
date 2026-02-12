@@ -4,6 +4,7 @@ import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { format } from "date-fns";
 import { ADMIN_FEE_PERCENTAGE } from "./constants";
+import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
 export interface Redemption {
   amount: number;
@@ -67,13 +68,14 @@ export async function calculateNetPresentValueWithRedemptions(
   startDate: Date,
   currentDate: Date = new Date(),
   isRollover: boolean = false,
-  adminFeeApplied: boolean = true
+  adminFeeApplied: boolean = true,
+  prefetchedRedemptions?: BatchRedemption[]
 ): Promise<NPVWithRedemptions> {
   // For flat rate investments, use gross capital directly (no admin fee)
   const netCapital = grossCapital;
 
-  // Get all redemptions for this account
-  const redemptions = await getAccountRedemptions(accountId);
+  // Use pre-fetched redemptions if provided, otherwise query individually
+  const redemptions = prefetchedRedemptions ?? await getAccountRedemptions(accountId);
   const totalRedemptions = redemptions.reduce((sum, r) => sum + r.amount, 0);
 
   const monthlyRate = getMonthlyCompoundRate(annualRate);

@@ -9,7 +9,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { getFloatingRateGrowthPercentage } from "../get-floating-rate-growth-percentage/index";
+import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
 import {
   startOfMonth,
   endOfMonth,
@@ -28,6 +28,7 @@ import {
   MonthlyValueResult,
 } from "@/lib/utils/floating-rate-calculator";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { cache } from "react";
 
 interface MonthlyRedemption {
@@ -177,7 +178,14 @@ export const getFloatingRateInvestmentsWithMonthlyPerformance = cache(
         }
       );
 
-      // Get growth rates for all months
+      // Batch-fetch all growth rates and redemptions in parallel
+      const accountIds = investmentData.map((i) => i.id);
+      const [growthRatesMap, redemptionMap] = await Promise.all([
+        getBatchFloatingRateGrowthPercentages(earliestDate, new Date()),
+        getBatchRedemptions(accountIds),
+      ]);
+
+      // Build monthlyGrowthRates array from batch map
       const monthlyGrowthRates: Array<{
         month: Date;
         monthLabel: string;
@@ -190,42 +198,17 @@ export const getFloatingRateInvestmentsWithMonthlyPerformance = cache(
       for (const monthLabel of sortedAvailableMonths) {
         const monthDate = new Date(monthLabel);
         const monthStart = startOfMonth(monthDate);
+        const key = format(monthStart, "yyyy-MM");
+        const data = growthRatesMap.get(key);
 
-        try {
-          const growthResult = await getFloatingRateGrowthPercentage(
-            monthStart
-          );
-
-          if (growthResult.success && growthResult.data) {
-            monthlyGrowthRates.push({
-              month: monthStart,
-              monthLabel,
-              growthPercentage: growthResult.data.growthPercentage,
-              performancePercentage: growthResult.data.performancePercentage,
-              appliedRule: growthResult.data.calculation.rule,
-              hasData: true,
-            });
-          } else {
-            monthlyGrowthRates.push({
-              month: monthStart,
-              monthLabel,
-              growthPercentage: 0,
-              performancePercentage: 0,
-              appliedRule: "No data",
-              hasData: false,
-            });
-          }
-        } catch (error) {
-          console.error(`Error getting performance for ${monthLabel}:`, error);
-          monthlyGrowthRates.push({
-            month: monthStart,
-            monthLabel,
-            growthPercentage: 0,
-            performancePercentage: 0,
-            appliedRule: "Error",
-            hasData: false,
-          });
-        }
+        monthlyGrowthRates.push({
+          month: monthStart,
+          monthLabel,
+          growthPercentage: data?.growthPercentage || 0,
+          performancePercentage: data?.performancePercentage || 0,
+          appliedRule: data?.appliedRule || "No data",
+          hasData: data?.hasData || false,
+        });
       }
 
       let totalPresentValueFund = 0;
@@ -254,13 +237,15 @@ export const getFloatingRateInvestmentsWithMonthlyPerformance = cache(
             let investmentGainedFund: number;
 
             try {
-              // Use redemption-aware calculation for complete monthly breakdown
+              // Use redemption-aware calculation with pre-fetched data
               const valueWithRedemptions =
                 await calculateFloatingRateValueWithRedemptions(
                   investment.id,
                   investment.netInvestorFund,
                   investment.transactionDate,
-                  new Date()
+                  new Date(),
+                  redemptionMap.get(investment.id),
+                  growthRatesMap
                 );
 
               presentValueFund = valueWithRedemptions.currentValue;

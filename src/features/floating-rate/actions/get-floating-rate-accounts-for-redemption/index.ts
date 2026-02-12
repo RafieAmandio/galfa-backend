@@ -9,6 +9,8 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and, not, exists, gt } from "drizzle-orm";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
+import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
 import { cache } from "react";
 
 interface FloatingRateAccountForRedemption {
@@ -67,7 +69,17 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
       )
     );
 
-  // Calculate current values for each account
+  // Batch-fetch all redemptions and growth rates in parallel
+  const accountIds = results.map((r) => r.id);
+  const earliestDate = results.reduce((earliest, r) => {
+    return r.transactionDate < earliest ? r.transactionDate : earliest;
+  }, results[0]?.transactionDate || new Date());
+  const [redemptionMap, growthRatesMap] = await Promise.all([
+    getBatchRedemptions(accountIds),
+    getBatchFloatingRateGrowthPercentages(earliestDate, redemptionDate),
+  ]);
+
+  // Calculate current values for each account with pre-fetched data
   const accountsWithBalances = await Promise.all(
     results.map(async (account) => {
       const grossCapital = Number(account.grossCapital);
@@ -75,12 +87,14 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
       const netInvestorFund = grossCapital - adminFee;
 
       try {
-        // Calculate current value with redemptions up to the redemption date
+        // Calculate current value with pre-fetched redemptions and growth rates
         const valueResult = await calculateFloatingRateValueWithRedemptions(
           account.id,
           netInvestorFund,
           account.transactionDate,
-          redemptionDate
+          redemptionDate,
+          redemptionMap.get(account.id),
+          growthRatesMap
         );
 
         // Only return accounts with positive balance

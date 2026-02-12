@@ -7,7 +7,7 @@ import {
   authUsers,
 } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { getFloatingRateGrowthPercentageInternal } from "../get-floating-rate-growth-percentage/index";
+import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
 import {
   startOfMonth,
   endOfMonth,
@@ -27,6 +27,7 @@ import {
   FloatingRateCalculationInput,
 } from "@/lib/utils/floating-rate-calculator";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { cache } from "react";
 
 interface MonthlyRedemption {
@@ -152,21 +153,6 @@ export const getInvestorFloatingRateInvestments = cache(async function (
       };
     }
 
-    // Get current growth rate data for current month
-    const currentMonth = startOfMonth(new Date());
-    const growthRateResult = await getFloatingRateGrowthPercentageInternal(
-      currentMonth
-    );
-
-    const growthData = {
-      growthPercentage: growthRateResult.data?.growthPercentage || 0,
-      performancePercentage: growthRateResult.data?.performancePercentage || 0,
-      appliedRule:
-        growthRateResult.data?.calculation.rule || "No data available",
-      hasData: growthRateResult.success,
-      message: growthRateResult.message,
-    };
-
     let totalGrossCapital = 0;
     let totalNetInvestorFund = 0;
     let totalAdminFees = 0;
@@ -196,37 +182,45 @@ export const getInvestorFloatingRateInvestments = cache(async function (
         : earliest;
     }, investmentData[0].transactionDate);
 
-    // Generate all months from earliest investment to current month
+    const currentMonth = startOfMonth(new Date());
+
+    // Batch-fetch all growth rates and redemptions in parallel
+    const accountIds = investmentData.map((i) => i.id);
+    const [growthRatesMap, redemptionMap] = await Promise.all([
+      getBatchFloatingRateGrowthPercentages(earliestDate, new Date()),
+      getBatchRedemptions(accountIds),
+    ]);
+
+    // Get current month growth data for display
+    const currentMonthKey = format(currentMonth, "yyyy-MM");
+    const currentMonthGrowth = growthRatesMap.get(currentMonthKey);
+    const growthData = {
+      growthPercentage: currentMonthGrowth?.growthPercentage || 0,
+      performancePercentage: currentMonthGrowth?.performancePercentage || 0,
+      appliedRule: currentMonthGrowth?.appliedRule || "No data available",
+      hasData: currentMonthGrowth?.hasData || false,
+      message: currentMonthGrowth?.hasData
+        ? `Successfully calculated floating rate growth percentage: ${(currentMonthGrowth?.growthPercentage || 0).toFixed(2)}%`
+        : "Performance data not available for the current month",
+    };
+
+    // Build monthlyGrowthRates array from batch map (used as fallback)
     const monthlyGrowthRates: Array<{
       month: Date;
       growthPercentage: number;
       performancePercentage: number;
       hasData: boolean;
     }> = [];
-
     let monthToCheck = startOfMonth(earliestDate);
     while (!isAfter(monthToCheck, currentMonth)) {
-      try {
-        const growthResult = await getFloatingRateGrowthPercentageInternal(
-          monthToCheck
-        );
-
-        monthlyGrowthRates.push({
-          month: monthToCheck,
-          growthPercentage: growthResult.data?.growthPercentage || 0,
-          performancePercentage: growthResult.data?.performancePercentage || 0,
-          hasData: growthResult.success,
-        });
-      } catch (error) {
-        console.error(`Error getting growth rate for ${monthToCheck}:`, error);
-        monthlyGrowthRates.push({
-          month: monthToCheck,
-          growthPercentage: 0,
-          performancePercentage: 0,
-          hasData: false,
-        });
-      }
-
+      const key = format(monthToCheck, "yyyy-MM");
+      const data = growthRatesMap.get(key);
+      monthlyGrowthRates.push({
+        month: monthToCheck,
+        growthPercentage: data?.growthPercentage || 0,
+        performancePercentage: data?.performancePercentage || 0,
+        hasData: data?.hasData || false,
+      });
       monthToCheck = addMonths(monthToCheck, 1);
     }
 
@@ -243,13 +237,15 @@ export const getInvestorFloatingRateInvestments = cache(async function (
         let currentMonthRedemptions: MonthlyRedemption[] = [];
 
         try {
-          // Use redemption-aware calculation for accurate current value
+          // Use redemption-aware calculation with pre-fetched data
           const valueWithRedemptions =
             await calculateFloatingRateValueWithRedemptions(
               investment.id,
               investment.netInvestorFund,
               investment.transactionDate,
-              new Date()
+              new Date(),
+              redemptionMap.get(investment.id),
+              growthRatesMap
             );
 
           presentValueFund = valueWithRedemptions.currentValue;
@@ -258,10 +254,10 @@ export const getInvestorFloatingRateInvestments = cache(async function (
             presentValueFund - investment.netInvestorFund + totalRedemptions;
 
           // Get current month redemptions
-          const currentMonthKey = format(currentMonth, "MMM yyyy");
+          const currentMonthDisplayKey = format(currentMonth, "MMMM yyyy");
           const currentMonthBreakdown =
             valueWithRedemptions.monthlyBreakdown.find(
-              (month) => month.monthYear === currentMonthKey
+              (month) => month.monthYear === currentMonthDisplayKey
             );
 
           if (currentMonthBreakdown) {

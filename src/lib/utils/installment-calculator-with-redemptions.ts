@@ -8,6 +8,7 @@ import {
   differenceInMonths,
   endOfMonth,
 } from "date-fns";
+import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
 export interface Redemption {
   amount: number;
@@ -71,10 +72,11 @@ export async function calculateInstallmentValueWithRedemptions(
   monthlyCof: number,
   investmentType: "principle" | "interest_only",
   startDate: Date,
-  currentDate: Date = new Date()
+  currentDate: Date = new Date(),
+  prefetchedRedemptions?: BatchRedemption[]
 ): Promise<InstallmentValueWithRedemptions> {
-  // Get all redemptions for this account
-  const redemptions = await getAccountRedemptions(accountId);
+  // Use pre-fetched redemptions if provided, otherwise query individually
+  const redemptions = prefetchedRedemptions ?? await getAccountRedemptions(accountId);
   const totalRedemptions = redemptions.reduce((sum, r) => sum + r.amount, 0);
 
   let currentValue = netCapital;

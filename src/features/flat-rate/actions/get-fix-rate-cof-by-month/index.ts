@@ -11,6 +11,7 @@ import { eq, and, gte, lte, lt, isNotNull } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 
 interface MonthlyCoFResult {
   success: boolean;
@@ -166,7 +167,11 @@ export async function getFixRateCoFByMonth(
     let totalNetCapitalWorking = 0;
     let totalPresentValue = 0;
 
-    // Process accounts with NPV calculations
+    // Batch-fetch all redemptions in a single query
+    const accountIds = monthlyAccounts.map((a) => a.id);
+    const redemptionMap = await getBatchRedemptions(accountIds);
+
+    // Process accounts with NPV calculations using pre-fetched redemptions
     const processedAccounts = await Promise.all(
       monthlyAccounts.map(async (account) => {
         const grossAmount = parseFloat(account.grossCapital);
@@ -192,7 +197,8 @@ export async function getFixRateCoFByMonth(
             account.transactionDate,
             monthEnd, // Calculate value as of end of target month
             account.isRollover || false,
-            account.adminFeeApplied || false // Don't default to true - use actual value
+            account.adminFeeApplied || false, // Don't default to true - use actual value
+            redemptionMap.get(account.id)
           );
 
           presentValue = npvResult.currentValue;

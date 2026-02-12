@@ -9,6 +9,7 @@ import {
 } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 
 interface InvestorSummary {
   email: string;
@@ -111,6 +112,10 @@ export async function getInvestorSummary(
 
   // Flat rate investments have no admin fee - skip parent account fee calculation
 
+  // Batch-fetch all redemptions in a single query
+  const accountIds = activeAccounts.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(accountIds);
+
   const investmentPromises = activeAccounts.map(
     async (result, index: number) => {
       const grossCapital = Number(result.grossCapital);
@@ -130,7 +135,8 @@ export async function getInvestorSummary(
         result.startDate,
         new Date(),
         isRollover,
-        adminFeeApplied
+        adminFeeApplied,
+        redemptionMap.get(result.id)
       );
 
       const gainLoss = npvResult.currentValue - netCapital;
