@@ -208,7 +208,7 @@ export async function getFixRateCoFByMonth(
           const monthsElapsed =
             (monthEnd.getTime() - account.transactionDate.getTime()) /
             (1000 * 60 * 60 * 24 * 30.44); // Approximate months
-          const monthlyRate = Math.pow(1 + annualRate, 1 / 12) - 1;
+          const monthlyRate = annualRate / 12;
           presentValue = netCapital * Math.pow(1 + monthlyRate, monthsElapsed);
         }
 

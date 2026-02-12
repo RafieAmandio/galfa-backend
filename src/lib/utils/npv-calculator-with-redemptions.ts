@@ -76,7 +76,7 @@ export async function calculateNetPresentValueWithRedemptions(
   const redemptions = await getAccountRedemptions(accountId);
   const totalRedemptions = redemptions.reduce((sum, r) => sum + r.amount, 0);
 
-  const monthlyRate = getMonthlyCompoundRate(netCapital, annualRate);
+  const monthlyRate = getMonthlyCompoundRate(annualRate);
   let currentValue = netCapital;
   let calculationDate = new Date(startDate);
   const endDate = currentDate;

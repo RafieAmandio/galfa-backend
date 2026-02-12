@@ -1,15 +1,11 @@
 /**
- * Calculate monthly compound rate from annual rate
+ * Calculate simple monthly rate from annual rate
  *
- * @param {number} annualRate - Annual rate as decimal (e.g., 0.17 for 17%)
- * @returns {number} - Monthly compound rate as decimal
+ * @param {number} annualRate - Annual rate as decimal (e.g., 0.12 for 12%)
+ * @returns {number} - Monthly rate as decimal (e.g., 0.01 for 1%)
  */
-export function getMonthlyCompoundRate(
-  capital: number,
-  annualRate: number
-): number {
-  // Formula: (1 + annual_rate)^(1/12) - 1
-  return Math.pow((capital * (1 + annualRate)) / capital, 1 / 12) - 1;
+export function getMonthlyCompoundRate(annualRate: number): number {
+  return annualRate / 12;
 }
 
 /**
@@ -25,6 +21,6 @@ export function calculateCompoundInterest(
   annualRate: number,
   months: number
 ): number {
-  const monthlyRate = getMonthlyCompoundRate(principal, annualRate);
+  const monthlyRate = getMonthlyCompoundRate(annualRate);
   return principal * Math.pow(1 + monthlyRate, months);
 }

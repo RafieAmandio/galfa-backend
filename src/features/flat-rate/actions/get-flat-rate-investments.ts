@@ -167,10 +167,7 @@ function calculateMonthlyData(params: {
   const monthlyData: MonthlyData[] = [];
   const startDate = new Date(params.transDate);
   const endDate = new Date(params.endDate);
-  const monthlyRate = getMonthlyCompoundRate(
-    params.netCapital,
-    params.annualRate
-  );
+  const monthlyRate = getMonthlyCompoundRate(params.annualRate);
 
   let currentBalance = params.netCapital;
   let currentDate = new Date(startDate);
