@@ -51,6 +51,8 @@ export async function sendBulkReports(): Promise<BulkSendResult> {
       };
     }
 
+    // Process investors in batches of 5 for controlled concurrency
+    const BATCH_SIZE = 5;
     const results: Array<{
       email: string;
       success: boolean;
@@ -60,50 +62,58 @@ export async function sendBulkReports(): Promise<BulkSendResult> {
     let successCount = 0;
     let failedCount = 0;
 
-    // Process each investor
-    for (const email of investorEmails) {
-      try {
-        // Get report data
-        const reportResult = await getReportData(email);
+    for (let i = 0; i < investorEmails.length; i += BATCH_SIZE) {
+      const batch = investorEmails.slice(i, i + BATCH_SIZE);
 
-        if (!reportResult.success || !reportResult.data) {
-          results.push({
+      const batchResults = await Promise.allSettled(
+        batch.map(async (email) => {
+          // Get report data
+          const reportResult = await getReportData(email);
+
+          if (!reportResult.success || !reportResult.data) {
+            throw new Error(
+              reportResult.error || "Failed to generate report data"
+            );
+          }
+
+          // Generate PDF
+          const pdfBuffer = await generatePdfBuffer(reportResult.data);
+          const pdfFilename = generatePdfFilename(email);
+
+          // Send email
+          const emailResult = await sendReportEmail(
             email,
-            success: false,
-            error: reportResult.error || "Failed to generate report data",
-          });
-          failedCount++;
-          continue;
-        }
+            pdfBuffer,
+            pdfFilename
+          );
 
-        // Generate PDF
-        const pdfBuffer = await generatePdfBuffer(reportResult.data);
-        const pdfFilename = generatePdfFilename(email);
+          if (!emailResult.success) {
+            throw new Error(emailResult.error || "Failed to send email");
+          }
 
-        // Send email
-        const emailResult = await sendReportEmail(email, pdfBuffer, pdfFilename);
+          return email;
+        })
+      );
 
-        if (emailResult.success) {
-          results.push({
-            email,
-            success: true,
-          });
+      // Collect results from this batch
+      for (let j = 0; j < batchResults.length; j++) {
+        const result = batchResults[j];
+        const email = batch[j];
+
+        if (result.status === "fulfilled") {
+          results.push({ email, success: true });
           successCount++;
         } else {
           results.push({
             email,
             success: false,
-            error: emailResult.error || "Failed to send email",
+            error:
+              result.reason instanceof Error
+                ? result.reason.message
+                : "Unknown error",
           });
           failedCount++;
         }
-      } catch (error) {
-        results.push({
-          email,
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        });
-        failedCount++;
       }
     }
 

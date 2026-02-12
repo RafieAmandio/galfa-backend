@@ -5,6 +5,7 @@ import { accounts, installmentAccounts, authUsers } from "@/db/drizzle/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
+import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 
 interface InstallmentAccountForRedemption {
   id: number;
@@ -67,6 +68,10 @@ export async function getInstallmentAccountsForRedemption(
     )
     .orderBy(accounts.transaction_date);
 
+  // Batch-fetch all redemptions in a single query
+  const accountIds = results.map((r) => r.id);
+  const redemptionMap = await getBatchRedemptions(accountIds);
+
   // Calculate current values and filter accounts with meaningful balances
   const accountsWithValues = await Promise.all(
     results.map(async (result) => {
@@ -78,14 +83,15 @@ export async function getInstallmentAccountsForRedemption(
         | "principle"
         | "interest_only";
 
-      // Calculate current value with redemptions
+      // Calculate current value with pre-fetched redemptions
       const currentValue = await calculateInstallmentValueWithRedemptions(
         result.id,
         netInvestorFund,
         monthlyCof,
         investmentType,
         result.transactionDate,
-        redemptionDate
+        redemptionDate,
+        redemptionMap.get(result.id)
       );
 
       return {
