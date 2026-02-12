@@ -8,8 +8,6 @@ export interface ComprehensiveInvestorSummary {
   email: string;
   // Combined totals
   totalNetInvestedFund: number;
-  totalGrossInvestedFund: number;
-  totalAdminFees: number;
   totalNetPresentValue: number;
   totalGainLoss: number;
   totalGainLossPercentage: number;
@@ -18,8 +16,6 @@ export interface ComprehensiveInvestorSummary {
   // Flat rate investments
   flatRateInvestments: {
     totalNetInvestedFund: number;
-    totalGrossInvestedFund: number;
-    totalAdminFees: number;
     totalNetPresentValue: number;
     totalGainLoss: number;
     totalGainLossPercentage: number;
@@ -30,8 +26,6 @@ export interface ComprehensiveInvestorSummary {
   // Floating rate investments
   floatingRateInvestments: {
     totalNetCapital: number;
-    totalGrossCapital: number;
-    totalAdminFees: number;
     totalGainedFund: number;
     activeInvestments: number;
     hasData: boolean;
@@ -71,8 +65,6 @@ export async function getComprehensiveInvestorSummary(
 
   // Initialize combined totals
   let totalNetInvestedFund = 0;
-  let totalGrossInvestedFund = 0;
-  let totalAdminFees = 0;
   let totalNetPresentValue = 0;
   let totalGainLoss = 0;
   let activeInvestments = 0;
@@ -80,8 +72,6 @@ export async function getComprehensiveInvestorSummary(
   // Process flat rate data
   const flatRateInvestments = {
     totalNetInvestedFund: 0,
-    totalGrossInvestedFund: 0,
-    totalAdminFees: 0,
     totalNetPresentValue: 0,
     totalGainLoss: 0,
     totalGainLossPercentage: 0,
@@ -92,9 +82,6 @@ export async function getComprehensiveInvestorSummary(
   if (hasFlatRateData) {
     flatRateInvestments.totalNetInvestedFund =
       flatRateData.totalNetInvestedFund;
-    flatRateInvestments.totalGrossInvestedFund =
-      flatRateData.totalGrossInvestedFund;
-    flatRateInvestments.totalAdminFees = flatRateData.totalAdminFees;
     flatRateInvestments.totalNetPresentValue =
       flatRateData.totalNetPresentValue;
     flatRateInvestments.totalGainLoss = flatRateData.totalGainLoss;
@@ -104,8 +91,6 @@ export async function getComprehensiveInvestorSummary(
 
     // Add to combined totals
     totalNetInvestedFund += flatRateData.totalNetInvestedFund;
-    totalGrossInvestedFund += flatRateData.totalGrossInvestedFund;
-    totalAdminFees += flatRateData.totalAdminFees;
     totalNetPresentValue += flatRateData.totalNetPresentValue;
     totalGainLoss += flatRateData.totalGainLoss;
     activeInvestments += flatRateData.activeInvestments;
@@ -114,8 +99,6 @@ export async function getComprehensiveInvestorSummary(
   // Process floating rate data
   const floatingRateInvestments = {
     totalNetCapital: 0,
-    totalGrossCapital: 0,
-    totalAdminFees: 0,
     totalGainedFund: 0,
     activeInvestments: 0,
     hasData: Boolean(hasFloatingRateData),
@@ -124,15 +107,11 @@ export async function getComprehensiveInvestorSummary(
   if (hasFloatingRateData) {
     const frData = floatingRateData.data!;
     floatingRateInvestments.totalNetCapital = frData.totalNetInvestorFund;
-    floatingRateInvestments.totalGrossCapital = frData.totalGrossCapital;
-    floatingRateInvestments.totalAdminFees = frData.totalAdminFees;
     floatingRateInvestments.totalGainedFund = frData.totalGainedFund;
     floatingRateInvestments.activeInvestments = frData.activeAccountsCount;
 
     // Add to combined totals
     totalNetInvestedFund += frData.totalNetInvestorFund;
-    totalGrossInvestedFund += frData.totalGrossCapital;
-    totalAdminFees += frData.totalAdminFees;
     totalNetPresentValue += frData.totalGainedFund; // For floating rate, current value is gained fund
     totalGainLoss += frData.totalGainedFund - frData.totalNetInvestorFund;
     activeInvestments += frData.activeAccountsCount;
@@ -156,14 +135,6 @@ export async function getComprehensiveInvestorSummary(
 
     // Add to combined totals
     totalNetInvestedFund += installmentData.totalNetInvestorFund;
-    totalGrossInvestedFund += installmentData.investments.reduce(
-      (sum, inv) => sum + inv.grossCapital,
-      0
-    );
-    totalAdminFees += installmentData.investments.reduce(
-      (sum, inv) => sum + inv.adminFee,
-      0
-    );
     // For installments, current value is remaining fund after redemptions
     const remainingValue =
       installmentData.totalNetInvestorFund -
@@ -180,8 +151,6 @@ export async function getComprehensiveInvestorSummary(
   return {
     email: investorEmail,
     totalNetInvestedFund,
-    totalGrossInvestedFund,
-    totalAdminFees,
     totalNetPresentValue,
     totalGainLoss,
     totalGainLossPercentage,

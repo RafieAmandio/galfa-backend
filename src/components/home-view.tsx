@@ -258,9 +258,9 @@ export function HomeView({ user, isAdmin, portfolioSummary }: HomeViewProps) {
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2">
-                  <span className="text-sm text-muted-foreground">Admin Fees</span>
+                  <span className="text-sm text-muted-foreground">Accounts</span>
                   <span className="font-semibold text-foreground">
-                    {formatCurrency(portfolioSummary.floatingRateInvestments.totalAdminFees)}
+                    {portfolioSummary.floatingRateInvestments.activeInvestments}
                   </span>
                 </div>
                 <Link

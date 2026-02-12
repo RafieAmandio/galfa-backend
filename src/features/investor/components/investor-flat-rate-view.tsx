@@ -7,8 +7,6 @@ import { format } from "date-fns";
 interface InvestmentDetail {
   accountNumber: string;
   netInvestedAmount: number;
-  grossInvestedAmount: number;
-  adminFee: number;
   startDate: Date;
   endDate: Date | null;
   annualRate: number;
@@ -23,8 +21,6 @@ interface InvestmentDetail {
 interface InvestorSummary {
   email: string;
   totalNetInvestedFund: number;
-  totalGrossInvestedFund: number;
-  totalAdminFees: number;
   totalNetPresentValue: number;
   totalGainLoss: number;
   totalGainLossPercentage: number;

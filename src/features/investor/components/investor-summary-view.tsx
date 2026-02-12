@@ -19,7 +19,6 @@ import {
   AlertCircle,
   RefreshCw,
   Activity,
-  DollarSign,
   ArrowUpRight,
   ArrowDownRight,
   Building2,
@@ -446,43 +445,6 @@ export function InvestorSummaryView({
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* Additional Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-card rounded-2xl shadow-soft p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Total Investment</h3>
-                    <p className="text-xs text-muted-foreground">Original amount invested</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-foreground">
-                {formatCurrency(summary.totalGrossInvestedFund)}
-              </p>
-            </div>
-
-            <div className="bg-card rounded-2xl shadow-soft p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Admin Fees Paid</h3>
-                    <p className="text-xs text-muted-foreground">Total fees paid to platform</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-2xl font-bold text-amber-600">
-                {formatCurrency(summary.totalAdminFees)}
-              </p>
             </div>
           </div>
 
