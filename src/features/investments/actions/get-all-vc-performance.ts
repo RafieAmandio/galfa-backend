@@ -8,7 +8,6 @@ interface VCPerformanceRecord {
   id: number;
   date: Date;
   aum: number;
-  profitTaken: number;
   ihsgValue: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -30,7 +29,6 @@ export async function getAllVCPerformance(): Promise<AllVCPerformanceResponse> {
         id: vcPerformance.id,
         date: vcPerformance.date,
         aum: vcPerformance.aum,
-        profitTaken: vcPerformance.profitTaken,
         ihsgValue: vcPerformance.ihsgValue,
         createdAt: vcPerformance.created_at,
         updatedAt: vcPerformance.updated_at,
@@ -43,7 +41,6 @@ export async function getAllVCPerformance(): Promise<AllVCPerformanceResponse> {
         id: record.id,
         date: record.date,
         aum: Number(record.aum),
-        profitTaken: Number(record.profitTaken),
         ihsgValue: record.ihsgValue ? Number(record.ihsgValue) : null,
         createdAt: record.createdAt,
         updatedAt: record.updatedAt,

@@ -14,13 +14,12 @@ import { getAllVCPerformance } from "../actions/get-all-vc-performance";
 import { CreateVCPerformanceModal } from "../components/create-vc-performance-modal";
 import { EditVCPerformanceModal } from "../components/edit-vc-performance-modal";
 import { format } from "date-fns";
-import { TrendingUp, DollarSign, Calendar, RefreshCw } from "lucide-react";
+import { TrendingUp, Calendar, RefreshCw } from "lucide-react";
 
 interface PerformanceRecord {
   id: number;
   date: Date;
   aum: number;
-  profitTaken: number;
   ihsgValue: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -95,11 +94,9 @@ export function PerformanceTable() {
   const totals = records.reduce(
     (acc, record) => ({
       totalAum: acc.totalAum + record.aum,
-      totalProfitTaken: acc.totalProfitTaken + record.profitTaken,
     }),
     {
       totalAum: 0,
-      totalProfitTaken: 0,
     }
   );
 
@@ -113,8 +110,7 @@ export function PerformanceTable() {
               Performance Records
             </h1>
             <p className="text-gray-600">
-              Manage and view all Assets Under Management (AUM) and Profit Taken
-              records
+              Manage and view all Assets Under Management (AUM) records
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -165,23 +161,6 @@ export function PerformanceTable() {
             </div>
           </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border">
-            <div className="flex items-center">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-teal-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">
-                  Latest Profit
-                </p>
-                <p className="text-lg font-bold text-gray-900">
-                  {records.length > 0
-                    ? formatCurrency(records[0].profitTaken)
-                    : "N/A"}
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -240,7 +219,6 @@ export function PerformanceTable() {
                   <TableHead className="text-right">
                     Assets Under Management
                   </TableHead>
-                  <TableHead className="text-right">Profit Taken</TableHead>
                   <TableHead className="text-right">IHSG</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Last Updated</TableHead>
@@ -273,9 +251,6 @@ export function PerformanceTable() {
                       </TableCell>
                       <TableCell className="text-right ">
                         {formatCurrency(record.aum)}
-                      </TableCell>
-                      <TableCell className="text-right ">
-                        {formatCurrency(record.profitTaken)}
                       </TableCell>
                       <TableCell className="text-right text-sm">
                         {record.ihsgValue ? record.ihsgValue.toLocaleString("id-ID", { minimumFractionDigits: 2 }) : "-"}
@@ -314,10 +289,6 @@ export function PerformanceTable() {
                   <TableCell className="text-right  font-bold text-blue-600">
                     {formatCurrency(totals.totalAum)}
                   </TableCell>
-                  <TableCell className="text-right  font-bold text-green-600">
-                    {formatCurrency(totals.totalProfitTaken)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>
                   <TableCell className="text-muted-foreground">-</TableCell>

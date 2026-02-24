@@ -50,7 +50,6 @@ interface CapitalMarketInvestmentData {
 export interface VCPerformanceDataPoint {
   date: Date;
   aum: number;
-  profitTaken: number;
   ihsgValue: number | null;
 }
 
@@ -161,7 +160,6 @@ export async function getReportData(
             .map((record) => ({
               date: record.date,
               aum: record.aum,
-              profitTaken: record.profitTaken,
               ihsgValue: record.ihsgValue,
             }))
         : [];

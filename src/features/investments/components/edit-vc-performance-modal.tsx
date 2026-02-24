@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Edit, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
+import { CalendarIcon, Edit, DollarSign, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { updateVCPerformance } from "../actions/update-vc-performance";
@@ -26,7 +26,6 @@ interface VCPerformanceRecord {
   id: number;
   date: Date;
   aum: number;
-  profitTaken: number;
   ihsgValue?: number | null;
   createdAt: Date;
   updatedAt: Date;
@@ -52,7 +51,6 @@ export function EditVCPerformanceModal({
     new Date(record.date)
   );
   const [aum, setAum] = useState(record.aum.toString());
-  const [profitTaken, setProfitTaken] = useState(record.profitTaken.toString());
   const [ihsgValue, setIhsgValue] = useState(record.ihsgValue?.toString() || "");
 
   // Reset form when record changes or modal opens
@@ -60,7 +58,6 @@ export function EditVCPerformanceModal({
     if (open) {
       setSelectedDate(new Date(record.date));
       setAum(record.aum.toString());
-      setProfitTaken(record.profitTaken.toString());
       setIhsgValue(record.ihsgValue?.toString() || "");
       setError(null);
     }
@@ -69,7 +66,6 @@ export function EditVCPerformanceModal({
   const resetForm = () => {
     setSelectedDate(new Date(record.date));
     setAum(record.aum.toString());
-    setProfitTaken(record.profitTaken.toString());
     setIhsgValue(record.ihsgValue?.toString() || "");
     setError(null);
   };
@@ -83,10 +79,6 @@ export function EditVCPerformanceModal({
     setAum(e.target.value);
   };
 
-  const handleProfitTakenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfitTaken(e.target.value);
-  };
-
   const handleIhsgValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIhsgValue(e.target.value);
   };
@@ -97,14 +89,9 @@ export function EditVCPerformanceModal({
     }
 
     const aumValue = parseFloat(aum) || 0;
-    const profitValue = parseFloat(profitTaken) || 0;
 
     if (aumValue <= 0) {
       return "Assets Under Management must be greater than 0";
-    }
-
-    if (profitValue < 0) {
-      return "Profit Taken cannot be negative";
     }
 
     return null;
@@ -127,7 +114,7 @@ export function EditVCPerformanceModal({
         id: record.id,
         date: selectedDate!,
         aum: parseFloat(aum) || 0,
-        profitTaken: parseFloat(profitTaken) || 0,
+        profitTaken: 0,
         ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
       });
 
@@ -229,27 +216,6 @@ export function EditVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               Total assets being managed (in IDR)
-            </p>
-          </div>
-
-          {/* Profit Taken */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="profitTaken"
-              className="flex items-center space-x-1"
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span>Profit Taken</span>
-            </Label>
-            <Input
-              id="profitTaken"
-              type="number"
-              placeholder="Enter profit taken amount..."
-              value={profitTaken}
-              onChange={handleProfitTakenChange}
-            />
-            <p className="text-xs text-gray-500">
-              Total profit realized (in IDR)
             </p>
           </div>
 

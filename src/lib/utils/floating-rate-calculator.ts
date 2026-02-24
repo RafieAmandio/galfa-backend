@@ -89,10 +89,10 @@ export function calculateFloatingRateMonthlyValues(
       const daysFraction = daysActive / totalDaysInMonth;
 
       if (monthGrowth.hasData && monthGrowth.growthPercentage > 0) {
-        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate)^(remainingDaysInMonth/totalDaysInMonth)
+        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate * daysFraction) — linear proportioning
         presentValueFund =
           netInvestorFund *
-          Math.pow(1 + monthGrowth.growthPercentage / 100, daysFraction);
+          (1 + (monthGrowth.growthPercentage / 100) * daysFraction);
       } else {
         presentValueFund = netInvestorFund;
       }

@@ -183,10 +183,10 @@ export async function calculateFloatingRateValueWithRedemptions(
         const totalDaysInMonth = monthEnd.getDate();
         const daysFraction = daysPassed / totalDaysInMonth;
 
-        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate)^(daysFraction)
+        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate * daysFraction) — linear proportioning
         newBalance =
           balanceAfterRedemptions *
-          Math.pow(1 + growthData.growthPercentage / 100, daysFraction);
+          (1 + (growthData.growthPercentage / 100) * daysFraction);
         gainedFund = newBalance - balanceAfterRedemptions;
       } else {
         // Subsequent months: use full month calculation

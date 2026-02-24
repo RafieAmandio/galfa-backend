@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus, DollarSign, TrendingUp, BarChart3 } from "lucide-react";
+import { CalendarIcon, Plus, DollarSign, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createVCPerformance } from "../actions/create-vc-performance";
@@ -40,13 +40,11 @@ export function CreateVCPerformanceModal({
     new Date()
   );
   const [aum, setAum] = useState("");
-  const [profitTaken, setProfitTaken] = useState("");
   const [ihsgValue, setIhsgValue] = useState("");
 
   const resetForm = () => {
     setSelectedDate(new Date());
     setAum("");
-    setProfitTaken("");
     setIhsgValue("");
     setError(null);
   };
@@ -60,10 +58,6 @@ export function CreateVCPerformanceModal({
     setAum(e.target.value);
   };
 
-  const handleProfitTakenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProfitTaken(e.target.value);
-  };
-
   const handleIhsgValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIhsgValue(e.target.value);
   };
@@ -74,14 +68,9 @@ export function CreateVCPerformanceModal({
     }
 
     const aumValue = parseFloat(aum) || 0;
-    const profitValue = parseFloat(profitTaken) || 0;
 
     if (aumValue <= 0) {
       return "Assets Under Management must be greater than 0";
-    }
-
-    if (profitValue < 0) {
-      return "Profit Taken cannot be negative";
     }
 
     return null;
@@ -103,7 +92,7 @@ export function CreateVCPerformanceModal({
       const result = await createVCPerformance({
         date: selectedDate!,
         aum: parseFloat(aum) || 0,
-        profitTaken: parseFloat(profitTaken) || 0,
+        profitTaken: 0,
         ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
       });
 
@@ -193,27 +182,6 @@ export function CreateVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               Total assets being managed (in IDR)
-            </p>
-          </div>
-
-          {/* Profit Taken */}
-          <div className="space-y-2">
-            <Label
-              htmlFor="profitTaken"
-              className="flex items-center space-x-1"
-            >
-              <TrendingUp className="h-4 w-4" />
-              <span>Profit Taken</span>
-            </Label>
-            <Input
-              id="profitTaken"
-              type="number"
-              placeholder="Enter profit taken amount..."
-              value={profitTaken}
-              onChange={handleProfitTakenChange}
-            />
-            <p className="text-xs text-gray-500">
-              Total profit realized (in IDR)
             </p>
           </div>
 
