@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Activity,
   Building2,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -110,6 +111,11 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       label: "Reports",
       href: "/admin/reports",
       icon: FileText,
+    },
+    {
+      label: "Import",
+      href: "/admin/import",
+      icon: Upload,
     },
   ];
 
