@@ -80,6 +80,9 @@ export async function calculateNetPresentValueWithRedemptions(
 
   const monthlyRate = getMonthlyCompoundRate(annualRate);
   let currentValue = netCapital;
+  // Track principal separately for simple interest calculation
+  // Interest is always computed on remainingPrincipal, not on currentValue
+  let remainingPrincipalForInterest = netCapital;
   let calculationDate = new Date(startDate);
   const endDate = currentDate;
   const monthlyBreakdown: MonthlyCalculation[] = [];
@@ -98,17 +101,29 @@ export async function calculateNetPresentValueWithRedemptions(
     );
     const actualEndDate = monthEnd > endDate ? endDate : monthEnd;
 
-    // Calculate days in this period
-    let daysInPeriod = Math.ceil(
-      (actualEndDate.getTime() - calculationDate.getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-
     const isStartMonth = calculationDate.getTime() === startDate.getTime();
     const isEndMonth = actualEndDate.getTime() === endDate.getTime();
 
-    if (!isStartMonth && !isEndMonth) {
-      daysInPeriod += 1;
+    // Calculate days in this period using date arithmetic to avoid timezone issues
+    const totalDaysInMonth = new Date(
+      calculationDate.getFullYear(),
+      calculationDate.getMonth() + 1,
+      0
+    ).getDate();
+
+    let daysInPeriod: number;
+    if (isStartMonth && isEndMonth) {
+      // Single month: exclude start date
+      daysInPeriod = actualEndDate.getDate() - calculationDate.getDate();
+    } else if (isStartMonth) {
+      // First month: exclude start date, count to end of month
+      daysInPeriod = totalDaysInMonth - calculationDate.getDate();
+    } else if (isEndMonth) {
+      // Last month: from 1st to current date (inclusive)
+      daysInPeriod = actualEndDate.getDate();
+    } else {
+      // Full middle month
+      daysInPeriod = totalDaysInMonth;
     }
 
     const startingBalance = currentValue;
@@ -133,43 +148,26 @@ export async function calculateNetPresentValueWithRedemptions(
       }
     });
 
+    // Reduce principal for interest calculation when redemptions occur
+    if (redemptionsThisMonth > 0) {
+      remainingPrincipalForInterest -= redemptionsThisMonth;
+      if (remainingPrincipalForInterest < 0) {
+        remainingPrincipalForInterest = 0;
+      }
+    }
+
     // If balance is fully redeemed (below threshold), end calculation here
     const isFullyRedeemed =
       balanceAfterRedemptions < 1000 && redemptionsThisMonth > 0;
 
-    // Calculate interest based on when redemptions occur
-    let interestEarned = 0;
-
-    if (redemptionsInPeriod.length === 0) {
-      // No redemptions in this period - calculate interest on full balance
-      let effectiveRate: number;
-      if (isStartMonth || isEndMonth) {
-        const actualMonthDays = new Date(
-          calculationDate.getFullYear(),
-          calculationDate.getMonth() + 1,
-          0
-        ).getDate();
-        effectiveRate = (daysInPeriod / actualMonthDays) * monthlyRate;
-      } else {
-        effectiveRate = monthlyRate;
-      }
-      interestEarned = currentValue * effectiveRate;
+    // Calculate simple interest: always on remaining principal, not on accumulated value
+    let effectiveRate: number;
+    if (isStartMonth || isEndMonth) {
+      effectiveRate = (daysInPeriod / totalDaysInMonth) * monthlyRate;
     } else {
-      // Redemptions occurred - calculate interest for period before redemption
-      // For simplicity, assume redemptions happen at end of month for full interest calculation
-      let effectiveRate: number;
-      if (isStartMonth || isEndMonth) {
-        const actualMonthDays = new Date(
-          calculationDate.getFullYear(),
-          calculationDate.getMonth() + 1,
-          0
-        ).getDate();
-        effectiveRate = (daysInPeriod / actualMonthDays) * monthlyRate;
-      } else {
-        effectiveRate = monthlyRate;
-      }
-      interestEarned = currentValue * effectiveRate;
+      effectiveRate = monthlyRate;
     }
+    const interestEarned = remainingPrincipalForInterest * effectiveRate;
 
     currentValue = balanceAfterRedemptions + interestEarned;
 
