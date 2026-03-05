@@ -16,6 +16,8 @@ import {
   Calendar,
   Activity,
   ChevronRight,
+  Settings,
+  Users,
 } from "lucide-react";
 
 interface HomeViewProps {
