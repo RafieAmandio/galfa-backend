@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus, DollarSign, BarChart3 } from "lucide-react";
+import { CalendarIcon, Plus, DollarSign, BarChart3, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createVCPerformance } from "../actions/create-vc-performance";
