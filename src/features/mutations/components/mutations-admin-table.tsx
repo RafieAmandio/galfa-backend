@@ -1,19 +1,20 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
-  Row,
+  PaginationState,
 } from "@tanstack/react-table";
+import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   Table,
   TableBody,
@@ -51,75 +52,51 @@ import {
   Filter,
   X,
   DollarSign,
-  Calendar,
   FileText,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Mutation } from "../actions/get-all-mutations";
+import { Mutation, getAllMutations } from "../actions/get-all-mutations";
 
-// Custom filter functions
-const numberRangeFilter = (
-  row: Row<Mutation>,
-  columnId: string,
-  value: [number?, number?]
-) => {
-  const [min, max] = value;
-  const cellValueRaw = row.getValue(columnId);
-
-  if (cellValueRaw === null || cellValueRaw === undefined) return true;
-
-  const cellValue = Number(cellValueRaw);
-  if (isNaN(cellValue)) return true;
-
-  if (min !== undefined && max !== undefined) {
-    return cellValue >= min && cellValue <= max;
-  }
-  if (min !== undefined) {
-    return cellValue >= min;
-  }
-  if (max !== undefined) {
-    return cellValue <= max;
-  }
-  return true;
-};
-
-// Custom filter function for date ranges
-const dateRangeFilter = (
-  row: Row<Mutation>,
-  columnId: string,
-  value: [string?, string?]
-) => {
-  const [from, to] = value;
-  const cellValueRaw = row.getValue(columnId);
-
-  if (!cellValueRaw) return true;
-
-  try {
-    const cellValue = new Date(cellValueRaw as Date | string);
-    if (isNaN(cellValue.getTime())) return true;
-
-    if (from && to) {
-      return cellValue >= new Date(from) && cellValue <= new Date(to);
-    }
-    if (from) {
-      return cellValue >= new Date(from);
-    }
-    if (to) {
-      return cellValue <= new Date(to);
-    }
-    return true;
-  } catch (error) {
-    return true;
-  }
-};
-
-export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
-  const [data] = useState<Mutation[]>(mutations);
+export function MutationsAdminTable() {
+  const [data, setData] = useState<Mutation[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const result = await getAllMutations({
+        page: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+      });
+      setData(result.data);
+      setTotalCount(result.totalCount);
+    } catch (error) {
+      console.error("Failed to fetch mutations:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [pagination.pageIndex, pagination.pageSize]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    setGlobalFilter(debouncedGlobalFilter);
+  }, [debouncedGlobalFilter]);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -162,180 +139,6 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
       updated_at: "Updated At",
     };
     return displayNames[columnId] || columnId;
-  };
-
-  // Filter Components
-  const TextFilter = ({ column }: { column: any }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              column.getFilterValue()
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search..."
-                value={(column.getFilterValue() as string) ?? ""}
-                onChange={(e) => column.setFilterValue(e.target.value)}
-              />
-              {column.getFilterValue() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => column.setFilterValue("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const NumberRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [number?, number?]
-      | undefined;
-    const [min, max] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">Min</Label>
-                <Input
-                  type="number"
-                  placeholder="Min"
-                  value={min ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    column.setFilterValue([
-                      value === "" ? undefined : Number(value),
-                      max,
-                    ]);
-                  }}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Max</Label>
-                <Input
-                  type="number"
-                  placeholder="Max"
-                  value={max ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    column.setFilterValue([
-                      min,
-                      value === "" ? undefined : Number(value),
-                    ]);
-                  }}
-                />
-              </div>
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const DateRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [string?, string?]
-      | undefined;
-    const [from, to] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-xs">From</Label>
-                <Input
-                  type="date"
-                  value={from ?? ""}
-                  onChange={(e) => {
-                    column.setFilterValue([e.target.value, to]);
-                  }}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">To</Label>
-                <Input
-                  type="date"
-                  value={to ?? ""}
-                  onChange={(e) => {
-                    column.setFilterValue([from, e.target.value]);
-                  }}
-                />
-              </div>
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
   };
 
   const TypeFilter = ({ column }: { column: any }) => {
@@ -515,7 +318,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 <ArrowUpDown className="ml-2 h-4 w-4" />
               )}
             </Button>
-            <NumberRangeFilter column={column} />
+            <NumberRangeFilter column={column} label="ID" />
           </div>
         ),
         cell: ({ getValue }) => (
@@ -555,7 +358,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 <ArrowUpDown className="ml-2 h-4 w-4" />
               )}
             </Button>
-            <NumberRangeFilter column={column} />
+            <NumberRangeFilter column={column} label="Amount" />
           </div>
         ),
         cell: ({ getValue }) => (
@@ -570,7 +373,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
         header: ({ column }) => (
           <div className="flex items-center">
             <span className="font-semibold">Description</span>
-            <TextFilter column={column} />
+            <TextFilter column={column} label="Description" />
           </div>
         ),
         cell: ({ getValue }) => (
@@ -611,7 +414,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 <ArrowUpDown className="ml-2 h-4 w-4" />
               )}
             </Button>
-            <DateRangeFilter column={column} />
+            <DateRangeFilter column={column} label="Transaction Date" />
           </div>
         ),
         cell: ({ getValue }) => (
@@ -641,7 +444,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 <ArrowUpDown className="ml-2 h-4 w-4" />
               )}
             </Button>
-            <DateRangeFilter column={column} />
+            <DateRangeFilter column={column} label="Created At" />
           </div>
         ),
         cell: ({ getValue }) => (
@@ -655,29 +458,29 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
     [data]
   );
 
+  const pageCount = Math.ceil(totalCount / pagination.pageSize);
+
   const table = useReactTable({
     data,
     columns,
+    manualPagination: true,
+    pageCount,
+    onPaginationChange: setPagination,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
     state: {
+      pagination,
       sorting,
       columnFilters,
       columnVisibility,
       rowSelection,
       globalFilter,
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
     },
   });
 
@@ -718,7 +521,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
           <CardContent>
             <div className="text-2xl font-bold">{totals.totalMutations}</div>
             <p className="text-xs text-muted-foreground">
-              {filteredData.length} of {data.length} mutations
+              Showing {data.length} of {totalCount} mutations
             </p>
           </CardContent>
         </Card>
@@ -752,8 +555,8 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search all columns..."
-              value={globalFilter ?? ""}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              value={globalFilterInput}
+              onChange={(e) => setGlobalFilterInput(e.target.value)}
               className="max-w-sm"
             />
           </div>
@@ -788,6 +591,7 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 size="sm"
                 onClick={() => {
                   table.resetColumnFilters();
+                  setGlobalFilterInput("");
                   setGlobalFilter("");
                 }}
               >
@@ -823,7 +627,19 @@ export function MutationsAdminTable({ mutations }: { mutations: Mutation[] }) {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}

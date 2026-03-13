@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection, getDbConnectionDebug } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
-import { eq, and, lt, isNotNull } from "drizzle-orm";
+import { eq, and, lt, isNotNull, sql } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
@@ -69,12 +69,20 @@ async function updateMaturedAccounts(db: any): Promise<void> {
   }
 }
 
-export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
+export async function getFlatRateInvestments(
+  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number } = {}
+) {
   console.info("DB Connection Debug:", getDbConnectionDebug());
   const db = createDrizzleConnection();
 
   // First, update any matured accounts to 'mature' status
   await updateMaturedAccounts(db);
+
+  // Get total count
+  const [{ count: totalCount }] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(accounts)
+    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id));
 
   const results = await db
     .select({
@@ -90,7 +98,9 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
       status: accounts.status,
     })
     .from(accounts)
-    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id));
+    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   console.info("FlatRate investments rows:", results.length);
   if (results.length > 0) {
@@ -161,8 +171,10 @@ export async function getFlatRateInvestments(): Promise<FlatRateInvestment[]> {
     })
   );
 
-  return investments;
+  return { data: investments, totalCount, page, pageSize };
 }
+
+export type FlatRateInvestmentsResult = Awaited<ReturnType<typeof getFlatRateInvestments>>;
 
 function calculateMonthlyData(params: {
   transDate: Date;

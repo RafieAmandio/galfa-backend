@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -29,6 +29,7 @@ import {
   ChevronRight,
   ArrowUpDown,
 } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { DownloadPdfButton } from "./download-pdf-button";
 import { SendEmailModal } from "./send-email-modal";
 import type { InvestorOption } from "@/features/investor/actions/get-all-investors";
@@ -42,6 +43,13 @@ export function InvestorReportsTable({
 }: InvestorReportsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
+
+  useEffect(() => {
+    setGlobalFilter(debouncedGlobalFilter);
+  }, [debouncedGlobalFilter]);
+
   const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
@@ -138,8 +146,8 @@ export function InvestorReportsTable({
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
               placeholder="Search by email or name..."
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
+              value={globalFilterInput}
+              onChange={(e) => setGlobalFilterInput(e.target.value)}
               className="pl-10"
             />
           </div>

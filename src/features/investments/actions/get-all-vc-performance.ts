@@ -34,7 +34,8 @@ export async function getAllVCPerformance(): Promise<AllVCPerformanceResponse> {
         updatedAt: vcPerformance.updated_at,
       })
       .from(vcPerformance)
-      .orderBy(desc(vcPerformance.date));
+      .orderBy(desc(vcPerformance.date))
+      .limit(12);
 
     const vcPerformanceRecords: VCPerformanceRecord[] = records.map(
       (record) => ({

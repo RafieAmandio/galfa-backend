@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   ColumnDef,
   flexRender,
@@ -12,7 +12,6 @@ import {
   ColumnFiltersState,
   SortingState,
   VisibilityState,
-  Row,
   getExpandedRowModel,
 } from "@tanstack/react-table";
 // Data fetching moved to server-side - no longer needed here
@@ -60,50 +59,11 @@ import {
   DollarSign,
 } from "lucide-react";
 import { format } from "date-fns";
+import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
+import { useDebounce } from "@/hooks/useDebounce";
 import { DeleteFloatingRateModal } from "@/features/floating-rate/components/delete-floating-rate-modal";
 
 // This component receives data from server-side
-
-// Custom filter functions
-const numberRangeFilter = (
-  row: Row<any>,
-  columnId: string,
-  value: [number?, number?]
-) => {
-  const [min, max] = value;
-  const cellValue = row.getValue(columnId) as number;
-
-  if (min !== undefined && max !== undefined) {
-    return cellValue >= min && cellValue <= max;
-  }
-  if (min !== undefined) {
-    return cellValue >= min;
-  }
-  if (max !== undefined) {
-    return cellValue <= max;
-  }
-  return true;
-};
-
-const dateRangeFilter = (
-  row: Row<any>,
-  columnId: string,
-  value: [string?, string?]
-) => {
-  const [from, to] = value;
-  const cellValue = new Date(row.getValue(columnId) as Date);
-
-  if (from && to) {
-    return cellValue >= new Date(from) && cellValue <= new Date(to);
-  }
-  if (from) {
-    return cellValue >= new Date(from);
-  }
-  if (to) {
-    return cellValue <= new Date(to);
-  }
-  return true;
-};
 
 interface PaginationParams {
   page?: number;
@@ -154,6 +114,8 @@ export default function FloatingRateInvestmentsMonthlyTable({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
   const [expanded, setExpanded] = useState({});
 
   const formatCurrency = (amount: number) => {
@@ -208,172 +170,6 @@ export default function FloatingRateInvestmentsMonthlyTable({
       rolloverSequence: "Rollover Sequence",
     };
     return displayNames[columnId] || columnId;
-  };
-
-  // Filter Components
-  const TextFilter = ({ column }: { column: any }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              column.getFilterValue()
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search..."
-                value={(column.getFilterValue() as string) ?? ""}
-                onChange={(e) => column.setFilterValue(e.target.value)}
-              />
-              {column.getFilterValue() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => column.setFilterValue("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const NumberRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [number?, number?]
-      | undefined;
-    const [min, max] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Min"
-                type="number"
-                value={min ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([
-                    value ? parseFloat(value) : undefined,
-                    max,
-                  ]);
-                }}
-              />
-              <Input
-                placeholder="Max"
-                type="number"
-                value={max ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([
-                    min,
-                    value ? parseFloat(value) : undefined,
-                  ]);
-                }}
-              />
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const DateRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [string?, string?]
-      | undefined;
-    const [from, to] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="From"
-                type="date"
-                value={from ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([value || undefined, to]);
-                }}
-              />
-              <Input
-                placeholder="To"
-                type="date"
-                value={to ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([from, value || undefined]);
-                }}
-              />
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
   };
 
   const StatusFilter = ({
@@ -489,7 +285,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <TextFilter column={column} />
+              <TextFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -519,7 +315,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <TextFilter column={column} />
+              <TextFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -547,7 +343,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -579,7 +375,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -611,7 +407,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -643,7 +439,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -675,7 +471,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <DateRangeFilter column={column} />
+              <DateRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -802,6 +598,10 @@ export default function FloatingRateInvestmentsMonthlyTable({
       search: value,
     });
   };
+
+  useEffect(() => {
+    handleGlobalFilterChange(debouncedGlobalFilter);
+  }, [debouncedGlobalFilter]);
 
   const table = useReactTable({
     data: tableData,
@@ -1038,16 +838,17 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search all columns..."
-                    value={paginationParams.search || ""}
+                    value={globalFilterInput}
                     onChange={(event) =>
-                      handleGlobalFilterChange(event.target.value)
+                      setGlobalFilterInput(event.target.value)
                     }
                     className="max-w-sm"
                   />
                 </div>
 
                 {/* Reset All Filters */}
-                {(paginationParams.search ||
+                {(globalFilterInput ||
+                  paginationParams.search ||
                   paginationParams.status ||
                   paginationParams.dateFrom ||
                   paginationParams.dateTo) && (
@@ -1055,6 +856,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      setGlobalFilterInput("");
                       setGlobalFilter("");
                       setColumnFilters([]);
                       onPaginationChange({

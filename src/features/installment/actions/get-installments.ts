@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, installmentAccounts, profiles } from "@/db/drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
 import { authUsers } from "@/db/drizzle/schema";
 import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
@@ -49,6 +49,9 @@ interface AdminInstallmentSummary {
   totalNetPresentValueFund: number;
   investments: InstallmentInvestment[];
   monthlyGainedFunds: { [monthYear: string]: number }; // Admin gains per month
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }
 
 interface InvestorInstallmentSummary {
@@ -160,8 +163,20 @@ function calculateNetCapital(grossCapital: number, adminFee: number): number {
 /**
  * Get all installment investments for admin view
  */
-export async function getAdminInstallmentInvestments(): Promise<AdminInstallmentSummary> {
+export async function getAdminInstallmentInvestments(
+  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number } = {}
+): Promise<AdminInstallmentSummary> {
   const db = createDrizzleConnection();
+
+  // Get total count
+  const countResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(accounts)
+    .innerJoin(
+      installmentAccounts,
+      eq(accounts.id, installmentAccounts.account_id)
+    );
+  const totalCount = Number(countResult[0].count);
 
   const results = await db
     .select({
@@ -185,7 +200,9 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
       eq(accounts.id, installmentAccounts.account_id)
     )
     .leftJoin(profiles, eq(accounts.user_id, profiles.id))
-    .leftJoin(authUsers, eq(profiles.id, authUsers.id));
+    .leftJoin(authUsers, eq(profiles.id, authUsers.id))
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
 
   let totalGainedFunds = 0;
   let totalPresentValueFund = 0;
@@ -294,6 +311,9 @@ export async function getAdminInstallmentInvestments(): Promise<AdminInstallment
     totalNetPresentValueFund,
     investments,
     monthlyGainedFunds,
+    totalCount,
+    page,
+    pageSize,
   };
 }
 

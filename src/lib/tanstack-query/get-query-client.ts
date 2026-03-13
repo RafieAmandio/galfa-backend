@@ -21,7 +21,8 @@ function makeQueryClient() {
     mutationCache: new MutationCache_TEMP_FIX(),
     defaultOptions: {
       queries: {
-        staleTime: 60 * 1000,
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000,
       },
       dehydrate: {
         // include pending queries in dehydration

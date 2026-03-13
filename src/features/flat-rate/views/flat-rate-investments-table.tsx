@@ -6,13 +6,12 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
+  PaginationState,
   getSortedRowModel,
   useReactTable,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
-  Row,
   getExpandedRowModel,
 } from "@tanstack/react-table";
 import { getFlatRateInvestments } from "../actions/get-flat-rate-investments";
@@ -62,60 +61,24 @@ import {
 } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
+import { useDebounce } from "@/hooks/useDebounce";
 
-type FlatRateInvestment = Awaited<ReturnType<typeof getFlatRateInvestments>>[0];
-
-// Custom filter function for number ranges
-const numberRangeFilter = (
-  row: Row<FlatRateInvestment>,
-  columnId: string,
-  value: [number?, number?]
-) => {
-  const [min, max] = value;
-  const cellValue = row.getValue(columnId) as number;
-
-  if (min !== undefined && max !== undefined) {
-    return cellValue >= min && cellValue <= max;
-  }
-  if (min !== undefined) {
-    return cellValue >= min;
-  }
-  if (max !== undefined) {
-    return cellValue <= max;
-  }
-  return true;
-};
-
-// Custom filter function for date ranges
-const dateRangeFilter = (
-  row: Row<FlatRateInvestment>,
-  columnId: string,
-  value: [string?, string?]
-) => {
-  const [from, to] = value;
-  const cellValue = new Date(row.getValue(columnId) as Date);
-
-  if (from && to) {
-    return cellValue >= new Date(from) && cellValue <= new Date(to);
-  }
-  if (from) {
-    return cellValue >= new Date(from);
-  }
-  if (to) {
-    return cellValue <= new Date(to);
-  }
-  return true;
-};
+type FlatRateInvestment = Awaited<ReturnType<typeof getFlatRateInvestments>>["data"][0];
 
 export function FlatRateInvestmentsTable() {
   const [data, setData] = useState<FlatRateInvestment[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
   const [expanded, setExpanded] = useState({});
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -140,172 +103,6 @@ export function FlatRateInvestmentsTable() {
       totalRedemptions: "Total Redeemed",
     };
     return displayNames[columnId] || columnId;
-  };
-
-  // Filter Components
-  const TextFilter = ({ column }: { column: any }) => {
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              column.getFilterValue()
-                ? "text-blue-600"
-                : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-56" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)}</Label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Search..."
-                value={(column.getFilterValue() as string) ?? ""}
-                onChange={(e) => column.setFilterValue(e.target.value)}
-              />
-              {column.getFilterValue() && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => column.setFilterValue("")}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const NumberRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [number?, number?]
-      | undefined;
-    const [min, max] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="Min"
-                type="number"
-                value={min ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([
-                    value ? parseFloat(value) : undefined,
-                    max,
-                  ]);
-                }}
-              />
-              <Input
-                placeholder="Max"
-                type="number"
-                value={max ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([
-                    min,
-                    value ? parseFloat(value) : undefined,
-                  ]);
-                }}
-              />
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
-
-  const DateRangeFilter = ({ column }: { column: any }) => {
-    const filterValue = column.getFilterValue() as
-      | [string?, string?]
-      | undefined;
-    const [from, to] = filterValue || [undefined, undefined];
-
-    return (
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={`h-6 w-6 p-0 ml-1 ${
-              filterValue ? "text-blue-600" : "text-muted-foreground"
-            }`}
-          >
-            <Filter className="h-3 w-3" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-64" align="start">
-          <div className="space-y-2">
-            <Label>Filter {getColumnDisplayName(column.id)} Range</Label>
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                placeholder="From"
-                type="date"
-                value={from ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([value || undefined, to]);
-                }}
-              />
-              <Input
-                placeholder="To"
-                type="date"
-                value={to ?? ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  column.setFilterValue([from, value || undefined]);
-                }}
-              />
-            </div>
-            {filterValue && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => column.setFilterValue(undefined)}
-                className="w-full"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Clear Filter
-              </Button>
-            )}
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
   };
 
   const StatusFilter = ({ column }: { column: any }) => {
@@ -426,7 +223,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <TextFilter column={column} />
+              <TextFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -456,7 +253,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -486,7 +283,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -514,7 +311,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <DateRangeFilter column={column} />
+              <DateRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -546,7 +343,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <DateRangeFilter column={column} />
+              <DateRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -591,7 +388,7 @@ export function FlatRateInvestmentsTable() {
                   <ArrowUpDown className="ml-2 h-4 w-4" />
                 )}
               </Button>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -608,7 +405,7 @@ export function FlatRateInvestmentsTable() {
           return (
             <div className="flex items-center">
               <span className="font-semibold">Total Redeemed</span>
-              <NumberRangeFilter column={column} />
+              <NumberRangeFilter column={column} label={getColumnDisplayName(column.id)} />
             </div>
           );
         },
@@ -661,7 +458,6 @@ export function FlatRateInvestmentsTable() {
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
@@ -669,6 +465,9 @@ export function FlatRateInvestmentsTable() {
     onGlobalFilterChange: setGlobalFilter,
     getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: () => true,
+    manualPagination: true,
+    pageCount: Math.ceil(totalCount / pagination.pageSize),
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
@@ -676,24 +475,28 @@ export function FlatRateInvestmentsTable() {
       rowSelection,
       globalFilter,
       expanded,
+      pagination,
     },
     onExpandedChange: setExpanded,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
   });
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [pagination.pageIndex, pagination.pageSize]);
+
+  useEffect(() => {
+    setGlobalFilter(debouncedGlobalFilter);
+  }, [debouncedGlobalFilter]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const investmentsData = await getFlatRateInvestments();
-      setData(investmentsData);
+      const result = await getFlatRateInvestments({
+        page: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+      });
+      setData(result.data);
+      setTotalCount(result.totalCount);
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
@@ -842,18 +645,19 @@ export function FlatRateInvestmentsTable() {
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search all columns..."
-                    value={globalFilter}
-                    onChange={(event) => setGlobalFilter(event.target.value)}
+                    value={globalFilterInput}
+                    onChange={(event) => setGlobalFilterInput(event.target.value)}
                     className="max-w-sm"
                   />
                 </div>
 
                 {/* Reset All Filters */}
-                {(globalFilter || columnFilters.length > 0) && (
+                {(globalFilterInput || columnFilters.length > 0) && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      setGlobalFilterInput("");
                       setGlobalFilter("");
                       table.resetColumnFilters();
                     }}

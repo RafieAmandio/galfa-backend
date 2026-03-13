@@ -11,15 +11,14 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
+  PaginationState,
   useReactTable,
   ColumnFiltersState,
   SortingState,
   VisibilityState,
   Row,
 } from "@tanstack/react-table";
-import { adminGetAllCapitalMarketAccounts } from "../actions/admin-get-all-capital-market-accounts";
 import {
   Table,
   TableBody,
@@ -113,6 +112,10 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
 
   const formatDate = (date: Date) => {
     return format(new Date(date), "d MMMM yyyy");
@@ -121,10 +124,19 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
   const queryClient = useQueryClient();
 
   const {
-    data: accountsData,
+    data: accountsResponse,
     isLoading,
     error,
-  } = useQuery(adminGetAllCapitalMarketAccountsQueryOptions());
+  } = useQuery(
+    adminGetAllCapitalMarketAccountsQueryOptions({
+      page: pagination.pageIndex + 1,
+      pageSize: pagination.pageSize,
+    })
+  );
+
+  const accountsData = accountsResponse?.data;
+  const totalCount = accountsResponse?.totalCount ?? 0;
+  const pageCount = Math.ceil(totalCount / pagination.pageSize);
 
   // Helper function to get column display name
   const getColumnDisplayName = (columnId: string) => {
@@ -438,37 +450,32 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onGlobalFilterChange: setGlobalFilter,
+    manualPagination: true,
+    pageCount,
+    onPaginationChange: setPagination,
     state: {
       sorting,
       columnFilters,
       columnVisibility,
       globalFilter,
-    },
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
+      pagination,
     },
   });
 
   // Expose refresh method to parent component
   useImperativeHandle(ref, () => ({
     refresh: () => {
-      queryClient.invalidateQueries(
-        adminGetAllCapitalMarketAccountsQueryOptions()
-      );
+      queryClient.invalidateQueries({
+        queryKey: ["all-capital-market-accounts"],
+      });
     },
   }));
 
-  // Calculate totals from filtered data
-  const filteredData = table
-    .getFilteredRowModel()
-    .rows.map((row) => row.original);
+  const filteredData = accountsData ?? [];
 
   if (isLoading) {
     return (
@@ -500,12 +507,7 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
                   Total Accounts
                 </p>
                 <p className="text-lg font-bold">
-                  {filteredData.length}
-                  {filteredData.length !== accountsData?.length && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      of {accountsData?.length}
-                    </span>
-                  )}
+                  {totalCount}
                 </p>
               </div>
             </div>
@@ -524,9 +526,9 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
               <div className="flex items-center space-x-2">
                 <Button
                   onClick={() =>
-                    queryClient.invalidateQueries(
-                      adminGetAllCapitalMarketAccountsQueryOptions()
-                    )
+                    queryClient.invalidateQueries({
+                      queryKey: ["all-capital-market-accounts"],
+                    })
                   }
                   variant="outline"
                   size="sm"
@@ -672,8 +674,7 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
           {/* Pagination */}
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              Showing {table.getFilteredRowModel().rows.length} of{" "}
-              {accountsData?.length} total accounts.
+              Showing {filteredData.length} of {totalCount} total accounts.
             </div>
             <div className="flex items-center space-x-6 lg:space-x-8">
               <div className="flex items-center space-x-2">

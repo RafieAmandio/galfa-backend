@@ -64,20 +64,33 @@ export async function getFundAllocationsSummary(): Promise<{
   error?: string;
 }> {
   try {
-    const result = await getFundAllocations();
+    const db = createDrizzleConnection();
 
-    if (!result.success || !result.data) {
-      return { success: false, error: result.error };
-    }
+    const allocations = await db
+      .select()
+      .from(fundAllocations)
+      .orderBy(desc(fundAllocations.aum));
 
-    const totalAum = result.data.reduce((sum, a) => sum + a.aum, 0);
+    const formattedAllocations: FundAllocation[] = allocations.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      aum: parseFloat(a.aum),
+      rate_type: a.rate_type,
+      rate_value: parseFloat(a.rate_value),
+      rate_label: a.rate_label,
+      created_at: a.created_at,
+      updated_at: a.updated_at,
+    }));
+
+    const totalAum = formattedAllocations.reduce((sum, a) => sum + a.aum, 0);
 
     return {
       success: true,
       data: {
         totalAum,
-        totalAllocations: result.data.length,
-        allocations: result.data,
+        totalAllocations: formattedAllocations.length,
+        allocations: formattedAllocations,
       },
     };
   } catch (error) {
