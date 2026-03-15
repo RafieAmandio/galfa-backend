@@ -16,6 +16,7 @@ import {
 } from "@tanstack/react-table";
 import { getFlatRateInvestments } from "../actions/get-flat-rate-investments";
 import { DeleteFlatRateModal } from "../components/delete-flat-rate-modal";
+import { EditFlatRateModal } from "../components/edit-flat-rate-modal";
 import {
   Table,
   TableBody,
@@ -429,6 +430,10 @@ export function FlatRateInvestmentsTable() {
         cell: ({ row }) => {
           return (
             <div className="flex items-center space-x-2">
+              <EditFlatRateModal
+                investment={row.original}
+                onSuccess={fetchData}
+              />
               <DeleteFlatRateModal
                 accountId={row.original.id}
                 accountNumber={row.original.name}
@@ -524,21 +529,6 @@ export function FlatRateInvestmentsTable() {
   // Get unique statuses for filter dropdown
   const uniqueStatuses = Array.from(new Set(data.map((inv) => inv.status)));
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">
-              Loading investments...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -554,11 +544,17 @@ export function FlatRateInvestmentsTable() {
                   Total Investments
                 </p>
                 <p className="text-lg font-bold">
-                  {filteredData.length}
-                  {filteredData.length !== data.length && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      of {data.length}
-                    </span>
+                  {loading ? (
+                    <span className="text-muted-foreground">-</span>
+                  ) : (
+                    <>
+                      {filteredData.length}
+                      {filteredData.length !== data.length && (
+                        <span className="text-sm text-muted-foreground ml-1">
+                          of {data.length}
+                        </span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>
@@ -577,7 +573,7 @@ export function FlatRateInvestmentsTable() {
                   Total Gross Capital
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.grossCapital)}
+                  {loading ? <span className="text-muted-foreground">-</span> : formatCurrency(totals.grossCapital)}
                 </p>
               </div>
             </div>
@@ -595,7 +591,7 @@ export function FlatRateInvestmentsTable() {
                   Current Value
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.currentValue)}
+                  {loading ? <span className="text-muted-foreground">-</span> : formatCurrency(totals.currentValue)}
                 </p>
               </div>
             </div>
@@ -613,7 +609,7 @@ export function FlatRateInvestmentsTable() {
                   Total Redeemed
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.totalRedemptions)}
+                  {loading ? <span className="text-muted-foreground">-</span> : formatCurrency(totals.totalRedemptions)}
                 </p>
               </div>
             </div>
@@ -740,7 +736,17 @@ export function FlatRateInvestmentsTable() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {loading ? (
+                  Array.from({ length: pagination.pageSize }).map((_, i) => (
+                    <TableRow key={`skeleton-${i}`}>
+                      {columns.map((_, j) => (
+                        <TableCell key={j}>
+                          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : table.getRowModel().rows?.length ? (
                   <>
                     {table.getRowModel().rows.map((row) => (
                       <React.Fragment key={row.id}>
@@ -773,9 +779,9 @@ export function FlatRateInvestmentsTable() {
                                   </Badge>
                                 </div>
 
-                                <div className="rounded-md border bg-background">
+                                <div className="rounded-md border bg-background max-h-80 overflow-auto">
                                   <Table>
-                                    <TableHeader>
+                                    <TableHeader className="sticky top-0 bg-background z-10">
                                       <TableRow>
                                         <TableHead>Month</TableHead>
                                         <TableHead className="text-center">

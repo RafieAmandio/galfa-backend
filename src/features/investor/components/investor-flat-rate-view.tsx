@@ -1,8 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createBrowserClient } from "@/db/supabase/browser";
 import { format } from "date-fns";
+import { getInvestorMonthlyNPV } from "@/features/investor/actions/get-investor-monthly-npv";
+import type {
+  InvestorMonthlyNPVResult,
+  MonthlyBreakdownEntry,
+} from "@/features/investor/actions/get-investor-monthly-npv";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 
 interface InvestmentDetail {
   accountNumber: string;
@@ -46,6 +76,99 @@ export function InvestorFlatRateView({
   const [isSigningOut, setIsSigningOut] = useState(false);
   const supabase = createBrowserClient();
 
+  // Monthly NPV state
+  const [monthlyData, setMonthlyData] =
+    useState<InvestorMonthlyNPVResult | null>(null);
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
+
+  useEffect(() => {
+    if (user.email && summary) {
+      setLoadingMonthly(true);
+      getInvestorMonthlyNPV(user.email)
+        .then((data) => {
+          setMonthlyData(data);
+          if (data && data.investments.length > 0) {
+            // Collect all unique months across all investments
+            const allMonths = new Set<string>();
+            data.investments.forEach((inv) => {
+              inv.monthlyBreakdown.forEach((m) => allMonths.add(m.monthYear));
+            });
+            const monthsArray = Array.from(allMonths);
+            // Default to the latest month (last in the array since they are chronological)
+            if (monthsArray.length > 0) {
+              setSelectedMonth(monthsArray[monthsArray.length - 1]);
+            }
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to fetch monthly NPV data:", err);
+        })
+        .finally(() => {
+          setLoadingMonthly(false);
+        });
+    }
+  }, [user.email, summary]);
+
+  // Compute available months sorted chronologically
+  const availableMonths = useMemo(() => {
+    if (!monthlyData) return [];
+    const allMonths = new Set<string>();
+    monthlyData.investments.forEach((inv) => {
+      inv.monthlyBreakdown.forEach((m) => allMonths.add(m.monthYear));
+    });
+    // Months are already in chronological format from the calculator ("MMMM yyyy")
+    // Sort by parsing the month-year string
+    return Array.from(allMonths).sort((a, b) => {
+      const dateA = new Date(a);
+      const dateB = new Date(b);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [monthlyData]);
+
+  // Get filtered data for the selected month
+  const selectedMonthData = useMemo(() => {
+    if (!monthlyData || !selectedMonth) return [];
+    return monthlyData.investments
+      .map((inv) => {
+        const monthEntry = inv.monthlyBreakdown.find(
+          (m) => m.monthYear === selectedMonth
+        );
+        if (!monthEntry) return null;
+        return {
+          accountNumber: inv.accountNumber,
+          annualRate: inv.annualRate,
+          ...monthEntry,
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is {
+          accountNumber: string;
+          annualRate: number;
+        } & MonthlyBreakdownEntry => item !== null
+      );
+  }, [monthlyData, selectedMonth]);
+
+  // Compute totals for the selected month
+  const selectedMonthTotals = useMemo(() => {
+    return selectedMonthData.reduce(
+      (acc, item) => ({
+        startingBalance: acc.startingBalance + item.startingBalance,
+        interestEarned: acc.interestEarned + item.interestEarned,
+        redemptions: acc.redemptions + item.redemptions,
+        endingBalance: acc.endingBalance + item.endingBalance,
+      }),
+      {
+        startingBalance: 0,
+        interestEarned: 0,
+        redemptions: 0,
+        endingBalance: 0,
+      }
+    );
+  }, [selectedMonthData]);
+
   const handleSignOut = async () => {
     setIsSigningOut(true);
     try {
@@ -67,6 +190,30 @@ export function InvestorFlatRateView({
   const formatDate = (date: Date | null) => {
     if (!date) return "Ongoing";
     return format(new Date(date), "d MMMM yyyy");
+  };
+
+  const handleDownloadCSV = () => {
+    if (selectedMonthData.length === 0) return;
+
+    const header =
+      "Account Number,Annual Rate,Beginning Balance,Interest Earned,Redemptions,Ending Balance (NPV),Days in Period";
+    const rows = selectedMonthData.map(
+      (item) =>
+        `${item.accountNumber},${(item.annualRate * 100).toFixed(2)}%,${item.startingBalance.toFixed(2)},${item.interestEarned.toFixed(2)},${item.redemptions.toFixed(2)},${item.endingBalance.toFixed(2)},${item.daysInPeriod}`
+    );
+    // Add totals row
+    rows.push(
+      `TOTAL,,${selectedMonthTotals.startingBalance.toFixed(2)},${selectedMonthTotals.interestEarned.toFixed(2)},${selectedMonthTotals.redemptions.toFixed(2)},${selectedMonthTotals.endingBalance.toFixed(2)},`
+    );
+
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `npv-${selectedMonth.replace(" ", "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -379,6 +526,153 @@ export function InvestorFlatRateView({
                 </table>
               </div>
             </div>
+
+            {/* Monthly NPV History */}
+            {loadingMonthly && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Monthly NPV History</CardTitle>
+                  <CardDescription>Loading monthly data...</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {!loadingMonthly &&
+              monthlyData &&
+              monthlyData.investments.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly NPV History</CardTitle>
+                    <CardDescription>
+                      View your net present value breakdown for a specific month
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+                      <div className="w-full sm:w-64">
+                        <Select
+                          value={selectedMonth}
+                          onValueChange={setSelectedMonth}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableMonths.map((month) => (
+                              <SelectItem key={month} value={month}>
+                                {month}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownloadCSV}
+                        disabled={selectedMonthData.length === 0}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download CSV
+                      </Button>
+                    </div>
+
+                    {selectedMonthData.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Account Number</TableHead>
+                            <TableHead>Annual Rate</TableHead>
+                            <TableHead className="text-right">
+                              Beginning Balance
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Interest Earned
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Redemptions
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Ending Balance (NPV)
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Days
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedMonthData.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {item.accountNumber}
+                              </TableCell>
+                              <TableCell>
+                                {(item.annualRate * 100).toFixed(2)}%
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {formatCurrency(item.startingBalance)}
+                              </TableCell>
+                              <TableCell className="text-right text-green-600 font-medium">
+                                {formatCurrency(item.interestEarned)}
+                              </TableCell>
+                              <TableCell className="text-right text-red-600 font-medium">
+                                {item.redemptions > 0
+                                  ? formatCurrency(item.redemptions)
+                                  : "-"}
+                              </TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {formatCurrency(item.endingBalance)}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.daysInPeriod}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                        <TableFooter>
+                          <TableRow>
+                            <TableCell colSpan={2} className="font-bold">
+                              Total
+                            </TableCell>
+                            <TableCell className="text-right font-bold">
+                              {formatCurrency(
+                                selectedMonthTotals.startingBalance
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-green-600">
+                              {formatCurrency(
+                                selectedMonthTotals.interestEarned
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-bold text-red-600">
+                              {selectedMonthTotals.redemptions > 0
+                                ? formatCurrency(
+                                    selectedMonthTotals.redemptions
+                                  )
+                                : "-"}
+                            </TableCell>
+                            <TableCell className="text-right font-bold">
+                              {formatCurrency(
+                                selectedMonthTotals.endingBalance
+                              )}
+                            </TableCell>
+                            <TableCell />
+                          </TableRow>
+                        </TableFooter>
+                      </Table>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-8">
+                        No data available for the selected month.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
             {/* Navigation
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">

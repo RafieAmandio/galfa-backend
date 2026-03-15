@@ -62,6 +62,7 @@ import { format } from "date-fns";
 import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
 import { useDebounce } from "@/hooks/useDebounce";
 import { DeleteFloatingRateModal } from "@/features/floating-rate/components/delete-floating-rate-modal";
+import { EditFloatingRateModal } from "@/features/floating-rate/components/edit-floating-rate-modal";
 
 // This component receives data from server-side
 
@@ -531,6 +532,10 @@ export default function FloatingRateInvestmentsMonthlyTable({
         cell: ({ row }) => {
           return (
             <div className="flex items-center justify-center gap-2">
+              <EditFloatingRateModal
+                investment={row.original}
+                onSuccess={onDeleted}
+              />
               <DeleteFloatingRateModal
                 accountId={row.original.id}
                 accountNumber={row.original.accountNumber}
@@ -996,7 +1001,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                                   </Badge>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-80 overflow-auto">
                                   {row.original.monthlyPerformance.map(
                                     (monthData: any) => (
                                       <div

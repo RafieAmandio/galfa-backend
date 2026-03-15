@@ -64,6 +64,7 @@ import { parse } from "date-fns";
 import { TextFilter, NumberRangeFilter, numberRangeFilter } from "@/components/ui/table-filters";
 import { useDebounce } from "@/hooks/useDebounce";
 import { DeleteInstallmentModal } from "../components/delete-installment-modal";
+import { EditInstallmentModal } from "../components/edit-installment-modal";
 
 interface AdminInstallmentSummary {
   totalGainedFunds: number;
@@ -487,6 +488,19 @@ export function AdminInstallmentTable() {
         cell: ({ row }) => {
           return (
             <div className="flex items-center justify-center gap-2">
+              <EditInstallmentModal
+                investment={{
+                  id: row.original.id,
+                  accountNumber: row.original.accountNumber,
+                  netCapital: row.original.netCapital,
+                  monthlyCof: row.original.monthlyCof,
+                  investmentType: row.original.investmentType,
+                  transactionDate: row.original.transactionDate,
+                  endDate: row.original.endDate,
+                  status: row.original.status,
+                }}
+                onSuccess={fetchData}
+              />
               <DeleteInstallmentModal
                 accountId={row.original.id}
                 accountNumber={row.original.accountNumber}
@@ -583,39 +597,14 @@ export function AdminInstallmentTable() {
     }
   );
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">
-              Loading installment investments...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!summary) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-muted-foreground">
-            No installment investments found.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Get unique months for the monthly gains table - sort chronologically
-  const uniqueMonths = Object.keys(summary.monthlyGainedFunds).sort((a, b) => {
-    const dateA = parse(a, "MMM yyyy", new Date());
-    const dateB = parse(b, "MMM yyyy", new Date());
-    return dateA.getTime() - dateB.getTime();
-  });
+  const uniqueMonths = summary
+    ? Object.keys(summary.monthlyGainedFunds).sort((a, b) => {
+        const dateA = parse(a, "MMM yyyy", new Date());
+        const dateB = parse(b, "MMM yyyy", new Date());
+        return dateA.getTime() - dateB.getTime();
+      })
+    : [];
 
   return (
     <div className="space-y-6">
@@ -632,11 +621,17 @@ export function AdminInstallmentTable() {
                   Total Investments
                 </p>
                 <p className="text-lg font-bold">
-                  {filteredData.length}
-                  {filteredData.length !== summary.investments.length && (
-                    <span className="text-sm text-muted-foreground ml-1">
-                      of {summary.investments.length}
-                    </span>
+                  {loading || !summary ? (
+                    <span className="text-muted-foreground">-</span>
+                  ) : (
+                    <>
+                      {filteredData.length}
+                      {filteredData.length !== summary.investments.length && (
+                        <span className="text-sm text-muted-foreground ml-1">
+                          of {summary.investments.length}
+                        </span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>
@@ -655,7 +650,7 @@ export function AdminInstallmentTable() {
                   Total Gained Funds
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.totalGainedFunds)}
+                  {loading ? <span className="text-muted-foreground">-</span> : formatCurrency(totals.totalGainedFunds)}
                 </p>
               </div>
             </div>
@@ -673,7 +668,7 @@ export function AdminInstallmentTable() {
                   Total Present Value Fund
                 </p>
                 <p className="text-lg font-bold">
-                  {formatCurrency(totals.totalPresentValueFund)}
+                  {loading ? <span className="text-muted-foreground">-</span> : formatCurrency(totals.totalPresentValueFund)}
                 </p>
               </div>
             </div>
@@ -682,7 +677,7 @@ export function AdminInstallmentTable() {
       </div>
 
       {/* Monthly Gained Funds */}
-      {uniqueMonths.length > 0 && (
+      {uniqueMonths.length > 0 && summary && (
         <Card>
           <CardHeader>
             <CardTitle className="text-lg font-medium flex items-center gap-2">
@@ -836,7 +831,17 @@ export function AdminInstallmentTable() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {loading ? (
+                  Array.from({ length: pagination.pageSize }).map((_, i) => (
+                    <TableRow key={`skeleton-${i}`}>
+                      {columns.map((_, j) => (
+                        <TableCell key={j}>
+                          <div className="h-4 w-full animate-pulse rounded bg-muted" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : table.getRowModel().rows?.length ? (
                   <>
                     {table.getRowModel().rows.map((row) => (
                       <React.Fragment key={row.id}>
@@ -866,9 +871,9 @@ export function AdminInstallmentTable() {
                                   </span>
                                 </div>
 
-                                <div className="rounded-md border bg-background">
+                                <div className="rounded-md border bg-background max-h-80 overflow-auto">
                                   <Table>
-                                    <TableHeader>
+                                    <TableHeader className="sticky top-0 bg-background z-10">
                                       <TableRow>
                                         <TableHead>Month</TableHead>
                                         <TableHead className="text-right">
