@@ -50,6 +50,7 @@ export async function redeemFlatRateAccount(
         adminFeeApplied: accounts.admin_fee_applied,
         userId: accounts.user_id,
         annualRate: fixRateAccounts.annual_rate,
+        adminFeeRate: fixRateAccounts.admin_fee,
       })
       .from(accounts)
       .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
@@ -74,6 +75,7 @@ export async function redeemFlatRateAccount(
     }
 
     // Calculate current account value (NPV) with redemptions
+    const adminFeeRate = Number(account.adminFeeRate || 0);
     const currentValue = await calculateNetPresentValueWithRedemptions(
       request.accountId,
       Number(account.capital),
@@ -81,7 +83,9 @@ export async function redeemFlatRateAccount(
       account.transactionDate,
       request.redemptionDate,
       account.isRollover || false,
-      account.adminFeeApplied !== false
+      account.adminFeeApplied !== false,
+      undefined,
+      adminFeeRate
     );
 
     // Validate redemption amount

@@ -40,6 +40,7 @@ export async function getAccountsForRedemptionWithBalance(
       accountNumber: accounts.account_number,
       grossCapital: accounts.capital,
       annualRate: fixRateAccounts.annual_rate,
+      adminFeeRate: fixRateAccounts.admin_fee,
       startDate: accounts.transaction_date,
       endDate: accounts.end_date,
       isRollover: accounts.is_rollover,
@@ -75,6 +76,7 @@ export async function getAccountsForRedemptionWithBalance(
       const annualRate = Number(account.annualRate);
       const isRollover = account.isRollover || false;
       const adminFeeApplied = account.adminFeeApplied !== false;
+      const adminFeeRate = Number(account.adminFeeRate || 0);
 
       // Calculate NPV with pre-fetched redemptions up to the redemption date
       const npvResult = await calculateNetPresentValueWithRedemptions(
@@ -85,7 +87,8 @@ export async function getAccountsForRedemptionWithBalance(
         redemptionDate,
         isRollover,
         adminFeeApplied,
-        redemptionMap.get(account.id)
+        redemptionMap.get(account.id),
+        adminFeeRate
       );
 
       // Only return accounts with positive balance

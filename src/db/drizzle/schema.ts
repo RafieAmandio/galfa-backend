@@ -105,6 +105,7 @@ export const fixRateAccounts = pgTable("fix_rate_accounts", {
   id: serial("id").primaryKey(),
   account_id: integer("account_id").references(() => accounts.id),
   annual_rate: decimal("annual_rate").notNull(),
+  admin_fee: decimal("admin_fee"),
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

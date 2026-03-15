@@ -23,6 +23,7 @@ interface CreateFlatRateAccountRequest {
   isRollover?: boolean;
   parentAccountId?: number;
   description?: string;
+  adminFeePercentage?: number;
 }
 
 interface CreateFlatRateAccountResult {
@@ -178,12 +179,14 @@ export async function createFlatRateAccount(
     // Get account type
     const accountTypeId = await getFlatRateAccountTypeId();
 
-    // Flat rate investments have no admin fee
     const isRollover = request.isRollover || false;
-    const adminFeeApplied = false; // No admin fee for flat rate investments
+    const adminFeeRate = request.adminFeePercentage && request.adminFeePercentage > 0
+      ? request.adminFeePercentage / 100
+      : 0;
+    const adminFeeApplied = adminFeeRate > 0;
 
-    const adminFee = 0;
-    const netCapital = request.capital;
+    const adminFee = request.capital * adminFeeRate;
+    const netCapital = request.capital - adminFee;
 
     // Create the main account record
     const newAccount = await db
@@ -211,6 +214,7 @@ export async function createFlatRateAccount(
     await db.insert(fixRateAccounts).values({
       account_id: accountId,
       annual_rate: request.annualRate.toString(),
+      admin_fee: adminFeeRate.toString(),
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -293,6 +297,7 @@ export async function getMaturedAccountsForRollover(): Promise<{
         investorName: profiles.full_name,
         originalCapital: accounts.capital,
         annualRate: fixRateAccounts.annual_rate,
+        adminFeeRate: fixRateAccounts.admin_fee,
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
         status: accounts.status,
@@ -334,7 +339,9 @@ export async function getMaturedAccountsForRollover(): Promise<{
             account.transactionDate,
             account.endDate,
             account.isRollover || false,
-            account.adminFeeApplied || true
+            account.adminFeeApplied || true,
+            undefined,
+            Number(account.adminFeeRate || 0)
           );
 
           return {

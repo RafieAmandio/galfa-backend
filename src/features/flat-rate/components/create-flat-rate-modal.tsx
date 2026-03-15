@@ -81,6 +81,7 @@ export function CreateFlatRateModal({
   const [isRollover, setIsRollover] = useState(false);
   const [selectedRolloverAccountId, setSelectedRolloverAccountId] =
     useState<string>("");
+  const [adminFeePercentage, setAdminFeePercentage] = useState("0");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [loadingInvestors, setLoadingInvestors] = useState(true);
@@ -132,6 +133,7 @@ export function CreateFlatRateModal({
       setEndDate(undefined);
       setIsRollover(false);
       setSelectedRolloverAccountId("");
+      setAdminFeePercentage("0");
       setDescription("");
       setMessage(null);
     }
@@ -164,16 +166,17 @@ export function CreateFlatRateModal({
     }
   }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
 
-  // Flat rate investments have no admin fee
   const calculateFinancials = () => {
     const capitalAmount = parseFloat(capital || "0");
+    const feePercentage = parseFloat(adminFeePercentage || "0");
     if (isNaN(capitalAmount) || capitalAmount <= 0) {
-      return { netCapital: 0 };
+      return { adminFee: 0, netCapital: 0 };
     }
-    return { netCapital: capitalAmount };
+    const adminFee = capitalAmount * (feePercentage / 100);
+    return { adminFee, netCapital: capitalAmount - adminFee };
   };
 
-  const { netCapital } = calculateFinancials();
+  const { adminFee, netCapital } = calculateFinancials();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,6 +261,7 @@ export function CreateFlatRateModal({
           ? parseInt(selectedRolloverAccountId)
           : undefined,
         description,
+        adminFeePercentage: parseFloat(adminFeePercentage || "0"),
       });
 
       if (result.success) {
@@ -275,6 +279,7 @@ export function CreateFlatRateModal({
         setEndDate(undefined);
         setIsRollover(false);
         setSelectedRolloverAccountId("");
+        setAdminFeePercentage("0");
         setDescription("");
 
         // Notify parent component
@@ -549,6 +554,26 @@ export function CreateFlatRateModal({
                 )}
               </div>
 
+              {/* Admin Fee */}
+              <div className="space-y-2">
+                <Label htmlFor="adminFeePercentage" className="text-sm font-medium">
+                  Admin Fee (%)
+                </Label>
+                <Input
+                  id="adminFeePercentage"
+                  type="number"
+                  value={adminFeePercentage}
+                  onChange={(e) => setAdminFeePercentage(e.target.value)}
+                  placeholder="Enter admin fee percentage (e.g., 5 for 5%)"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                />
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Leave at 0 for no admin fee. Enter as percentage (e.g., 5 for 5%).
+                </p>
+              </div>
+
               {/* Transaction Date */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">
@@ -716,7 +741,7 @@ export function CreateFlatRateModal({
                   <h3 className="font-medium text-gray-900 mb-3">
                     {isRollover ? "New Investment Period" : "Financial Summary"}
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600">
                         {isRollover ? "Rollover Capital:" : "Investment Capital:"}
@@ -725,6 +750,16 @@ export function CreateFlatRateModal({
                         {formatCurrency(parseFloat(capital))}
                       </p>
                     </div>
+                    {adminFee > 0 && (
+                      <div>
+                        <span className="text-gray-600">
+                          Admin Fee ({adminFeePercentage}%):
+                        </span>
+                        <p className="font-medium text-red-600">
+                          -{formatCurrency(adminFee)}
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <span className="text-gray-600">
                         Capital Working:

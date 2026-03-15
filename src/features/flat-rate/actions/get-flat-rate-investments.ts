@@ -90,6 +90,7 @@ export async function getFlatRateInvestments(
       name: accounts.account_number,
       grossCapital: accounts.capital, // Full capital from database
       rate: fixRateAccounts.annual_rate,
+      adminFeeRate: fixRateAccounts.admin_fee,
       transDate: accounts.transaction_date,
       endDate: accounts.end_date,
       isRollover: accounts.is_rollover,
@@ -127,10 +128,10 @@ export async function getFlatRateInvestments(
       const annualRate = Number(result.rate);
       const isRollover = result.isRollover || false;
       const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
+      const adminFeeRate = Number(result.adminFeeRate || 0);
 
-      // Flat rate investments have no admin fee - use gross capital directly
-      const adminFee = 0;
-      const netCapital = grossCapital;
+      const adminFee = grossCapital * adminFeeRate;
+      const netCapital = grossCapital - adminFee;
 
       // Calculate NPV with pre-fetched redemptions
       const npvWithRedemptions = await calculateNetPresentValueWithRedemptions(
@@ -141,7 +142,8 @@ export async function getFlatRateInvestments(
         new Date(),
         isRollover,
         adminFeeApplied,
-        redemptionMap.get(result.id)
+        redemptionMap.get(result.id),
+        adminFeeRate
       );
 
       return {
@@ -150,6 +152,7 @@ export async function getFlatRateInvestments(
         grossCapital,
         adminFee,
         netCapital,
+        adminFeeRate,
         rate: Number((annualRate * 100).toFixed(2)),
         transDate: result.transDate,
         endDate: result.endDate!,

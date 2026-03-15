@@ -103,6 +103,7 @@ export async function getFixRateCoFByMonth(
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
         annualRate: fixRateAccounts.annual_rate,
+        adminFeeRate: fixRateAccounts.admin_fee,
         isRollover: accounts.is_rollover,
         adminFeeApplied: accounts.admin_fee_applied,
         status: accounts.status,
@@ -176,14 +177,10 @@ export async function getFixRateCoFByMonth(
       monthlyAccounts.map(async (account) => {
         const grossAmount = parseFloat(account.grossCapital);
         const annualRate = parseFloat(account.annualRate);
+        const adminFeeRate = Number(account.adminFeeRate || 0);
 
-        // Calculate net capital (after admin fee)
-        let adminFee = 0;
-        if (account.isRollover) {
-          adminFee = 0; // No admin fee for rollovers
-        } else if (account.adminFeeApplied) {
-          adminFee = grossAmount * ADMIN_FEE_PERCENTAGE;
-        }
+        // Calculate net capital (after admin fee) using stored rate
+        const adminFee = grossAmount * adminFeeRate;
         const netCapital = grossAmount - adminFee;
 
         // Calculate present value as of the target month end
@@ -198,7 +195,8 @@ export async function getFixRateCoFByMonth(
             monthEnd, // Calculate value as of end of target month
             account.isRollover || false,
             account.adminFeeApplied || false, // Don't default to true - use actual value
-            redemptionMap.get(account.id)
+            redemptionMap.get(account.id),
+            adminFeeRate
           );
 
           presentValue = npvResult.currentValue;

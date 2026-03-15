@@ -34,6 +34,7 @@ interface FlatRateInvestment {
   name: string;
   grossCapital: number;
   rate: number;
+  adminFeeRate?: number;
   transDate: Date;
   endDate: Date;
   status: string;
@@ -57,6 +58,9 @@ export function EditFlatRateModal({
   // Form state
   const [capital, setCapital] = useState(investment.grossCapital.toString());
   const [annualRate, setAnnualRate] = useState(investment.rate.toString());
+  const [adminFeePercentage, setAdminFeePercentage] = useState(
+    ((investment.adminFeeRate || 0) * 100).toString()
+  );
   const [transactionDate, setTransactionDate] = useState<Date | undefined>(
     new Date(investment.transDate)
   );
@@ -70,6 +74,7 @@ export function EditFlatRateModal({
     if (open) {
       setCapital(investment.grossCapital.toString());
       setAnnualRate(investment.rate.toString());
+      setAdminFeePercentage(((investment.adminFeeRate || 0) * 100).toString());
       setTransactionDate(new Date(investment.transDate));
       setEndDate(new Date(investment.endDate));
       setStatus(investment.status);
@@ -80,6 +85,7 @@ export function EditFlatRateModal({
   const resetForm = () => {
     setCapital(investment.grossCapital.toString());
     setAnnualRate(investment.rate.toString());
+    setAdminFeePercentage(((investment.adminFeeRate || 0) * 100).toString());
     setTransactionDate(new Date(investment.transDate));
     setEndDate(new Date(investment.endDate));
     setStatus(investment.status);
@@ -134,6 +140,7 @@ export function EditFlatRateModal({
         accountId: investment.id,
         capital: parseFloat(capital),
         annualRate: parseFloat(annualRate),
+        adminFeePercentage: parseFloat(adminFeePercentage || "0"),
         transactionDate: transactionDate!,
         endDate: endDate!,
         status,
@@ -209,6 +216,24 @@ export function EditFlatRateModal({
             />
             <p className="text-xs text-gray-500">
               Annual interest rate as a percentage
+            </p>
+          </div>
+
+          {/* Admin Fee */}
+          <div className="space-y-2">
+            <Label htmlFor="adminFeePercentage">Admin Fee (%)</Label>
+            <Input
+              id="adminFeePercentage"
+              type="number"
+              step="0.1"
+              min="0"
+              max="100"
+              placeholder="Enter admin fee percentage..."
+              value={adminFeePercentage}
+              onChange={(e) => setAdminFeePercentage(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Admin fee percentage (0 for no fee)
             </p>
           </div>
 

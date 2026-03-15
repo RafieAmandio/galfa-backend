@@ -80,6 +80,7 @@ export async function getInflowByMonth(
         status: accounts.status,
         // Account type specific rates
         fixRateAnnualRate: fixRateAccounts.annual_rate,
+        fixRateAdminFee: fixRateAccounts.admin_fee,
         floatingRateAdminFee: floatingRateAccounts.admin_fee,
         installmentMonthlyCoF: installmentAccounts.monthly_cof,
         installmentAdminFee: installmentAccounts.admin_fee,
@@ -153,9 +154,9 @@ export async function getInflowByMonth(
       ) {
         // Floating rate accounts store admin fee directly
         adminFee = parseFloat(investment.floatingRateAdminFee);
-      } else if (investment.adminFeeApplied && accountType === "fixed_rate") {
-        // Fixed rate accounts use standard 5% admin fee
-        adminFee = grossAmount * ADMIN_FEE_PERCENTAGE;
+      } else if (accountType === "fixed_rate" && investment.fixRateAdminFee !== null) {
+        // Fixed rate accounts use stored admin fee rate
+        adminFee = grossAmount * parseFloat(investment.fixRateAdminFee);
       }
 
       // Net capital is what actually goes to work for the investor

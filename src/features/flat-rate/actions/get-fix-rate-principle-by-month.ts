@@ -107,6 +107,7 @@ export async function getFixRatePrincipleByMonth(
         grossCapital: accounts.capital,
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
+        adminFeeRate: fixRateAccounts.admin_fee,
         isRollover: accounts.is_rollover,
         adminFeeApplied: accounts.admin_fee_applied,
         status: accounts.status,
@@ -147,16 +148,10 @@ export async function getFixRatePrincipleByMonth(
 
     const processedAccounts = monthlyAccounts.map((account) => {
       const grossAmount = parseFloat(account.grossCapital);
-      let adminFee = 0;
+      const adminFeeRate = Number(account.adminFeeRate || 0);
 
-      // Calculate admin fee based on rollover status
-      // Rollover accounts don't have admin fees deducted since they were already paid on the original investment
-      if (account.isRollover) {
-        adminFee = 0; // No admin fee for rollovers
-      } else if (account.adminFeeApplied) {
-        // Original investments have 5% admin fee deducted from gross capital
-        adminFee = grossAmount * ADMIN_FEE_PERCENTAGE;
-      }
+      // Calculate admin fee using stored rate
+      const adminFee = grossAmount * adminFeeRate;
 
       // Net capital is what was actually working for the investor during this month
       const netAmount = grossAmount - adminFee;

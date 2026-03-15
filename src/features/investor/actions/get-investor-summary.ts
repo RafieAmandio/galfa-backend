@@ -54,6 +54,7 @@ export async function getInvestorSummary(
       startDate: accounts.transaction_date,
       endDate: accounts.end_date,
       annualRate: fixRateAccounts.annual_rate,
+      adminFeeRate: fixRateAccounts.admin_fee,
       isRollover: accounts.is_rollover,
       adminFeeApplied: accounts.admin_fee_applied,
       rolloverSequence: accounts.rollover_sequence,
@@ -122,10 +123,10 @@ export async function getInvestorSummary(
       const annualRate = Number(result.annualRate);
       const isRollover = result.isRollover || false;
       const adminFeeApplied = result.adminFeeApplied !== false; // Default to true if null
+      const adminFeeRate = Number(result.adminFeeRate || 0);
 
-      // Flat rate investments have no admin fee - use gross capital directly
-      const adminFee = 0;
-      const netCapital = grossCapital;
+      const adminFee = grossCapital * adminFeeRate;
+      const netCapital = grossCapital - adminFee;
 
       // Calculate Net Present Value using redemption-aware utility
       const npvResult = await calculateNetPresentValueWithRedemptions(
@@ -136,7 +137,8 @@ export async function getInvestorSummary(
         new Date(),
         isRollover,
         adminFeeApplied,
-        redemptionMap.get(result.id)
+        redemptionMap.get(result.id),
+        adminFeeRate
       );
 
       const gainLoss = npvResult.currentValue - netCapital;

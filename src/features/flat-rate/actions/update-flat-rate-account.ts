@@ -11,6 +11,7 @@ interface UpdateFlatRateAccountRequest {
   transactionDate?: Date;
   endDate?: Date;
   status?: string;
+  adminFeePercentage?: number;
 }
 
 interface UpdateFlatRateAccountResponse {
@@ -23,7 +24,7 @@ export async function updateFlatRateAccount(
 ): Promise<UpdateFlatRateAccountResponse> {
   try {
     const db = createDrizzleConnection();
-    const { accountId, capital, annualRate, transactionDate, endDate, status } =
+    const { accountId, capital, annualRate, transactionDate, endDate, status, adminFeePercentage } =
       request;
 
     // Check if account exists
@@ -57,6 +58,10 @@ export async function updateFlatRateAccount(
     if (status !== undefined) {
       accountUpdate.status = status;
     }
+    if (adminFeePercentage !== undefined) {
+      const adminFeeRate = adminFeePercentage / 100;
+      accountUpdate.admin_fee_applied = adminFeeRate > 0;
+    }
 
     // Update accounts table
     await db
@@ -64,14 +69,23 @@ export async function updateFlatRateAccount(
       .set(accountUpdate)
       .where(eq(accounts.id, accountId));
 
-    // Update fixRateAccounts table if annualRate is provided
+    // Update fixRateAccounts table if annualRate or adminFeePercentage is provided
+    const fixRateUpdate: Record<string, unknown> = { updated_at: new Date() };
+    let hasFixRateUpdate = false;
+
     if (annualRate !== undefined) {
+      fixRateUpdate.annual_rate = annualRate.toString();
+      hasFixRateUpdate = true;
+    }
+    if (adminFeePercentage !== undefined) {
+      fixRateUpdate.admin_fee = (adminFeePercentage / 100).toString();
+      hasFixRateUpdate = true;
+    }
+
+    if (hasFixRateUpdate) {
       await db
         .update(fixRateAccounts)
-        .set({
-          annual_rate: annualRate.toString(),
-          updated_at: new Date(),
-        })
+        .set(fixRateUpdate)
         .where(eq(fixRateAccounts.account_id, accountId));
     }
 

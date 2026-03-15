@@ -47,6 +47,7 @@ export async function getInvestorMonthlyNPV(
       startDate: accounts.transaction_date,
       endDate: accounts.end_date,
       annualRate: fixRateAccounts.annual_rate,
+      adminFeeRate: fixRateAccounts.admin_fee,
       isRollover: accounts.is_rollover,
       adminFeeApplied: accounts.admin_fee_applied,
       parentAccountId: accounts.parent_account_id,
@@ -83,6 +84,7 @@ export async function getInvestorMonthlyNPV(
     const annualRate = Number(result.annualRate);
     const isRollover = result.isRollover || false;
     const adminFeeApplied = result.adminFeeApplied !== false;
+    const adminFeeRate = Number(result.adminFeeRate || 0);
 
     const npvResult = await calculateNetPresentValueWithRedemptions(
       result.id,
@@ -92,7 +94,8 @@ export async function getInvestorMonthlyNPV(
       new Date(),
       isRollover,
       adminFeeApplied,
-      redemptionMap.get(result.id)
+      redemptionMap.get(result.id),
+      adminFeeRate
     );
 
     return {

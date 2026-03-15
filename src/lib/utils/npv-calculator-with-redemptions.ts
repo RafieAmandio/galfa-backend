@@ -69,10 +69,13 @@ export async function calculateNetPresentValueWithRedemptions(
   currentDate: Date = new Date(),
   isRollover: boolean = false,
   adminFeeApplied: boolean = true,
-  prefetchedRedemptions?: BatchRedemption[]
+  prefetchedRedemptions?: BatchRedemption[],
+  adminFeeRate: number = 0
 ): Promise<NPVWithRedemptions> {
-  // For flat rate investments, use gross capital directly (no admin fee)
-  const netCapital = grossCapital;
+  // Apply admin fee if rate is provided
+  const netCapital = adminFeeRate > 0
+    ? grossCapital * (1 - adminFeeRate)
+    : grossCapital;
 
   // Use pre-fetched redemptions if provided, otherwise query individually
   const redemptions = prefetchedRedemptions ?? await getAccountRedemptions(accountId);
