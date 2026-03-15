@@ -495,7 +495,7 @@ export function AdminInstallmentTable() {
                   netCapital: row.original.netCapital,
                   monthlyCof: row.original.monthlyCof,
                   investmentType: row.original.investmentType,
-                  transactionDate: row.original.transactionDate,
+                  transactionDate: row.original.startDate,
                   endDate: row.original.endDate,
                   status: row.original.status,
                 }}
