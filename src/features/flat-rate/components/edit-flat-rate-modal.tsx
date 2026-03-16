@@ -139,7 +139,7 @@ export function EditFlatRateModal({
       const result = await updateFlatRateAccount({
         accountId: investment.id,
         capital: parseFloat(capital),
-        annualRate: parseFloat(annualRate),
+        annualRate: parseFloat(annualRate) / 100,
         adminFeePercentage: parseFloat(adminFeePercentage || "0"),
         transactionDate: transactionDate!,
         endDate: endDate!,
