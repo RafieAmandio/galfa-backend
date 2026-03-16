@@ -146,7 +146,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-full">
         <div className="flex gap-3 items-center justify-center h-64">
           <Loader2 className="h-6 w-6 animate-spin" />
           <div className="text-lg">Loading floating rate investments...</div>
@@ -157,7 +157,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-full">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <div className="text-red-800">
             <h3 className="text-lg font-medium">Error loading data</h3>
@@ -175,7 +175,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
   }
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="w-full max-w-full">
       <div className="mb-6">
         <div className="flex justify-between items-center">
           <div>

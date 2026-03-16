@@ -68,7 +68,7 @@ export function InvestorFloatingRateView({
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-full">
         <div className="flex items-center justify-center h-64">
           <div className="text-lg">
             Loading your floating rate investments...
@@ -80,7 +80,7 @@ export function InvestorFloatingRateView({
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-full">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-red-600 mb-4">
@@ -101,7 +101,7 @@ export function InvestorFloatingRateView({
   const data = result?.success ? result.data : null;
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="w-full max-w-full">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Your Floating Rate Investments

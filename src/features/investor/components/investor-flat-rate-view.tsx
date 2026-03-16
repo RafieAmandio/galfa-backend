@@ -218,7 +218,7 @@ export function InvestorFlatRateView({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto p-6 max-w-6xl">
+      <div className="w-full max-w-full">
         {/* Header Section */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8">
           <div className="text-center">

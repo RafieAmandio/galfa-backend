@@ -15,7 +15,7 @@ export function AdminReportsView({ investors }: AdminReportsViewProps) {
   const [isBulkEmailModalOpen, setIsBulkEmailModalOpen] = useState(false);
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="w-full max-w-full">
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>

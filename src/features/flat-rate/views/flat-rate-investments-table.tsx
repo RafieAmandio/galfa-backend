@@ -88,7 +88,7 @@ export function FlatRateInvestmentsTable() {
     }).format(amount);
 
   const formatDate = (date: Date) => {
-    return format(new Date(date), "d MMMM yyyy");
+    return format(new Date(date), "dd MMM yyyy");
   };
 
   // Helper function to get column display name
@@ -229,7 +229,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="font-medium">{getValue() as string}</div>
+          <div className="font-medium truncate max-w-[160px]" title={getValue() as string}>{getValue() as string}</div>
         ),
         filterFn: "includesString",
       },
@@ -259,7 +259,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className=" text-green-600 font-medium">{formatCurrency(getValue() as number)}</div>
+          <div className="text-green-600 font-medium whitespace-nowrap">{formatCurrency(getValue() as number)}</div>
         ),
         filterFn: numberRangeFilter,
       },
@@ -317,7 +317,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="text-muted-foreground">
+          <div className="text-muted-foreground whitespace-nowrap">
             {formatDate(getValue() as Date)}
           </div>
         ),
@@ -349,7 +349,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className="text-muted-foreground">
+          <div className="text-muted-foreground whitespace-nowrap">
             {formatDate(getValue() as Date)}
           </div>
         ),
@@ -394,7 +394,7 @@ export function FlatRateInvestmentsTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className=" text-blue-600 font-medium">
+          <div className="text-blue-600 font-medium whitespace-nowrap">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -715,8 +715,8 @@ export function FlatRateInvestmentsTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="w-full text-sm">
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -921,7 +921,7 @@ export function FlatRateInvestmentsTable() {
                     />
                   </SelectTrigger>
                   <SelectContent side="top">
-                    {[10, 20, 30, 40, 50].map((pageSize) => (
+                    {[10, 20, 30, 50, 100].map((pageSize) => (
                       <SelectItem key={pageSize} value={`${pageSize}`}>
                         {pageSize}
                       </SelectItem>

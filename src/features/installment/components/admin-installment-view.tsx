@@ -43,7 +43,7 @@ export function AdminInstallmentView({
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="w-full max-w-full">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Installment Investments - Admin View

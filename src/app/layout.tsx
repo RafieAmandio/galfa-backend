@@ -51,7 +51,7 @@ export default async function RootLayout({
               <Navigation user={user} isAdmin={isAdmin} authError={authError} />
 
               {/* Main Content Area */}
-              <main className="flex-1 ml-60 min-h-screen bg-background pt-14">
+              <main className="flex-1 ml-60 min-h-screen bg-background pt-14 overflow-x-hidden">
                 <div className="p-6">
                   {children}
                 </div>

@@ -15,7 +15,7 @@ interface AdminFlatRateViewProps {
 export function AdminFlatRateView({ user }: AdminFlatRateViewProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto p-6">
+      <div className="w-full max-w-full">
         {/* Admin Header */}
         <div className="rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex justify-between items-center">
