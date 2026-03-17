@@ -487,10 +487,12 @@ export function FlatRateInvestmentsTable() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.pageIndex, pagination.pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter]);
 
   useEffect(() => {
     setGlobalFilter(debouncedGlobalFilter);
+    // Reset to first page when search changes
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [debouncedGlobalFilter]);
 
   const fetchData = async () => {
@@ -499,6 +501,7 @@ export function FlatRateInvestmentsTable() {
       const result = await getFlatRateInvestments({
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
+        search: debouncedGlobalFilter || undefined,
       });
       setData(result.data);
       setTotalCount(result.totalCount);

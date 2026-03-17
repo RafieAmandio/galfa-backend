@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection, getDbConnectionDebug } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
-import { eq, and, lt, isNotNull, sql } from "drizzle-orm";
+import { eq, and, lt, isNotNull, sql, ilike } from "drizzle-orm";
 import { getMonthlyCompoundRate } from "@/lib/utils/rate-calculations";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
@@ -70,7 +70,7 @@ async function updateMaturedAccounts(db: any): Promise<void> {
 }
 
 export async function getFlatRateInvestments(
-  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number } = {}
+  { page = 1, pageSize = 10, search }: { page?: number; pageSize?: number; search?: string } = {}
 ) {
   console.info("DB Connection Debug:", getDbConnectionDebug());
   const db = createDrizzleConnection();
@@ -78,11 +78,17 @@ export async function getFlatRateInvestments(
   // First, update any matured accounts to 'mature' status
   await updateMaturedAccounts(db);
 
-  // Get total count
+  // Build search filter
+  const searchFilter = search
+    ? ilike(accounts.account_number, `%${search}%`)
+    : undefined;
+
+  // Get total count (with search filter)
   const [{ count: totalCount }] = await db
     .select({ count: sql<number>`count(*)` })
     .from(accounts)
-    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id));
+    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+    .where(searchFilter);
 
   const results = await db
     .select({
@@ -100,6 +106,7 @@ export async function getFlatRateInvestments(
     })
     .from(accounts)
     .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+    .where(searchFilter)
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, installmentAccounts, profiles } from "@/db/drizzle/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, ilike } from "drizzle-orm";
 import { differenceInMonths, format, addMonths, startOfMonth } from "date-fns";
 import { authUsers } from "@/db/drizzle/schema";
 import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
@@ -164,9 +164,14 @@ function calculateNetCapital(grossCapital: number, adminFee: number): number {
  * Get all installment investments for admin view
  */
 export async function getAdminInstallmentInvestments(
-  { page = 1, pageSize = 10 }: { page?: number; pageSize?: number } = {}
+  { page = 1, pageSize = 10, search }: { page?: number; pageSize?: number; search?: string } = {}
 ): Promise<AdminInstallmentSummary> {
   const db = createDrizzleConnection();
+
+  // Build search filter
+  const searchFilter = search
+    ? ilike(accounts.account_number, `%${search}%`)
+    : undefined;
 
   // Get total count
   const countResult = await db
@@ -175,7 +180,8 @@ export async function getAdminInstallmentInvestments(
     .innerJoin(
       installmentAccounts,
       eq(accounts.id, installmentAccounts.account_id)
-    );
+    )
+    .where(searchFilter);
   const totalCount = Number(countResult[0].count);
 
   const results = await db
@@ -201,6 +207,7 @@ export async function getAdminInstallmentInvestments(
     )
     .leftJoin(profiles, eq(accounts.user_id, profiles.id))
     .leftJoin(authUsers, eq(profiles.id, authUsers.id))
+    .where(searchFilter)
     .limit(pageSize)
     .offset((page - 1) * pageSize);
 

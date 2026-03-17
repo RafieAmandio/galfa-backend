@@ -80,6 +80,7 @@ export function MutationsAdminTable() {
       const result = await getAllMutations({
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
+        search: debouncedGlobalFilter || undefined,
       });
       setData(result.data);
       setTotalCount(result.totalCount);
@@ -88,7 +89,7 @@ export function MutationsAdminTable() {
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter]);
 
   useEffect(() => {
     fetchData();
@@ -96,6 +97,7 @@ export function MutationsAdminTable() {
 
   useEffect(() => {
     setGlobalFilter(debouncedGlobalFilter);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [debouncedGlobalFilter]);
 
   const formatCurrency = (amount: number) =>

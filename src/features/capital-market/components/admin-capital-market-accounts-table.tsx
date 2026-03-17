@@ -5,7 +5,9 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useState,
+  useEffect,
 } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import {
   ColumnDef,
   flexRender,
@@ -112,6 +114,8 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
@@ -131,8 +135,14 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
     adminGetAllCapitalMarketAccountsQueryOptions({
       page: pagination.pageIndex + 1,
       pageSize: pagination.pageSize,
+      search: debouncedGlobalFilter || undefined,
     })
   );
+
+  useEffect(() => {
+    setGlobalFilter(debouncedGlobalFilter);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+  }, [debouncedGlobalFilter]);
 
   const accountsData = accountsResponse?.data;
   const totalCount = accountsResponse?.totalCount ?? 0;
@@ -547,18 +557,19 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search all columns..."
-                    value={globalFilter}
-                    onChange={(event) => setGlobalFilter(event.target.value)}
+                    value={globalFilterInput}
+                    onChange={(event) => setGlobalFilterInput(event.target.value)}
                     className="max-w-sm"
                   />
                 </div>
 
                 {/* Reset All Filters */}
-                {(globalFilter || columnFilters.length > 0) && (
+                {(globalFilterInput || columnFilters.length > 0) && (
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => {
+                      setGlobalFilterInput("");
                       setGlobalFilter("");
                       table.resetColumnFilters();
                     }}

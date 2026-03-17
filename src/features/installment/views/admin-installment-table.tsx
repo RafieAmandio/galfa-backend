@@ -558,6 +558,7 @@ export function AdminInstallmentTable() {
       const data = await getAdminInstallmentInvestments({
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
+        search: debouncedGlobalFilter || undefined,
       });
       setSummary(data);
       setTotalCount(data.totalCount);
@@ -570,10 +571,11 @@ export function AdminInstallmentTable() {
 
   useEffect(() => {
     fetchData();
-  }, [pagination.pageIndex, pagination.pageSize]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter]);
 
   useEffect(() => {
     setGlobalFilter(debouncedGlobalFilter);
+    setPagination((prev) => ({ ...prev, pageIndex: 0 }));
   }, [debouncedGlobalFilter]);
 
   // Calculate totals from filtered data
