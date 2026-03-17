@@ -31,7 +31,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -489,148 +488,117 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">
-              Loading capital market accounts...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white border border-border rounded-xl p-12 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">
+            Loading capital market accounts...
+          </span>
+        </div>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <UsersIcon className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Accounts
-                </p>
-                <p className="text-lg font-bold">
-                  {totalCount}
-                </p>
-              </div>
+      {/* KPI Card */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#192473] rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Accounts</p>
+              <p className="text-xl font-semibold">{totalCount}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <UsersIcon className="h-4 w-4 text-white/80" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Table */}
-      <Card>
-        <CardHeader>
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-border">
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold">
-                Capital Market Accounts
-              </CardTitle>
+              <h3 className="font-medium text-sm text-foreground">
+                Account List
+              </h3>
+              <Button
+                onClick={() =>
+                  queryClient.invalidateQueries({
+                    queryKey: ["all-capital-market-accounts"],
+                  })
+                }
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
+
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search accounts..."
+                  value={globalFilterInput}
+                  onChange={(event) => setGlobalFilterInput(event.target.value)}
+                  className="max-w-sm h-9 text-sm"
+                />
+              </div>
+
+              {(globalFilterInput || columnFilters.length > 0) && (
                 <Button
-                  onClick={() =>
-                    queryClient.invalidateQueries({
-                      queryKey: ["all-capital-market-accounts"],
-                    })
-                  }
                   variant="outline"
                   size="sm"
+                  onClick={() => {
+                    setGlobalFilterInput("");
+                    setGlobalFilter("");
+                    table.resetColumnFilters();
+                  }}
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
+                  <X className="h-4 w-4 mr-2" />
+                  Reset Filters
                 </Button>
-              </div>
-            </div>
-
-            {/* Global Search and Filter Controls */}
-            <div className="flex flex-col space-y-4">
-              {/* Global Search */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search all columns..."
-                    value={globalFilterInput}
-                    onChange={(event) => setGlobalFilterInput(event.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
-
-                {/* Reset All Filters */}
-                {(globalFilterInput || columnFilters.length > 0) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setGlobalFilterInput("");
-                      setGlobalFilter("");
-                      table.resetColumnFilters();
-                    }}
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Reset All Filters
-                  </Button>
-                )}
-              </div>
-
-              {/* Active Filters Display */}
-              {columnFilters.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Active filters:
-                  </span>
-                  {columnFilters.map((filter) => {
-                    const formatFilterValue = (value: any) => {
-                      if (Array.isArray(value)) {
-                        const [min, max] = value;
-                        if (min !== undefined && max !== undefined) {
-                          return `${min} - ${max}`;
-                        } else if (min !== undefined) {
-                          return `≥ ${min}`;
-                        } else if (max !== undefined) {
-                          return `≤ ${max}`;
-                        }
-                        return "";
-                      }
-                      return String(value);
-                    };
-
-                    return (
-                      <Badge
-                        key={filter.id}
-                        variant="secondary"
-                        className="text-xs"
-                      >
-                        {getColumnDisplayName(filter.id)}:{" "}
-                        {formatFilterValue(filter.value)}
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-3 w-3 p-0 ml-1"
-                          onClick={() => {
-                            table
-                              .getColumn(filter.id)
-                              ?.setFilterValue(undefined);
-                          }}
-                        >
-                          <X className="h-2 w-2" />
-                        </Button>
-                      </Badge>
-                    );
-                  })}
-                </div>
               )}
             </div>
+
+            {columnFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-muted-foreground">Active filters:</span>
+                {columnFilters.map((filter) => {
+                  const formatFilterValue = (value: any) => {
+                    if (Array.isArray(value)) {
+                      const [min, max] = value;
+                      if (min !== undefined && max !== undefined) return `${min} - ${max}`;
+                      if (min !== undefined) return `≥ ${min}`;
+                      if (max !== undefined) return `≤ ${max}`;
+                      return "";
+                    }
+                    return String(value);
+                  };
+
+                  return (
+                    <Badge key={filter.id} variant="secondary" className="text-xs">
+                      {getColumnDisplayName(filter.id)}: {formatFilterValue(filter.value)}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-3 w-3 p-0 ml-1"
+                        onClick={() => table.getColumn(filter.id)?.setFilterValue(undefined)}
+                      >
+                        <X className="h-2 w-2" />
+                      </Button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="p-5">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -754,8 +722,8 @@ export const AdminCapitalMarketAccountsTable = forwardRef<
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 });

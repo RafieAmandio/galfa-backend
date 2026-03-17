@@ -146,10 +146,22 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
 
   if (isLoading) {
     return (
-      <div className="w-full max-w-full">
-        <div className="flex gap-3 items-center justify-center h-64">
-          <Loader2 className="h-6 w-6 animate-spin" />
-          <div className="text-lg">Loading floating rate investments...</div>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">
+              Floating Rate Investments
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Manage and monitor floating rate investment accounts
+            </p>
+          </div>
+        </div>
+        <div className="bg-white border border-border rounded-xl p-12 flex items-center justify-center">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">Loading floating rate investments...</span>
+          </div>
         </div>
       </div>
     );
@@ -157,14 +169,14 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
 
   if (error) {
     return (
-      <div className="w-full max-w-full">
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-5">
           <div className="text-red-800">
-            <h3 className="text-lg font-medium">Error loading data</h3>
-            <p className="mt-1">{error}</p>
+            <h3 className="text-sm font-medium">Error loading data</h3>
+            <p className="mt-1 text-sm">{error}</p>
             <button
               onClick={handleRefresh}
-              className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              className="mt-3 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
             >
               Try Again
             </button>
@@ -175,21 +187,20 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
   }
 
   return (
-    <div className="w-full max-w-full">
-      <div className="mb-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Floating Rate Investments
-            </h1>
-            <p className="text-muted-foreground">
-              Manage and monitor floating rate investment accounts
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <CreateFloatingRateModal investorEmails={investorEmails || []} />
-            <RedeemFloatingRateModal onRedemptionComplete={handleRefresh} />
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Floating Rate Investments
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage and monitor floating rate investment accounts
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CreateFloatingRateModal investorEmails={investorEmails || []} />
+          <RedeemFloatingRateModal onRedemptionComplete={handleRefresh} />
         </div>
       </div>
 

@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -510,106 +509,93 @@ export function MutationsAdminTable() {
     );
 
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Mutations
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totals.totalMutations}</div>
-            <p className="text-xs text-muted-foreground">
-              Showing {data.length} of {totalCount} mutations
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Amount</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(totals.totalAmount)}
+    <div className="space-y-6">
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[#192473] rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Mutations</p>
+              <p className="text-xl font-semibold">{totals.totalMutations}</p>
+              <p className="text-xs text-white/50 mt-0.5">
+                Showing {data.length} of {totalCount}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Combined transaction value
-            </p>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-white/80" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-emerald-500 rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Amount</p>
+              <p className="text-xl font-semibold">{formatCurrency(totals.totalAmount)}</p>
+              <p className="text-xs text-white/50 mt-0.5">Combined transaction value</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-white/80" />
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Search className="h-5 w-5" />
-            Search & Filters
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Global Search */}
-          <div className="flex items-center space-x-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search all columns..."
-              value={globalFilterInput}
-              onChange={(e) => setGlobalFilterInput(e.target.value)}
-              className="max-w-sm"
-            />
-          </div>
-
-          {/* Active Filters */}
-          {activeFilters.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              <span className="text-sm font-medium text-muted-foreground">
-                Active filters:
-              </span>
-              {activeFilters.map((filter) => (
-                <Badge
-                  key={filter.id}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {getColumnDisplayName(filter.id)}: {String(filter.value)}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-4 w-4 p-0 hover:bg-transparent"
-                    onClick={() => {
-                      table.getColumn(filter.id)?.setFilterValue(undefined);
-                    }}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  table.resetColumnFilters();
-                  setGlobalFilterInput("");
-                  setGlobalFilter("");
-                }}
-              >
-                Reset All Filters
-              </Button>
+      {/* Main Table */}
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-border">
+          <div className="flex flex-col space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-sm text-foreground">Transaction List</h3>
             </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Mutations</CardTitle>
-        </CardHeader>
-        <CardContent>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search mutations..."
+                  value={globalFilterInput}
+                  onChange={(e) => setGlobalFilterInput(e.target.value)}
+                  className="max-w-sm h-9 text-sm"
+                />
+              </div>
+
+              {activeFilters.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    table.resetColumnFilters();
+                    setGlobalFilterInput("");
+                    setGlobalFilter("");
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reset Filters
+                </Button>
+              )}
+            </div>
+
+            {activeFilters.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-muted-foreground">Active filters:</span>
+                {activeFilters.map((filter) => (
+                  <Badge key={filter.id} variant="secondary" className="text-xs flex items-center gap-1">
+                    {getColumnDisplayName(filter.id)}: {String(filter.value)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-3 w-3 p-0"
+                      onClick={() => table.getColumn(filter.id)?.setFilterValue(undefined)}
+                    >
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="p-5">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -744,8 +730,8 @@ export function MutationsAdminTable() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

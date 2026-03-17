@@ -14,41 +14,32 @@ interface AdminFlatRateViewProps {
 
 export function AdminFlatRateView({ user }: AdminFlatRateViewProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="w-full max-w-full">
-        {/* Admin Header */}
-        <div className="rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900 flex items-center">
-                Flat Rate Investments
-              </h1>
-              <p className="text-gray-600 mt-1">
-                Administrative access to flat rate investment calculations and
-                data
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <CreateFlatRateModal
-                onAccountCreated={() => {
-                  // Refresh the table data to show new investment
-                  window.location.reload();
-                }}
-              />
-              <RedeemFlatRateModal
-                onRedemptionComplete={() => {
-                  // Optionally refresh the table data
-                  window.location.reload();
-                }}
-              />
-            </div>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Fixed Rate Investments
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Manage fixed rate investment accounts and calculations
+          </p>
         </div>
-
-        {/* Flat Rate Table */}
-
-        <FlatRateInvestmentsTable />
+        <div className="flex items-center gap-2">
+          <CreateFlatRateModal
+            onAccountCreated={() => {
+              window.location.reload();
+            }}
+          />
+          <RedeemFlatRateModal
+            onRedemptionComplete={() => {
+              window.location.reload();
+            }}
+          />
+        </div>
       </div>
+
+      <FlatRateInvestmentsTable />
     </div>
   );
 }

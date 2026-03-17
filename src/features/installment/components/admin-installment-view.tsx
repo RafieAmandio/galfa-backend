@@ -20,7 +20,6 @@ export function AdminInstallmentView({
   const [loadingRedemptionAccounts, setLoadingRedemptionAccounts] =
     useState(false);
 
-  // Load redemption accounts for today
   useEffect(() => {
     const loadRedemptionAccounts = async () => {
       setLoadingRedemptionAccounts(true);
@@ -38,28 +37,28 @@ export function AdminInstallmentView({
   }, []);
 
   const handleRedemptionComplete = () => {
-    // Refresh the table data
     window.location.reload();
   };
 
   return (
-    <div className="w-full max-w-full">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Installment Investments - Admin View
-        </h1>
-        <p className="text-gray-600">
-          Track gained funds, present value, and net present value for all
-          installment investments.
-        </p>
-      </div>
-
-      <div className="flex justify-end gap-4 mb-4">
-        <RedeemInstallmentModal
-          onRedemptionComplete={handleRedemptionComplete}
-          initialRedemptionAccounts={redemptionAccounts}
-        />
-        <CreateInstallmentAccountModal investorEmails={investorEmails} />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">
+            Installment Investments
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Track gained funds, present value, and net present value
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <RedeemInstallmentModal
+            onRedemptionComplete={handleRedemptionComplete}
+            initialRedemptionAccounts={redemptionAccounts}
+          />
+          <CreateInstallmentAccountModal investorEmails={investorEmails} />
+        </div>
       </div>
 
       <AdminInstallmentTable />

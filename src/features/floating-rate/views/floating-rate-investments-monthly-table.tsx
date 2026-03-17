@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -662,290 +661,211 @@ export default function FloatingRateInvestmentsMonthlyTable({
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="flex items-center justify-center py-12">
-          <div className="flex items-center space-x-2">
-            <Loader2 className="h-6 w-6 animate-spin" />
-            <span className="text-muted-foreground">
-              Loading floating rate investments...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white border border-border rounded-xl p-12 flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">Loading floating rate investments...</span>
+        </div>
+      </div>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
+        <p className="text-red-600 text-sm mb-4">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Try Again
+        </Button>
+      </div>
     );
   }
 
   if (!data) {
     return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <p className="text-muted-foreground">No data available</p>
-        </CardContent>
-      </Card>
+      <div className="bg-white border border-border rounded-xl p-12 text-center">
+        <p className="text-sm text-muted-foreground">No data available</p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Summary Cards */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Investments
-                </p>
-                <p className="text-lg font-bold">
-                  {data.pagination.total}
-                  <span className="text-sm text-muted-foreground ml-1">
-                    total investments
-                  </span>
-                </p>
-              </div>
+        <div className="bg-[#192473] rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Investments</p>
+              <p className="text-xl font-semibold">{data.pagination.total}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-white/80" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Gross Capital
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.grossCapital)}
-                </p>
-              </div>
+        <div className="bg-emerald-500 rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Gross Capital</p>
+              <p className="text-xl font-semibold">{formatCurrency(totals.grossCapital)}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-white/80" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-teal-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-teal-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Net Investor Fund
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.netInvestorFund)}
-                </p>
-              </div>
+        <div className="bg-[#FFEB7A] rounded-xl p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-[#192473]/60 mb-1">Net Investor Fund</p>
+              <p className="text-xl font-semibold text-[#192473]">{formatCurrency(totals.netInvestorFund)}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-[#192473]/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-[#192473]/80" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <DollarSign className="h-5 w-5 text-red-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Admin Fees
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.adminFee)}
-                </p>
-              </div>
+        <div className="bg-white border border-border rounded-xl p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Admin Fees</p>
+              <p className="text-xl font-semibold text-amber-600">{formatCurrency(totals.adminFee)}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-amber-600" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Present Value Fund
-                </p>
-                <p className="text-lg font-bold">
-                  {formatCurrency(totals.presentValueFund)}
-                </p>
-              </div>
+        <div className="bg-white border border-border rounded-xl p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Present Value Fund</p>
+              <p className="text-xl font-semibold text-emerald-600">{formatCurrency(totals.presentValueFund)}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-emerald-600" />
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Available Months
-                </p>
-                <p className="text-lg font-bold">
-                  {data.availableMonths.length}
-                </p>
-              </div>
+        <div className="bg-white border border-border rounded-xl p-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Available Months</p>
+              <p className="text-xl font-semibold">{data.availableMonths.length}</p>
             </div>
-          </CardContent>
-        </Card>
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Table */}
-      <Card>
-        <CardHeader>
+      <div className="bg-white border border-border rounded-xl overflow-hidden">
+        <div className="p-5 border-b border-border">
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold">
-                Floating Rate Investments - Monthly Performance
-              </CardTitle>
-              <div className="flex items-center space-x-2">
-                <Button
-                  onClick={() => window.location.reload()}
-                  variant="outline"
-                  size="sm"
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
-                </Button>
-              </div>
+              <h3 className="font-medium text-sm text-foreground">
+                Monthly Performance
+              </h3>
+              <Button
+                onClick={() => window.location.reload()}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
             </div>
 
-            {/* Global Search and Filter Controls */}
-            <div className="flex flex-col space-y-4">
-              {/* Global Search */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search all columns..."
-                    value={globalFilterInput}
-                    onChange={(event) =>
-                      setGlobalFilterInput(event.target.value)
-                    }
-                    className="max-w-sm"
-                  />
-                </div>
-
-                {/* Reset All Filters */}
-                {(globalFilterInput ||
-                  paginationParams.search ||
-                  paginationParams.status ||
-                  paginationParams.dateFrom ||
-                  paginationParams.dateTo) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setGlobalFilterInput("");
-                      setGlobalFilter("");
-                      setColumnFilters([]);
-                      onPaginationChange({
-                        search: "",
-                        status: "",
-                        dateFrom: "",
-                        dateTo: "",
-                        page: 1,
-                      });
-                    }}
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Reset All Filters
-                  </Button>
-                )}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search accounts..."
+                  value={globalFilterInput}
+                  onChange={(event) => setGlobalFilterInput(event.target.value)}
+                  className="max-w-sm h-9 text-sm"
+                />
               </div>
 
-              {/* Active Filters Display */}
-              {(paginationParams.search ||
+              {(globalFilterInput ||
+                paginationParams.search ||
                 paginationParams.status ||
                 paginationParams.dateFrom ||
                 paginationParams.dateTo) && (
-                <div className="flex flex-wrap gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    Active filters:
-                  </span>
-                  {paginationParams.search && (
-                    <Badge variant="secondary" className="text-xs">
-                      Search: {paginationParams.search}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-3 w-3 p-0 ml-1"
-                        onClick={() => onPaginationChange({ search: "" })}
-                      >
-                        <X className="h-2 w-2" />
-                      </Button>
-                    </Badge>
-                  )}
-                  {paginationParams.status && (
-                    <Badge variant="secondary" className="text-xs">
-                      Status: {paginationParams.status}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-3 w-3 p-0 ml-1"
-                        onClick={() => onPaginationChange({ status: "" })}
-                      >
-                        <X className="h-2 w-2" />
-                      </Button>
-                    </Badge>
-                  )}
-                  {paginationParams.dateFrom && (
-                    <Badge variant="secondary" className="text-xs">
-                      From: {paginationParams.dateFrom}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-3 w-3 p-0 ml-1"
-                        onClick={() => onPaginationChange({ dateFrom: "" })}
-                      >
-                        <X className="h-2 w-2" />
-                      </Button>
-                    </Badge>
-                  )}
-                  {paginationParams.dateTo && (
-                    <Badge variant="secondary" className="text-xs">
-                      To: {paginationParams.dateTo}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-3 w-3 p-0 ml-1"
-                        onClick={() => onPaginationChange({ dateTo: "" })}
-                      >
-                        <X className="h-2 w-2" />
-                      </Button>
-                    </Badge>
-                  )}
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setGlobalFilterInput("");
+                    setGlobalFilter("");
+                    setColumnFilters([]);
+                    onPaginationChange({
+                      search: "",
+                      status: "",
+                      dateFrom: "",
+                      dateTo: "",
+                      page: 1,
+                    });
+                  }}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Reset Filters
+                </Button>
               )}
             </div>
+
+            {(paginationParams.search ||
+              paginationParams.status ||
+              paginationParams.dateFrom ||
+              paginationParams.dateTo) && (
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs text-muted-foreground">Active filters:</span>
+                {paginationParams.search && (
+                  <Badge variant="secondary" className="text-xs">
+                    Search: {paginationParams.search}
+                    <Button variant="ghost" size="sm" className="h-3 w-3 p-0 ml-1" onClick={() => onPaginationChange({ search: "" })}>
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                )}
+                {paginationParams.status && (
+                  <Badge variant="secondary" className="text-xs">
+                    Status: {paginationParams.status}
+                    <Button variant="ghost" size="sm" className="h-3 w-3 p-0 ml-1" onClick={() => onPaginationChange({ status: "" })}>
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                )}
+                {paginationParams.dateFrom && (
+                  <Badge variant="secondary" className="text-xs">
+                    From: {paginationParams.dateFrom}
+                    <Button variant="ghost" size="sm" className="h-3 w-3 p-0 ml-1" onClick={() => onPaginationChange({ dateFrom: "" })}>
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                )}
+                {paginationParams.dateTo && (
+                  <Badge variant="secondary" className="text-xs">
+                    To: {paginationParams.dateTo}
+                    <Button variant="ghost" size="sm" className="h-3 w-3 p-0 ml-1" onClick={() => onPaginationChange({ dateTo: "" })}>
+                      <X className="h-2 w-2" />
+                    </Button>
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="p-5">
           <div className="rounded-md border">
             <Table>
               <TableHeader>
@@ -1287,8 +1207,8 @@ export default function FloatingRateInvestmentsMonthlyTable({
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

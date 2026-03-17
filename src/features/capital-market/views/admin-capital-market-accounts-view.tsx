@@ -7,18 +7,17 @@ import { AdminCapitalMarketAccountsTable } from "../components/admin-capital-mar
 export function AdminCapitalMarketAccountsView() {
   const handleAccountCreated = () => {
     // The table will handle its own refresh
-    // We can add a callback mechanism if needed
   };
 
   return (
-    <div className="w-full max-w-full">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-xl font-semibold text-foreground">
             Capital Market Accounts
           </h1>
-          <p className="text-gray-600 mt-1">
+          <p className="text-sm text-muted-foreground">
             Manage capital market accounts for users
           </p>
         </div>
@@ -27,7 +26,6 @@ export function AdminCapitalMarketAccountsView() {
         />
       </div>
 
-      {/* Table Component */}
       <AdminCapitalMarketAccountsTable />
     </div>
   );
