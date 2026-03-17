@@ -18,8 +18,9 @@ import {
   type ValidationResult,
 } from "../lib/import-validators";
 import { bulkImportAccounts } from "../actions/bulk-import-accounts";
+import { validateImportData } from "../actions/validate-import-data";
 
-type ViewState = "idle" | "preview" | "result";
+type ViewState = "idle" | "validating" | "preview" | "result";
 
 interface ImportResult {
   totalProcessed: number;
@@ -64,14 +65,97 @@ export function ImportView() {
 
   const handleFileSelected = useCallback(async (file: File) => {
     try {
+      setState("validating");
+
+      // Step 1: Parse Excel
       const arrayBuffer = await file.arrayBuffer();
       const parsed = parseImportFile(arrayBuffer);
 
-      setFixedRateResults(validateFixedRateRows(parsed.fixedRate));
-      setFloatingRateResults(validateFloatingRateRows(parsed.floatingRate));
-      setInstallmentResults(validateInstallmentRows(parsed.installment));
+      // Step 2: Zod schema validation
+      let fixedResults = validateFixedRateRows(parsed.fixedRate);
+      let floatingResults = validateFloatingRateRows(parsed.floatingRate);
+      let installmentResultsLocal = validateInstallmentRows(parsed.installment);
+
+      // Step 3: Server-side DB validation (emails exist, account numbers unique)
+      const allEmails = [
+        ...parsed.fixedRate.map((r) => r.investorEmail),
+        ...parsed.floatingRate.map((r) => r.investorEmail),
+        ...parsed.installment.map((r) => r.investorEmail),
+      ];
+      const allAccountNumbers = [
+        ...parsed.fixedRate.map((r) => r.accountNumber),
+        ...parsed.floatingRate.map((r) => r.accountNumber),
+        ...parsed.installment.map((r) => r.accountNumber),
+      ];
+
+      const dbValidation = await validateImportData(allEmails, allAccountNumbers);
+
+      const invalidEmailSet = new Set(dbValidation.invalidEmails);
+      const duplicateAccountMap = new Map(
+        dbValidation.duplicateAccountNumbers.map((d) => [d.accountNumber, d.reason])
+      );
+
+      // Merge DB validation errors into row results
+      fixedResults = fixedResults.map((r) => {
+        const extraErrors: string[] = [];
+        if (invalidEmailSet.has(r.data.investorEmail)) {
+          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
+        }
+        if (duplicateAccountMap.has(r.data.accountNumber)) {
+          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
+        }
+        if (extraErrors.length > 0) {
+          return {
+            ...r,
+            errors: [...r.errors, ...extraErrors],
+            isValid: false,
+          };
+        }
+        return r;
+      });
+
+      floatingResults = floatingResults.map((r) => {
+        const extraErrors: string[] = [];
+        if (invalidEmailSet.has(r.data.investorEmail)) {
+          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
+        }
+        if (duplicateAccountMap.has(r.data.accountNumber)) {
+          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
+        }
+        if (extraErrors.length > 0) {
+          return {
+            ...r,
+            errors: [...r.errors, ...extraErrors],
+            isValid: false,
+          };
+        }
+        return r;
+      });
+
+      installmentResultsLocal = installmentResultsLocal.map((r) => {
+        const extraErrors: string[] = [];
+        if (invalidEmailSet.has(r.data.investorEmail)) {
+          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
+        }
+        if (duplicateAccountMap.has(r.data.accountNumber)) {
+          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
+        }
+        if (extraErrors.length > 0) {
+          return {
+            ...r,
+            errors: [...r.errors, ...extraErrors],
+            isValid: false,
+          };
+        }
+        return r;
+      });
+
+      setFixedRateResults(fixedResults);
+      setFloatingRateResults(floatingResults);
+      setInstallmentResults(installmentResultsLocal);
       setState("preview");
     } catch (error) {
+      setState("idle");
       alert(
         "Failed to parse the Excel file. Please make sure it is a valid .xlsx file."
       );
@@ -120,7 +204,7 @@ export function ImportView() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Bulk Import</h1>
+          <h1 className="text-xl font-semibold text-foreground">Bulk Import</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Upload an Excel file to create multiple accounts at once
           </p>
@@ -137,6 +221,18 @@ export function ImportView() {
       {/* Idle state - file upload */}
       {state === "idle" && (
         <FileUploadZone onFileSelected={handleFileSelected} />
+      )}
+
+      {/* Validating state */}
+      {state === "validating" && (
+        <div className="bg-white border border-border rounded-xl p-12 flex items-center justify-center">
+          <div className="flex items-center space-x-3">
+            <Loader2 className="h-5 w-5 animate-spin text-[#192473]" />
+            <span className="text-sm text-muted-foreground">
+              Validating import data against database...
+            </span>
+          </div>
+        </div>
       )}
 
       {/* Preview state */}

@@ -9,6 +9,8 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ValidationResult } from "../lib/import-validators";
 import type {
@@ -23,188 +25,266 @@ interface ImportPreviewTableProps {
   installmentResults: ValidationResult<InstallmentRow>[];
 }
 
+function ErrorList({ errors }: { errors: string[] }) {
+  return (
+    <div className="space-y-1">
+      {errors.map((error, i) => (
+        <div key={i} className="flex items-start gap-1.5">
+          <AlertCircle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
+          <span className="text-xs text-red-600">{error}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function SummaryBadges({
+  results,
+}: {
+  results: ValidationResult<unknown>[];
+}) {
+  const valid = results.filter((r) => r.isValid).length;
+  const invalid = results.length - valid;
+
+  return (
+    <div className="flex gap-2 mb-4">
+      <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+        <CheckCircle2 className="h-3 w-3 mr-1" />
+        {valid} valid
+      </Badge>
+      {invalid > 0 && (
+        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          {invalid} with errors
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export function ImportPreviewTable({
   fixedRateResults,
   floatingRateResults,
   installmentResults,
 }: ImportPreviewTableProps) {
-  const tabs: { value: string; label: string; count: number }[] = [];
+  const tabs: { value: string; label: string; count: number; errors: number }[] = [];
   if (fixedRateResults.length > 0)
     tabs.push({
       value: "fixed",
       label: "Fixed Rate",
       count: fixedRateResults.length,
+      errors: fixedRateResults.filter((r) => !r.isValid).length,
     });
   if (floatingRateResults.length > 0)
     tabs.push({
       value: "floating",
       label: "Floating Rate",
       count: floatingRateResults.length,
+      errors: floatingRateResults.filter((r) => !r.isValid).length,
     });
   if (installmentResults.length > 0)
     tabs.push({
       value: "installment",
       label: "Installment",
       count: installmentResults.length,
+      errors: installmentResults.filter((r) => !r.isValid).length,
     });
 
   if (tabs.length === 0) {
     return (
-      <p className="text-muted-foreground text-center py-8">
-        No data found in the uploaded file. Make sure the sheet names are
-        &quot;Fixed Rate&quot;, &quot;Floating Rate&quot;, and/or
-        &quot;Installment&quot;.
-      </p>
+      <div className="bg-white border border-border rounded-xl p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          No data found in the uploaded file. Make sure the sheet names are
+          &quot;Fixed Rate&quot;, &quot;Floating Rate&quot;, and/or
+          &quot;Installment&quot;.
+        </p>
+      </div>
     );
   }
 
   return (
-    <Tabs defaultValue={tabs[0].value}>
-      <TabsList>
-        {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value}>
-            {tab.label} ({tab.count})
-          </TabsTrigger>
-        ))}
-      </TabsList>
+    <div className="bg-white border border-border rounded-xl overflow-hidden">
+      <Tabs defaultValue={tabs[0].value}>
+        <div className="p-4 border-b border-border">
+          <TabsList>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="text-sm">
+                {tab.label} ({tab.count})
+                {tab.errors > 0 && (
+                  <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                    {tab.errors}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
 
-      {fixedRateResults.length > 0 && (
-        <TabsContent value="fixed">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Account No.</TableHead>
-                <TableHead>Capital</TableHead>
-                <TableHead>Rate (%)</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Rollover</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {fixedRateResults.map((r) => (
-                <TableRow
-                  key={r.rowIndex}
-                  className={cn(!r.isValid && "bg-red-50")}
-                >
-                  <TableCell>{r.rowIndex + 1}</TableCell>
-                  <TableCell>{r.data.investorEmail}</TableCell>
-                  <TableCell>{r.data.accountNumber}</TableCell>
-                  <TableCell>{r.data.capital.toLocaleString("id-ID")}</TableCell>
-                  <TableCell>{r.data.annualRate}</TableCell>
-                  <TableCell>{r.data.startDate}</TableCell>
-                  <TableCell>{r.data.endDate}</TableCell>
-                  <TableCell>{r.data.isRollover ? "Yes" : "No"}</TableCell>
-                  <TableCell>
-                    {r.isValid ? (
-                      <span className="text-green-600 font-medium">Valid</span>
-                    ) : (
-                      <span className="text-red-600 text-xs">
-                        {r.errors.join("; ")}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TabsContent>
-      )}
+        {fixedRateResults.length > 0 && (
+          <TabsContent value="fixed" className="p-4 mt-0">
+            <SummaryBadges results={fixedRateResults} />
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Row</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Account No.</TableHead>
+                    <TableHead className="text-right">Capital</TableHead>
+                    <TableHead className="text-right">Rate (%)</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Rollover</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {fixedRateResults.map((r) => (
+                    <TableRow
+                      key={r.rowIndex}
+                      className={cn(!r.isValid && "bg-red-50/50")}
+                    >
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.rowIndex + 2}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.investorEmail}</TableCell>
+                      <TableCell className="text-sm font-medium">{r.data.accountNumber}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.capital.toLocaleString("id-ID")}
+                      </TableCell>
+                      <TableCell className="text-sm text-right">{r.data.annualRate}</TableCell>
+                      <TableCell className="text-sm">{r.data.startDate}</TableCell>
+                      <TableCell className="text-sm">{r.data.endDate}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.data.isRollover ? "Yes" : "No"}
+                      </TableCell>
+                      <TableCell>
+                        {r.isValid ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                            Valid
+                          </Badge>
+                        ) : (
+                          <ErrorList errors={r.errors} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
 
-      {floatingRateResults.length > 0 && (
-        <TabsContent value="floating">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Account No.</TableHead>
-                <TableHead>Capital</TableHead>
-                <TableHead>Admin Fee (%)</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {floatingRateResults.map((r) => (
-                <TableRow
-                  key={r.rowIndex}
-                  className={cn(!r.isValid && "bg-red-50")}
-                >
-                  <TableCell>{r.rowIndex + 1}</TableCell>
-                  <TableCell>{r.data.investorEmail}</TableCell>
-                  <TableCell>{r.data.accountNumber}</TableCell>
-                  <TableCell>{r.data.capital.toLocaleString("id-ID")}</TableCell>
-                  <TableCell>{r.data.adminFeePercentage}</TableCell>
-                  <TableCell>{r.data.startDate}</TableCell>
-                  <TableCell>{r.data.endDate}</TableCell>
-                  <TableCell>
-                    {r.isValid ? (
-                      <span className="text-green-600 font-medium">Valid</span>
-                    ) : (
-                      <span className="text-red-600 text-xs">
-                        {r.errors.join("; ")}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TabsContent>
-      )}
+        {floatingRateResults.length > 0 && (
+          <TabsContent value="floating" className="p-4 mt-0">
+            <SummaryBadges results={floatingRateResults} />
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Row</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Account No.</TableHead>
+                    <TableHead className="text-right">Capital</TableHead>
+                    <TableHead className="text-right">Admin Fee (%)</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {floatingRateResults.map((r) => (
+                    <TableRow
+                      key={r.rowIndex}
+                      className={cn(!r.isValid && "bg-red-50/50")}
+                    >
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.rowIndex + 2}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.investorEmail}</TableCell>
+                      <TableCell className="text-sm font-medium">{r.data.accountNumber}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.capital.toLocaleString("id-ID")}
+                      </TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.adminFeePercentage}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.startDate}</TableCell>
+                      <TableCell className="text-sm">{r.data.endDate}</TableCell>
+                      <TableCell>
+                        {r.isValid ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                            Valid
+                          </Badge>
+                        ) : (
+                          <ErrorList errors={r.errors} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
 
-      {installmentResults.length > 0 && (
-        <TabsContent value="installment">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>#</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Account No.</TableHead>
-                <TableHead>Capital</TableHead>
-                <TableHead>CoF (%)</TableHead>
-                <TableHead>Admin Fee (%)</TableHead>
-                <TableHead>Start Date</TableHead>
-                <TableHead>End Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {installmentResults.map((r) => (
-                <TableRow
-                  key={r.rowIndex}
-                  className={cn(!r.isValid && "bg-red-50")}
-                >
-                  <TableCell>{r.rowIndex + 1}</TableCell>
-                  <TableCell>{r.data.investorEmail}</TableCell>
-                  <TableCell>{r.data.accountNumber}</TableCell>
-                  <TableCell>{r.data.capital.toLocaleString("id-ID")}</TableCell>
-                  <TableCell>{r.data.monthlyCoF}</TableCell>
-                  <TableCell>{r.data.adminFeePercentage}</TableCell>
-                  <TableCell>{r.data.startDate}</TableCell>
-                  <TableCell>{r.data.endDate}</TableCell>
-                  <TableCell>{r.data.investmentType}</TableCell>
-                  <TableCell>
-                    {r.isValid ? (
-                      <span className="text-green-600 font-medium">Valid</span>
-                    ) : (
-                      <span className="text-red-600 text-xs">
-                        {r.errors.join("; ")}
-                      </span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TabsContent>
-      )}
-    </Tabs>
+        {installmentResults.length > 0 && (
+          <TabsContent value="installment" className="p-4 mt-0">
+            <SummaryBadges results={installmentResults} />
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Row</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Account No.</TableHead>
+                    <TableHead className="text-right">Capital</TableHead>
+                    <TableHead className="text-right">CoF (%)</TableHead>
+                    <TableHead className="text-right">Admin Fee (%)</TableHead>
+                    <TableHead>Start Date</TableHead>
+                    <TableHead>End Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {installmentResults.map((r) => (
+                    <TableRow
+                      key={r.rowIndex}
+                      className={cn(!r.isValid && "bg-red-50/50")}
+                    >
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.rowIndex + 2}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.investorEmail}</TableCell>
+                      <TableCell className="text-sm font-medium">{r.data.accountNumber}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.capital.toLocaleString("id-ID")}
+                      </TableCell>
+                      <TableCell className="text-sm text-right">{r.data.monthlyCoF}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.adminFeePercentage}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.startDate}</TableCell>
+                      <TableCell className="text-sm">{r.data.endDate}</TableCell>
+                      <TableCell className="text-sm">{r.data.investmentType}</TableCell>
+                      <TableCell>
+                        {r.isValid ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+                            Valid
+                          </Badge>
+                        ) : (
+                          <ErrorList errors={r.errors} />
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
+      </Tabs>
+    </div>
   );
 }
