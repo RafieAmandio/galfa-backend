@@ -98,6 +98,7 @@ interface FloatingRateInvestmentsMonthlyTableProps {
   paginationParams: PaginationParams;
   onPaginationChange: (params: Partial<PaginationParams>) => void;
   onDeleted?: () => void;
+  isFetching?: boolean;
 }
 
 export default function FloatingRateInvestmentsMonthlyTable({
@@ -105,6 +106,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
   paginationParams,
   onPaginationChange,
   onDeleted,
+  isFetching = false,
 }: FloatingRateInvestmentsMonthlyTableProps) {
   // Remove data fetching state - data comes from props
   const loading = false;
@@ -772,9 +774,12 @@ export default function FloatingRateInvestmentsMonthlyTable({
         <div className="p-5 border-b border-border">
           <div className="flex flex-col space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-medium text-sm text-foreground">
-                Monthly Performance
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-sm text-foreground">
+                  Monthly Performance
+                </h3>
+                {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
+              </div>
               <Button
                 onClick={() => window.location.reload()}
                 variant="outline"

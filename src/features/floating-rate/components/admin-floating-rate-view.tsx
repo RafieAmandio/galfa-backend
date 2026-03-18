@@ -89,6 +89,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
   const {
     data: floatingRateResult,
     isLoading: isFloatingRateLoading,
+    isFetching: isFloatingRateFetching,
     error: floatingRateError,
   } = useQuery(
     getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimizedQueryOptions(
@@ -112,7 +113,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
       : null;
   const error = floatingRateError?.message || investorsError?.message;
 
-  const isLoading = isFloatingRateLoading || isInvestorsLoading;
+  const isInitialLoading = isFloatingRateLoading || isInvestorsLoading;
 
   // Handle refresh by invalidating queries and clearing caches
   const handleRefresh = () => {
@@ -144,7 +145,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
     }));
   };
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -210,6 +211,7 @@ export function AdminFloatingRateView({ user }: AdminFloatingRateViewProps) {
           paginationParams={paginationParams}
           onPaginationChange={handlePaginationChange}
           onDeleted={handleRefresh}
+          isFetching={isFloatingRateFetching}
         />
       )}
     </div>

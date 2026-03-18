@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -22,7 +23,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getFloatingRateAccountsForRedemptionQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-accounts-for-redemption/query-options";
@@ -71,6 +72,8 @@ export function RedeemFloatingRateModal({
   const [redemptionHistory, setRedemptionHistory] = useState<
     RedemptionHistory[]
   >([]);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
 
   // Fetch accounts using Tanstack React Query
   const {
@@ -143,6 +146,8 @@ export function RedeemFloatingRateModal({
       setRedemptionHistory([]);
       setRedemptionDate(new Date());
       setIsFullRedemption(false);
+      setAccountSearch("");
+      setAccountDropdownOpen(false);
     }
   }, [open]);
 
@@ -350,24 +355,89 @@ export function RedeemFloatingRateModal({
                     this date
                   </div>
                 ) : (
-                  <select
-                    value={selectedAccountId || ""}
-                    onChange={(e) =>
-                      setSelectedAccountId(
-                        e.target.value ? parseInt(e.target.value) : null
-                      )
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="">Choose an account...</option>
-                    {accounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name} - {account.investorEmail} - Current
-                        Value: {formatCurrency(account.currentValue)}
-                      </option>
-                    ))}
-                  </select>
+                  <Popover open={accountDropdownOpen} onOpenChange={setAccountDropdownOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={accountDropdownOpen}
+                        className="w-full justify-between font-normal h-auto min-h-[44px] py-2"
+                      >
+                        {selectedAccountId ? (
+                          <span className="text-left truncate">
+                            {(() => {
+                              const acc = accounts.find(a => a.id === selectedAccountId);
+                              return acc ? `${acc.name} - ${acc.investorEmail}` : "Choose an account...";
+                            })()}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Choose an account...</span>
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <div className="p-2 border-b">
+                        <div className="flex items-center gap-2 px-1">
+                          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                          <Input
+                            placeholder="Search account or email..."
+                            value={accountSearch}
+                            onChange={(e) => setAccountSearch(e.target.value)}
+                            className="h-8 border-0 p-0 shadow-none focus-visible:ring-0"
+                          />
+                        </div>
+                      </div>
+                      <div className="max-h-[240px] overflow-y-auto p-1">
+                        {accounts
+                          .filter((acc) => {
+                            if (!accountSearch) return true;
+                            const q = accountSearch.toLowerCase();
+                            return (
+                              acc.name.toLowerCase().includes(q) ||
+                              acc.investorEmail.toLowerCase().includes(q)
+                            );
+                          })
+                          .map((account) => (
+                            <button
+                              key={account.id}
+                              type="button"
+                              className={cn(
+                                "w-full text-left px-2 py-2 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground flex items-start gap-2",
+                                selectedAccountId === account.id && "bg-accent"
+                              )}
+                              onClick={() => {
+                                setSelectedAccountId(account.id);
+                                setAccountDropdownOpen(false);
+                                setAccountSearch("");
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "h-4 w-4 mt-0.5 shrink-0",
+                                  selectedAccountId === account.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">{account.name}</div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {account.investorEmail} &middot; {formatCurrency(account.currentValue)}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        {accounts.filter((acc) => {
+                          if (!accountSearch) return true;
+                          const q = accountSearch.toLowerCase();
+                          return acc.name.toLowerCase().includes(q) || acc.investorEmail.toLowerCase().includes(q);
+                        }).length === 0 && (
+                          <div className="py-4 text-center text-sm text-muted-foreground">
+                            No accounts found
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 )}
               </div>
 
