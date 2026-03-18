@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -10,11 +10,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getAllVCPerformance } from "../actions/get-all-vc-performance";
 import { CreateVCPerformanceModal } from "../components/create-vc-performance-modal";
 import { EditVCPerformanceModal } from "../components/edit-vc-performance-modal";
 import { format } from "date-fns";
-import { TrendingUp, Calendar, RefreshCw } from "lucide-react";
+import {
+  TrendingUp,
+  Calendar,
+  RefreshCw,
+  DollarSign,
+  ChevronFirst,
+  ChevronLast,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from "lucide-react";
 
 interface PerformanceRecord {
   id: number;
@@ -27,18 +44,27 @@ interface PerformanceRecord {
 
 export function PerformanceTable() {
   const [records, setRecords] = useState<PerformanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(12);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadVCPerformanceRecords = async () => {
-    setLoading(true);
+  const totalPages = Math.ceil(totalCount / pageSize);
+
+  const fetchData = useCallback(async () => {
+    if (!isInitialLoad) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
-      const result = await getAllVCPerformance();
+      const result = await getAllVCPerformance({ page, pageSize });
 
       if (result.success && result.data) {
         setRecords(result.data);
+        setTotalCount(result.totalCount ?? 0);
       } else {
         setError(result.message || "Failed to fetch records");
       }
@@ -46,13 +72,14 @@ export function PerformanceTable() {
       setError("An unexpected error occurred");
       console.error("Error loading VC performance records:", err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
+      setIsInitialLoad(false);
     }
-  };
+  }, [page, pageSize, isInitialLoad]);
 
   useEffect(() => {
-    loadVCPerformanceRecords();
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -62,7 +89,7 @@ export function PerformanceTable() {
   };
 
   const formatDateTime = (date: Date) => {
-    return format(new Date(date), "d MMMM yyyy 'at' HH:mm");
+    return format(new Date(date), "d MMM yyyy, HH:mm");
   };
 
   const getMonthYear = (date: Date) => {
@@ -82,148 +109,149 @@ export function PerformanceTable() {
     {}
   );
 
-  const getDuplicateMonths = () => {
-    return Object.keys(groupedByMonth).filter(
-      (month) => groupedByMonth[month].length > 1
-    );
-  };
-
-  const duplicateMonths = getDuplicateMonths();
-
-  // Calculate totals for summable columns
-  const totals = records.reduce(
-    (acc, record) => ({
-      totalAum: acc.totalAum + record.aum,
-    }),
-    {
-      totalAum: 0,
-    }
+  const duplicateMonths = Object.keys(groupedByMonth).filter(
+    (month) => groupedByMonth[month].length > 1
   );
+
+  // Calculate totals for current page
+  const totalAum = records.reduce((acc, record) => acc + record.aum, 0);
+
+  // Skeleton loading for initial load
+  if (isInitialLoad) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-6 w-48 bg-muted rounded animate-pulse" />
+            <div className="h-4 w-72 bg-muted rounded animate-pulse mt-2" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl p-5 bg-muted/50 animate-pulse h-[88px]" />
+          ))}
+        </div>
+        <div className="bg-white border border-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <div className="h-5 w-40 bg-muted rounded animate-pulse" />
+          </div>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex gap-4 p-4 border-b border-border/50">
+              {Array.from({ length: 6 }).map((_, j) => (
+                <div key={j} className="h-4 flex-1 bg-muted/50 rounded animate-pulse" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header Section */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Performance Records
-            </h1>
-            <p className="text-gray-600">
-              Manage and view all Assets Under Management (AUM) records
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <CreateVCPerformanceModal onSuccess={loadVCPerformanceRecords} />
-            <Button
-              onClick={loadVCPerformanceRecords}
-              disabled={loading}
-              variant="outline"
-              className="flex items-center space-x-2"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />
-              <span>Refresh</span>
-            </Button>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Performance Records</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage and view Assets Under Management (AUM) records
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <CreateVCPerformanceModal onSuccess={fetchData} />
+          <Button
+            onClick={fetchData}
+            disabled={isLoading}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-[#192473] rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Total Records</p>
+              <p className="text-xl font-semibold">{totalCount}</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <Calendar className="h-4 w-4 text-white/80" />
+            </div>
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-          <div className="bg-gray-50 p-4 rounded-lg border">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">
-                  Total Records
-                </p>
-                <p className="text-lg font-bold text-gray-900">
-                  {records.length}
-                </p>
-              </div>
+        <div className="bg-emerald-500 rounded-xl p-5 text-white">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-white/60 mb-1">Latest AUM</p>
+              <p className="text-xl font-semibold">
+                {records.length > 0 ? formatCurrency(records[0].aum) : "N/A"}
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-white/80" />
             </div>
           </div>
+        </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border">
-            <div className="flex items-center">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-gray-600">Latest AUM</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {records.length > 0 ? formatCurrency(records[0].aum) : "N/A"}
-                </p>
-              </div>
+        <div className="bg-[#FFEB7A] rounded-xl p-5 text-[#192473]">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs font-medium text-[#192473]/60 mb-1">Page Total AUM</p>
+              <p className="text-xl font-semibold">{formatCurrency(totalAum)}</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-[#192473]/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-[#192473]/80" />
             </div>
           </div>
-
         </div>
       </div>
 
       {/* Duplicate Month Warning */}
       {duplicateMonths.length > 0 && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Calendar className="h-5 w-5 text-red-600" />
-            </div>
-            <div className="ml-3">
-              <p className="text-red-700 text-sm font-medium">
-                Duplicate Records Warning
-              </p>
-              <p className="text-red-600 text-sm mt-1">
-                Multiple records found for:{" "}
-                {duplicateMonths
-                  .map((month) => format(new Date(month + "-01"), "MMMM yyyy"))
-                  .join(", ")}
-                . Each month should have only one record.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="bg-white p-8 rounded-lg shadow-sm border text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading performance records...</p>
+        <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+          <p className="text-red-700 text-sm font-medium">Duplicate Records Warning</p>
+          <p className="text-red-600 text-sm mt-1">
+            Multiple records found for:{" "}
+            {duplicateMonths
+              .map((month) => format(new Date(month + "-01"), "MMMM yyyy"))
+              .join(", ")}
+          </p>
         </div>
       )}
 
       {/* Error State */}
       {error && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
-          <p className="text-red-700">{error}</p>
+        <div className="bg-red-50 border border-red-200 p-4 rounded-xl">
+          <p className="text-red-700 text-sm">{error}</p>
         </div>
       )}
 
       {/* Records Table */}
-      {!loading && !error && records.length > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Performance Records ({records.length} total)
+      {!error && records.length > 0 && (
+        <div className="bg-white border border-border rounded-xl overflow-hidden">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground">
+              Performance Records
             </h2>
+            {isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[100px]">ID</TableHead>
+                  <TableHead className="w-[60px]">ID</TableHead>
                   <TableHead>Month/Year</TableHead>
-                  <TableHead className="text-right">
-                    Assets Under Management
-                  </TableHead>
+                  <TableHead className="text-right">Assets Under Management</TableHead>
                   <TableHead className="text-right">IHSG</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Last Updated</TableHead>
-                  <TableHead className="w-[100px]">Status</TableHead>
-                  <TableHead className="w-[100px]">Action</TableHead>
+                  <TableHead className="w-[80px]">Status</TableHead>
+                  <TableHead className="w-[80px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -234,12 +262,12 @@ export function PerformanceTable() {
                   return (
                     <TableRow
                       key={record.id}
-                      className={isDuplicate ? "bg-red-50" : ""}
+                      className={isDuplicate ? "bg-red-50/50" : ""}
                     >
-                      <TableCell className="font-medium">{record.id}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{record.id}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="font-medium">
+                          <span className="text-sm font-medium">
                             {getMonthYear(record.date)}
                           </span>
                           {isDuplicate && (
@@ -249,25 +277,29 @@ export function PerformanceTable() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right ">
+                      <TableCell className="text-sm text-right font-medium">
                         {formatCurrency(record.aum)}
                       </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {record.ihsgValue ? record.ihsgValue.toLocaleString("id-ID", { minimumFractionDigits: 2 }) : "-"}
+                      <TableCell className="text-sm text-right">
+                        {record.ihsgValue
+                          ? record.ihsgValue.toLocaleString("id-ID", {
+                              minimumFractionDigits: 2,
+                            })
+                          : "-"}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDateTime(record.createdAt)}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-500">
+                      <TableCell className="text-xs text-muted-foreground">
                         {formatDateTime(record.updatedAt)}
                       </TableCell>
                       <TableCell>
                         {isDuplicate ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-100 text-red-700">
                             Duplicate
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700">
                             Valid
                           </span>
                         )}
@@ -275,7 +307,7 @@ export function PerformanceTable() {
                       <TableCell>
                         <EditVCPerformanceModal
                           record={record}
-                          onSuccess={loadVCPerformanceRecords}
+                          onSuccess={fetchData}
                         />
                       </TableCell>
                     </TableRow>
@@ -283,35 +315,106 @@ export function PerformanceTable() {
                 })}
 
                 {/* Totals Row */}
-                <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
-                  <TableCell className="font-bold">TOTAL</TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
-                  <TableCell className="text-right  font-bold text-blue-600">
-                    {formatCurrency(totals.totalAum)}
+                <TableRow className="bg-[#192473]/5 border-t-2 border-[#192473]/10 font-semibold hover:bg-[#192473]/5">
+                  <TableCell className="font-semibold text-sm">TOTAL</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-right font-semibold text-sm text-[#192473]">
+                    {formatCurrency(totalAum)}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
-                  <TableCell className="text-muted-foreground">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+            <div className="text-sm text-muted-foreground">
+              Showing {(page - 1) * pageSize + 1}-{Math.min(page * pageSize, totalCount)} of {totalCount}
+            </div>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium">Rows per page</p>
+                <Select
+                  value={`${pageSize}`}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue placeholder={pageSize} />
+                  </SelectTrigger>
+                  <SelectContent side="top">
+                    {[12, 24, 36, 48, 60].map((size) => (
+                      <SelectItem key={size} value={`${size}`}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+                Page {page} of {totalPages || 1}
+              </div>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => setPage(1)}
+                  disabled={page <= 1}
+                >
+                  <span className="sr-only">Go to first page</span>
+                  <ChevronFirst className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                >
+                  <span className="sr-only">Go to previous page</span>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page >= totalPages}
+                >
+                  <span className="sr-only">Go to next page</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="hidden h-8 w-8 p-0 lg:flex"
+                  onClick={() => setPage(totalPages)}
+                  disabled={page >= totalPages}
+                >
+                  <span className="sr-only">Go to last page</span>
+                  <ChevronLast className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Empty State */}
-      {!loading && !error && records.length === 0 && (
-        <div className="bg-white p-12 rounded-lg shadow-sm border text-center">
-          <div className="p-3 bg-gray-100 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <TrendingUp className="h-8 w-8 text-gray-400" />
+      {!error && records.length === 0 && !isLoading && (
+        <div className="bg-white border border-border rounded-xl p-12 text-center">
+          <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+            <TrendingUp className="h-6 w-6 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <h3 className="text-base font-medium text-foreground mb-1">
             No Performance Records
           </h3>
-          <p className="text-gray-500 mb-4">
-            No performance records have been created yet. Add your first record
-            to get started.
+          <p className="text-sm text-muted-foreground">
+            Add your first record to get started.
           </p>
         </div>
       )}

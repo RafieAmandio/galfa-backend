@@ -2,8 +2,8 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
-import { eq, and, gte, lt, ne } from "drizzle-orm";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { eq, sql, and, ne } from "drizzle-orm";
+import { format } from "date-fns";
 
 interface UpdateVCPerformanceRequest {
   id: number;
@@ -71,10 +71,11 @@ export async function updateVCPerformance(
       };
     }
 
-    // Check if another record already exists for this month (excluding current record)
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
+    const inputDate = new Date(date);
+    const targetMonth = inputDate.getMonth() + 1;
+    const targetYear = inputDate.getFullYear();
 
+    // Check if another record already exists for this month (excluding current record)
     const conflictingRecords = await db
       .select({
         id: vcPerformance.id,
@@ -83,25 +84,28 @@ export async function updateVCPerformance(
       .from(vcPerformance)
       .where(
         and(
-          gte(vcPerformance.date, monthStart),
-          lt(vcPerformance.date, monthEnd),
-          ne(vcPerformance.id, id) // Exclude current record
+          sql`extract(month from ${vcPerformance.date}) = ${targetMonth}`,
+          sql`extract(year from ${vcPerformance.date}) = ${targetYear}`,
+          ne(vcPerformance.id, id)
         )
       );
 
     if (conflictingRecords.length > 0) {
-      const monthName = format(monthStart, "MMMM yyyy");
+      const monthName = format(new Date(targetYear, targetMonth - 1, 1), "MMMM yyyy");
       return {
         success: false,
         message: `Another performance record already exists for ${monthName}. Each month should have only one record.`,
       };
     }
 
+    // Store date as 1st of the month at noon UTC for consistency
+    const normalizedDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 12, 0, 0));
+
     // Update the record
     const [updatedRecord] = await db
       .update(vcPerformance)
       .set({
-        date,
+        date: normalizedDate,
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
         ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
@@ -126,7 +130,7 @@ export async function updateVCPerformance(
         ihsgValue: updatedRecord.ihsgValue ? Number(updatedRecord.ihsgValue) : null,
       },
       message: `Successfully updated performance record for ${format(
-        monthStart,
+        new Date(targetYear, targetMonth - 1, 1),
         "MMMM yyyy"
       )}`,
     };

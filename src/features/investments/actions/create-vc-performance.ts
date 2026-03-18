@@ -2,8 +2,8 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
-import { and, gte, lt } from "drizzle-orm";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { sql, and } from "drizzle-orm";
+import { format } from "date-fns";
 
 interface CreateVCPerformanceRequest {
   date: Date;
@@ -53,10 +53,12 @@ export async function createVCPerformance(
       };
     }
 
-    // Check if record already exists for this month
-    const monthStart = startOfMonth(date);
-    const monthEnd = endOfMonth(date);
+    // Normalize date to 1st of month at noon UTC to avoid timezone issues
+    const inputDate = new Date(date);
+    const targetMonth = inputDate.getMonth() + 1; // 1-based
+    const targetYear = inputDate.getFullYear();
 
+    // Check if record already exists for this month using extract for timezone safety
     const existingRecords = await db
       .select({
         id: vcPerformance.id,
@@ -65,24 +67,27 @@ export async function createVCPerformance(
       .from(vcPerformance)
       .where(
         and(
-          gte(vcPerformance.date, monthStart),
-          lt(vcPerformance.date, monthEnd)
+          sql`extract(month from ${vcPerformance.date}) = ${targetMonth}`,
+          sql`extract(year from ${vcPerformance.date}) = ${targetYear}`
         )
       );
 
     if (existingRecords.length > 0) {
-      const monthName = format(monthStart, "MMMM yyyy");
+      const monthName = format(new Date(targetYear, targetMonth - 1, 1), "MMMM yyyy");
       return {
         success: false,
         message: `A performance record already exists for ${monthName}. Each month should have only one record.`,
       };
     }
 
+    // Store date as 1st of the month at noon UTC for consistency
+    const normalizedDate = new Date(Date.UTC(targetYear, targetMonth - 1, 1, 12, 0, 0));
+
     // Create the new record
     const [newRecord] = await db
       .insert(vcPerformance)
       .values({
-        date,
+        date: normalizedDate,
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
         ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
@@ -107,7 +112,7 @@ export async function createVCPerformance(
         ihsgValue: newRecord.ihsgValue ? Number(newRecord.ihsgValue) : null,
       },
       message: `Successfully created performance record for ${format(
-        monthStart,
+        new Date(targetYear, targetMonth - 1, 1),
         "MMMM yyyy"
       )}`,
     };

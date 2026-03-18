@@ -10,6 +10,7 @@ import {
   installmentAccounts,
   accountTypes,
   authUsers,
+  profiles,
 } from "@/db/drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
@@ -95,17 +96,19 @@ export async function bulkImportAccounts(
   ];
   const uniqueEmails = [...new Set(allEmails.filter(Boolean))];
 
+  const failedEmailCreations = new Map<string, string>();
+
   if (uniqueEmails.length > 0) {
     const db = createDrizzleConnection();
     const existingUsers = await db
-      .select({ email: authUsers.email })
+      .select({ id: authUsers.id, email: authUsers.email })
       .from(authUsers)
       .where(inArray(authUsers.email, uniqueEmails));
     const existingEmailSet = new Set(existingUsers.map((u) => u.email));
 
+    // Auto-create new users that don't exist in auth.users
     for (const email of uniqueEmails) {
       if (!existingEmailSet.has(email)) {
-        // Create investor with a random password (they can reset it)
         const tempPassword = `Import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         const namePart = email.split("@")[0].replace(/[._-]/g, " ");
         const fullName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
@@ -118,9 +121,32 @@ export async function bulkImportAccounts(
         );
 
         if (!createResult.success) {
-          // If user creation fails, all rows with this email will fail during import
+          failedEmailCreations.set(email, createResult.message);
           console.error(`Failed to create investor ${email}: ${createResult.message}`);
         }
+      }
+    }
+
+    // Ensure profiles exist for all auth users (some may have auth.users but no profiles row)
+    for (const user of existingUsers) {
+      if (!user.id || !user.email) continue;
+      const existingProfile = await db
+        .select({ id: profiles.id })
+        .from(profiles)
+        .where(eq(profiles.id, user.id))
+        .limit(1);
+
+      if (existingProfile.length === 0) {
+        const namePart = user.email.split("@")[0].replace(/[._-]/g, " ");
+        const fullName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        await db
+          .insert(profiles)
+          .values({
+            id: user.id,
+            full_name: fullName,
+            updated_at: new Date(),
+          })
+          .onConflictDoNothing();
       }
     }
   }
@@ -128,6 +154,16 @@ export async function bulkImportAccounts(
   // Process Fixed Rate rows
   for (let i = 0; i < fixedRateRows.length; i++) {
     const row = fixedRateRows[i];
+    if (failedEmailCreations.has(row.investorEmail)) {
+      results.push({
+        type: "Fixed Rate",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: false,
+        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+      });
+      continue;
+    }
     try {
       const result = await createFlatRateAccount({
         investorEmail: row.investorEmail,
@@ -160,6 +196,16 @@ export async function bulkImportAccounts(
   // Process Floating Rate rows
   for (let i = 0; i < floatingRateRows.length; i++) {
     const row = floatingRateRows[i];
+    if (failedEmailCreations.has(row.investorEmail)) {
+      results.push({
+        type: "Floating Rate",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: false,
+        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+      });
+      continue;
+    }
     try {
       const result = await createFloatingRateAccount({
         investorEmail: row.investorEmail,
@@ -191,6 +237,16 @@ export async function bulkImportAccounts(
   // Process Installment rows (inline DB logic since existing action uses FormData)
   for (let i = 0; i < installmentRows.length; i++) {
     const row = installmentRows[i];
+    if (failedEmailCreations.has(row.investorEmail)) {
+      results.push({
+        type: "Installment",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: false,
+        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+      });
+      continue;
+    }
     try {
       // Validate account number uniqueness
       const isUnique = await isAccountNumberUnique(row.accountNumber);

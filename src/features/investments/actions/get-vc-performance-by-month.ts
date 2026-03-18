@@ -2,9 +2,8 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { vcPerformance } from "@/db/drizzle/schema";
-import { eq, and, gte, lt } from "drizzle-orm";
-import { sum, avg } from "drizzle-orm";
-import { startOfMonth, endOfMonth, format } from "date-fns";
+import { and, sql } from "drizzle-orm";
+import { format } from "date-fns";
 
 interface VCPerformanceData {
   month: Date;
@@ -29,23 +28,24 @@ export async function getVCPerformanceByMonth(
 ): Promise<VCPerformanceResponse> {
   try {
     const db = createDrizzleConnection();
-    const monthStart = startOfMonth(selectedMonth);
-    const monthEnd = endOfMonth(selectedMonth);
+    const inputDate = new Date(selectedMonth);
+    const targetMonth = inputDate.getMonth() + 1;
+    const targetYear = inputDate.getFullYear();
 
-    // Get all VC performance data for the selected month
+    // Get all VC performance data for the selected month using extract for timezone safety
     const monthlyData = await db
       .select()
       .from(vcPerformance)
       .where(
         and(
-          gte(vcPerformance.date, monthStart),
-          lt(vcPerformance.date, monthEnd)
+          sql`extract(month from ${vcPerformance.date}) = ${targetMonth}`,
+          sql`extract(year from ${vcPerformance.date}) = ${targetYear}`
         )
       )
       .orderBy(vcPerformance.date);
 
     const recordCount = monthlyData.length;
-    const monthName = format(monthStart, "MMMM yyyy");
+    const monthName = format(new Date(targetYear, targetMonth - 1, 1), "MMMM yyyy");
 
     // Handle no records found - return success with null data and warning message
     if (recordCount === 0) {
@@ -66,7 +66,7 @@ export async function getVCPerformanceByMonth(
     const performanceRecord = monthlyData[0];
 
     const vcPerformanceData: VCPerformanceData = {
-      month: monthStart,
+      month: new Date(targetYear, targetMonth - 1, 1),
       totalAUM: Number(performanceRecord.aum),
       totalProfitTaken: Number(performanceRecord.profitTaken),
       averageAUM: Number(performanceRecord.aum),
