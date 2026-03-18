@@ -3,6 +3,7 @@
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { createFlatRateAccount } from "@/features/flat-rate/actions/create-flat-rate-account";
 import { createFloatingRateAccount } from "@/features/floating-rate/actions/create-floating-rate-account";
+import { createUserByAdmin } from "@/features/admin/actions/create-user";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import {
   accounts,
@@ -10,7 +11,7 @@ import {
   accountTypes,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
 interface FixedRateImportRow {
@@ -85,6 +86,44 @@ export async function bulkImportAccounts(
   }
 
   const results: RowResult[] = [];
+
+  // Auto-create investors that don't exist yet
+  const allEmails = [
+    ...fixedRateRows.map((r) => r.investorEmail),
+    ...floatingRateRows.map((r) => r.investorEmail),
+    ...installmentRows.map((r) => r.investorEmail),
+  ];
+  const uniqueEmails = [...new Set(allEmails.filter(Boolean))];
+
+  if (uniqueEmails.length > 0) {
+    const db = createDrizzleConnection();
+    const existingUsers = await db
+      .select({ email: authUsers.email })
+      .from(authUsers)
+      .where(inArray(authUsers.email, uniqueEmails));
+    const existingEmailSet = new Set(existingUsers.map((u) => u.email));
+
+    for (const email of uniqueEmails) {
+      if (!existingEmailSet.has(email)) {
+        // Create investor with a random password (they can reset it)
+        const tempPassword = `Import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+        const namePart = email.split("@")[0].replace(/[._-]/g, " ");
+        const fullName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+
+        const createResult = await createUserByAdmin(
+          email,
+          tempPassword,
+          fullName,
+          "investor"
+        );
+
+        if (!createResult.success) {
+          // If user creation fails, all rows with this email will fail during import
+          console.error(`Failed to create investor ${email}: ${createResult.message}`);
+        }
+      }
+    }
+  }
 
   // Process Fixed Rate rows
   for (let i = 0; i < fixedRateRows.length; i++) {

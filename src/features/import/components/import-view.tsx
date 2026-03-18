@@ -90,65 +90,41 @@ export function ImportView() {
 
       const dbValidation = await validateImportData(allEmails, allAccountNumbers);
 
-      const invalidEmailSet = new Set(dbValidation.invalidEmails);
+      const newEmailSet = new Set(dbValidation.newEmails);
       const duplicateAccountMap = new Map(
         dbValidation.duplicateAccountNumbers.map((d) => [d.accountNumber, d.reason])
       );
 
-      // Merge DB validation errors into row results
-      fixedResults = fixedResults.map((r) => {
-        const extraErrors: string[] = [];
-        if (invalidEmailSet.has(r.data.investorEmail)) {
-          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
-        }
-        if (duplicateAccountMap.has(r.data.accountNumber)) {
-          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
-        }
-        if (extraErrors.length > 0) {
-          return {
-            ...r,
-            errors: [...r.errors, ...extraErrors],
-            isValid: false,
-          };
-        }
-        return r;
-      });
+      // Helper to merge DB validation into row results
+      const mergeDbValidation = <T extends { investorEmail: string; accountNumber: string }>(
+        results: ValidationResult<T>[]
+      ) =>
+        results.map((r) => {
+          const extraErrors: string[] = [];
+          const extraWarnings: string[] = [];
 
-      floatingResults = floatingResults.map((r) => {
-        const extraErrors: string[] = [];
-        if (invalidEmailSet.has(r.data.investorEmail)) {
-          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
-        }
-        if (duplicateAccountMap.has(r.data.accountNumber)) {
-          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
-        }
-        if (extraErrors.length > 0) {
-          return {
-            ...r,
-            errors: [...r.errors, ...extraErrors],
-            isValid: false,
-          };
-        }
-        return r;
-      });
+          // New email = warning (will auto-create investor)
+          if (newEmailSet.has(r.data.investorEmail)) {
+            extraWarnings.push(`New investor "${r.data.investorEmail}" will be created`);
+          }
+          // Duplicate account number = error (can't import)
+          if (duplicateAccountMap.has(r.data.accountNumber)) {
+            extraErrors.push(
+              `Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`
+            );
+          }
 
-      installmentResultsLocal = installmentResultsLocal.map((r) => {
-        const extraErrors: string[] = [];
-        if (invalidEmailSet.has(r.data.investorEmail)) {
-          extraErrors.push(`Investor "${r.data.investorEmail}" not found in database`);
-        }
-        if (duplicateAccountMap.has(r.data.accountNumber)) {
-          extraErrors.push(`Account number "${r.data.accountNumber}": ${duplicateAccountMap.get(r.data.accountNumber)}`);
-        }
-        if (extraErrors.length > 0) {
           return {
             ...r,
             errors: [...r.errors, ...extraErrors],
-            isValid: false,
+            warnings: [...r.warnings, ...extraWarnings],
+            isValid: extraErrors.length > 0 ? false : r.isValid,
           };
-        }
-        return r;
-      });
+        });
+
+      fixedResults = mergeDbValidation(fixedResults);
+      floatingResults = mergeDbValidation(floatingResults);
+      installmentResultsLocal = mergeDbValidation(installmentResultsLocal);
 
       setFixedRateResults(fixedResults);
       setFloatingRateResults(floatingResults);

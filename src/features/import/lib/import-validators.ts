@@ -75,6 +75,7 @@ export interface ValidationResult<T> {
   rowIndex: number;
   data: T;
   errors: string[];
+  warnings: string[];
   isValid: boolean;
 }
 
@@ -89,6 +90,7 @@ export function validateFixedRateRows(
       errors: result.success
         ? []
         : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      warnings: [],
       isValid: result.success,
     };
   });
@@ -105,6 +107,7 @@ export function validateFloatingRateRows(
       errors: result.success
         ? []
         : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      warnings: [],
       isValid: result.success,
     };
   });
@@ -121,6 +124,7 @@ export function validateInstallmentRows(
       errors: result.success
         ? []
         : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      warnings: [],
       isValid: result.success,
     };
   });

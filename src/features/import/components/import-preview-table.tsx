@@ -10,7 +10,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ValidationResult } from "../lib/import-validators";
 import type {
@@ -25,16 +25,40 @@ interface ImportPreviewTableProps {
   installmentResults: ValidationResult<InstallmentRow>[];
 }
 
-function ErrorList({ errors }: { errors: string[] }) {
+function StatusCell({ result }: { result: ValidationResult<unknown> }) {
+  if (!result.isValid) {
+    return (
+      <div className="space-y-1">
+        {result.errors.map((error, i) => (
+          <div key={`e-${i}`} className="flex items-start gap-1.5">
+            <AlertCircle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
+            <span className="text-xs text-red-600">{error}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (result.warnings.length > 0) {
+    return (
+      <div className="space-y-1">
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mb-1">
+          Valid (with notes)
+        </Badge>
+        {result.warnings.map((warning, i) => (
+          <div key={`w-${i}`} className="flex items-start gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 flex-shrink-0" />
+            <span className="text-xs text-amber-600">{warning}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-1">
-      {errors.map((error, i) => (
-        <div key={i} className="flex items-start gap-1.5">
-          <AlertCircle className="h-3 w-3 text-red-500 mt-0.5 flex-shrink-0" />
-          <span className="text-xs text-red-600">{error}</span>
-        </div>
-      ))}
-    </div>
+    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
+      Valid
+    </Badge>
   );
 }
 
@@ -45,6 +69,7 @@ function SummaryBadges({
 }) {
   const valid = results.filter((r) => r.isValid).length;
   const invalid = results.length - valid;
+  const withWarnings = results.filter((r) => r.isValid && r.warnings.length > 0).length;
 
   return (
     <div className="flex gap-2 mb-4">
@@ -52,6 +77,12 @@ function SummaryBadges({
         <CheckCircle2 className="h-3 w-3 mr-1" />
         {valid} valid
       </Badge>
+      {withWarnings > 0 && (
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+          <AlertTriangle className="h-3 w-3 mr-1" />
+          {withWarnings} new investors
+        </Badge>
+      )}
       {invalid > 0 && (
         <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
           <AlertCircle className="h-3 w-3 mr-1" />
@@ -142,7 +173,10 @@ export function ImportPreviewTable({
                   {fixedRateResults.map((r) => (
                     <TableRow
                       key={r.rowIndex}
-                      className={cn(!r.isValid && "bg-red-50/50")}
+                      className={cn(
+                      !r.isValid && "bg-red-50/50",
+                      r.isValid && r.warnings.length > 0 && "bg-amber-50/50"
+                    )}
                     >
                       <TableCell className="text-xs text-muted-foreground">
                         {r.rowIndex + 2}
@@ -159,13 +193,7 @@ export function ImportPreviewTable({
                         {r.data.isRollover ? "Yes" : "No"}
                       </TableCell>
                       <TableCell>
-                        {r.isValid ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                            Valid
-                          </Badge>
-                        ) : (
-                          <ErrorList errors={r.errors} />
-                        )}
+                        <StatusCell result={r} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -196,7 +224,10 @@ export function ImportPreviewTable({
                   {floatingRateResults.map((r) => (
                     <TableRow
                       key={r.rowIndex}
-                      className={cn(!r.isValid && "bg-red-50/50")}
+                      className={cn(
+                      !r.isValid && "bg-red-50/50",
+                      r.isValid && r.warnings.length > 0 && "bg-amber-50/50"
+                    )}
                     >
                       <TableCell className="text-xs text-muted-foreground">
                         {r.rowIndex + 2}
@@ -212,13 +243,7 @@ export function ImportPreviewTable({
                       <TableCell className="text-sm">{r.data.startDate}</TableCell>
                       <TableCell className="text-sm">{r.data.endDate}</TableCell>
                       <TableCell>
-                        {r.isValid ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                            Valid
-                          </Badge>
-                        ) : (
-                          <ErrorList errors={r.errors} />
-                        )}
+                        <StatusCell result={r} />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -251,7 +276,10 @@ export function ImportPreviewTable({
                   {installmentResults.map((r) => (
                     <TableRow
                       key={r.rowIndex}
-                      className={cn(!r.isValid && "bg-red-50/50")}
+                      className={cn(
+                      !r.isValid && "bg-red-50/50",
+                      r.isValid && r.warnings.length > 0 && "bg-amber-50/50"
+                    )}
                     >
                       <TableCell className="text-xs text-muted-foreground">
                         {r.rowIndex + 2}
@@ -269,13 +297,7 @@ export function ImportPreviewTable({
                       <TableCell className="text-sm">{r.data.endDate}</TableCell>
                       <TableCell className="text-sm">{r.data.investmentType}</TableCell>
                       <TableCell>
-                        {r.isValid ? (
-                          <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-xs">
-                            Valid
-                          </Badge>
-                        ) : (
-                          <ErrorList errors={r.errors} />
-                        )}
+                        <StatusCell result={r} />
                       </TableCell>
                     </TableRow>
                   ))}
