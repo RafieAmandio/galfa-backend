@@ -89,7 +89,7 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
       const row = rows[i];
       if (!row || !row[0]) continue; // Skip empty rows
       result.fixedRate.push({
-        investorEmail: String(row[0] ?? "").trim(),
+        investorEmail: String(row[0] ?? "").trim().toLowerCase(),
         accountNumber: String(row[1] ?? "").trim(),
         capital: Number(row[2]) || 0,
         annualRate: Number(row[3]) || 0,
@@ -111,7 +111,7 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
       const row = rows[i];
       if (!row || !row[0]) continue;
       result.floatingRate.push({
-        investorEmail: String(row[0] ?? "").trim(),
+        investorEmail: String(row[0] ?? "").trim().toLowerCase(),
         accountNumber: String(row[1] ?? "").trim(),
         capital: Number(row[2]) || 0,
         adminFeePercentage: Number(row[3]) || 0,
@@ -132,7 +132,7 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
       const row = rows[i];
       if (!row || !row[0]) continue;
       result.installment.push({
-        investorEmail: String(row[0] ?? "").trim(),
+        investorEmail: String(row[0] ?? "").trim().toLowerCase(),
         accountNumber: String(row[1] ?? "").trim(),
         capital: Number(row[2]) || 0,
         monthlyCoF: Number(row[3]) || 0,
