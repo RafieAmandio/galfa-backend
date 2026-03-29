@@ -72,11 +72,7 @@ export function FundAllocationsSlide({
             </View>
             <View style={[slide.tableCell, { width: "45%" }]}>
               <Text style={[slide.tableCellText, { fontSize: 5.5 }]}>
-                {alloc.description
-                  ? alloc.description.length > 120
-                    ? alloc.description.substring(0, 120) + "..."
-                    : alloc.description
-                  : "-"}
+                {alloc.description || "-"}
               </Text>
             </View>
             <View style={[slide.tableCell, { width: "20%" }]}>
