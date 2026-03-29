@@ -4,17 +4,20 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import {
   accounts,
   floatingRateAccounts,
+  fixRateAccounts,
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
 import { eq } from "drizzle-orm";
 import { getBatchFloatingRateGrowthPercentages } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage/index";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
+import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
+import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, addMonths, isAfter, format } from "date-fns";
 
 export interface StatementMonthData {
-  month: string; // "January", "February", etc.
+  month: string;
   totalInvested: number;
   totalProfit: number;
   redeemed: number;
@@ -38,17 +41,24 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Common monthly breakdown shape used for aggregation
+interface MonthlyEntry {
+  monthYear: string;
+  endingBalance: number;
+  redemptions: number;
+  hasData: boolean;
+}
+
 export async function getStatementOfAccountData(
   investorEmail: string
 ): Promise<{ success: boolean; data?: StatementOfAccountData; error?: string }> {
   try {
     const db = createDrizzleConnection();
 
-    // Get all floating rate accounts for this investor
-    const results = await db
+    // Get floating rate accounts
+    const floatingResults = await db
       .select({
         id: accounts.id,
-        accountNumber: accounts.account_number,
         grossCapital: accounts.capital,
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
@@ -57,79 +67,136 @@ export async function getStatementOfAccountData(
         fullName: profiles.full_name,
       })
       .from(accounts)
-      .innerJoin(
-        floatingRateAccounts,
-        eq(accounts.id, floatingRateAccounts.account_id)
-      )
+      .innerJoin(floatingRateAccounts, eq(accounts.id, floatingRateAccounts.account_id))
       .innerJoin(profiles, eq(accounts.user_id, profiles.id))
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .where(eq(authUsers.email, investorEmail))
       .orderBy(accounts.transaction_date);
 
-    if (results.length === 0) {
+    // Get fix rate accounts
+    const fixResults = await db
+      .select({
+        id: accounts.id,
+        grossCapital: accounts.capital,
+        transactionDate: accounts.transaction_date,
+        endDate: accounts.end_date,
+        status: accounts.status,
+        annualRate: fixRateAccounts.annual_rate,
+        adminFee: fixRateAccounts.admin_fee,
+        isRollover: accounts.is_rollover,
+        adminFeeApplied: accounts.admin_fee_applied,
+        fullName: profiles.full_name,
+      })
+      .from(accounts)
+      .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+      .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+      .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+      .where(eq(authUsers.email, investorEmail))
+      .orderBy(accounts.transaction_date);
+
+    if (floatingResults.length === 0 && fixResults.length === 0) {
       return {
         success: true,
-        data: {
-          investorName: "",
-          years: [],
-        },
+        data: { investorName: "", years: [] },
       };
     }
 
-    const investorName = results[0].fullName || investorEmail;
+    const investorName =
+      floatingResults[0]?.fullName || fixResults[0]?.fullName || investorEmail;
 
-    // Process account data
-    const investmentAccounts = results.map((result) => {
+    // Collect all account IDs for batch redemption fetch
+    const allAccountIds = [
+      ...floatingResults.map((r) => r.id),
+      ...fixResults.map((r) => r.id),
+    ];
+
+    const currentDate = new Date();
+
+    // Find earliest date across all accounts
+    const allDates = [
+      ...floatingResults.map((r) => r.transactionDate),
+      ...fixResults.map((r) => r.transactionDate),
+    ];
+    const earliestDate = allDates.reduce((a, b) => (a < b ? a : b));
+
+    // Batch-fetch growth rates and redemptions
+    const [growthRatesMap, redemptionMap] = await Promise.all([
+      getBatchFloatingRateGrowthPercentages(earliestDate, currentDate),
+      getBatchRedemptions(allAccountIds),
+    ]);
+
+    // Calculate monthly breakdowns for each account
+    // Each entry: { netInvestorFund, monthlyEntries[] }
+    const accountData: Array<{
+      id: number;
+      netInvestorFund: number;
+      transactionDate: Date;
+      monthlyEntries: MonthlyEntry[];
+    }> = [];
+
+    // Process floating rate accounts
+    for (const result of floatingResults) {
       const grossCapital = parseFloat(result.grossCapital);
       const adminFeeAmount = parseFloat(result.adminFee);
       const netInvestorFund = grossCapital - adminFeeAmount;
-      return {
+
+      const valueWithRedemptions = await calculateFloatingRateValueWithRedemptions(
+        result.id,
+        netInvestorFund,
+        result.transactionDate,
+        currentDate,
+        redemptionMap.get(result.id),
+        growthRatesMap
+      );
+
+      accountData.push({
         id: result.id,
         netInvestorFund,
         transactionDate: result.transactionDate,
-        endDate: result.endDate,
-        status: result.status,
-      };
-    });
+        monthlyEntries: valueWithRedemptions.monthlyBreakdown.map((m) => ({
+          monthYear: m.monthYear,
+          endingBalance: m.endingBalance,
+          redemptions: m.redemptions,
+          hasData: m.hasData,
+        })),
+      });
+    }
 
-    // Find date range
-    const earliestDate = investmentAccounts.reduce(
-      (earliest, acc) =>
-        acc.transactionDate < earliest ? acc.transactionDate : earliest,
-      investmentAccounts[0].transactionDate
-    );
-    const currentDate = new Date();
+    // Process fix rate accounts
+    for (const result of fixResults) {
+      const grossCapital = parseFloat(result.grossCapital);
+      const annualRate = parseFloat(result.annualRate);
+      const isRollover = result.isRollover || false;
+      const adminFeeApplied = result.adminFeeApplied !== false;
+      const adminFeeRate = !isRollover && adminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
+      const netInvestorFund = grossCapital * (1 - adminFeeRate);
 
-    // Batch-fetch growth rates and redemptions
-    const accountIds = investmentAccounts.map((a) => a.id);
-    const [growthRatesMap, redemptionMap] = await Promise.all([
-      getBatchFloatingRateGrowthPercentages(earliestDate, currentDate),
-      getBatchRedemptions(accountIds),
-    ]);
+      const npvResult = await calculateNetPresentValueWithRedemptions(
+        result.id,
+        grossCapital,
+        annualRate,
+        result.transactionDate,
+        currentDate,
+        isRollover,
+        adminFeeApplied,
+        redemptionMap.get(result.id),
+        adminFeeRate
+      );
 
-    // Calculate monthly breakdown for each account
-    const accountMonthlyData = await Promise.all(
-      investmentAccounts.map(async (account) => {
-        const valueWithRedemptions =
-          await calculateFloatingRateValueWithRedemptions(
-            account.id,
-            account.netInvestorFund,
-            account.transactionDate,
-            currentDate,
-            redemptionMap.get(account.id),
-            growthRatesMap
-          );
-
-        return {
-          ...account,
-          monthlyBreakdown: valueWithRedemptions.monthlyBreakdown,
-          totalRedemptions: valueWithRedemptions.totalRedemptions,
-        };
-      })
-    );
+      accountData.push({
+        id: result.id,
+        netInvestorFund,
+        transactionDate: result.transactionDate,
+        monthlyEntries: npvResult.monthlyBreakdown.map((m) => ({
+          monthYear: m.monthYear,
+          endingBalance: m.endingBalance,
+          redemptions: m.redemptions,
+          hasData: true, // fix rate always has data (fixed annual rate)
+        })),
+      });
+    }
 
     // Aggregate by month across all accounts
-    // Build a map of month -> aggregated data
     const monthlyAggregated = new Map<
       string,
       {
@@ -143,7 +210,6 @@ export async function getStatementOfAccountData(
     // Track cumulative redemptions per account
     const accountCumulativeRedemptions = new Map<number, number>();
 
-    // Iterate through each month from earliest to current
     let monthCursor = startOfMonth(earliestDate);
     const endMonth = startOfMonth(currentDate);
 
@@ -154,15 +220,13 @@ export async function getStatementOfAccountData(
       let cumulativeRedemptions = 0;
       let hasData = false;
 
-      for (const account of accountMonthlyData) {
-        // Check if account was active during this month
+      for (const account of accountData) {
         const accountStart = startOfMonth(account.transactionDate);
         if (isAfter(accountStart, monthCursor)) {
-          continue; // Account hasn't started yet
+          continue;
         }
 
-        // Find this month's data in the account's breakdown
-        const monthData = account.monthlyBreakdown.find(
+        const monthData = account.monthlyEntries.find(
           (m) => m.monthYear === monthKey
         );
 
@@ -171,14 +235,12 @@ export async function getStatementOfAccountData(
           presentValue += monthData.endingBalance;
           hasData = hasData || monthData.hasData;
 
-          // Track cumulative redemptions for this account
           const prevCumulative =
             accountCumulativeRedemptions.get(account.id) || 0;
           const newCumulative = prevCumulative + monthData.redemptions;
           accountCumulativeRedemptions.set(account.id, newCumulative);
           cumulativeRedemptions += newCumulative;
         } else {
-          // Account exists but no monthly data (shouldn't happen normally)
           totalInvested += account.netInvestorFund;
         }
       }
@@ -223,17 +285,13 @@ export async function getStatementOfAccountData(
       yearMap.get(year)!.push(monthData);
     }
 
-    // Convert to sorted array of years
     const years: StatementYearData[] = Array.from(yearMap.entries())
       .sort(([a], [b]) => a - b)
       .map(([year, months]) => ({ year, months }));
 
     return {
       success: true,
-      data: {
-        investorName,
-        years,
-      },
+      data: { investorName, years },
     };
   } catch (error) {
     console.error("Error fetching statement of account data:", error);
