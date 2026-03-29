@@ -150,6 +150,7 @@ export async function getStatementOfAccountData(
       reportedInvested: number;
       parentAccountId: number | null;
       transactionDate: Date;
+      endDate: Date | null;
       monthlyEntries: MonthlyEntry[];
     }> = [];
 
@@ -161,21 +162,56 @@ export async function getStatementOfAccountData(
 
       // For rollovers, use the parent's original capital as "reported invested"
       let reportedInvested = netInvestorFund;
-      if (result.isRollover && result.parentAccountId) {
+      const isRollover = result.isRollover || false;
+      if (isRollover && result.parentAccountId) {
         const parentCapital = allAccountCapitalMap.get(result.parentAccountId);
         if (parentCapital) {
           reportedInvested = parentCapital;
         }
       }
 
+      // Stop calculation at end_date if account has ended
+      const calcEndDate = result.endDate && result.endDate < currentDate
+        ? result.endDate
+        : currentDate;
+
       const valueWithRedemptions = await calculateFloatingRateValueWithRedemptions(
         result.id,
         netInvestorFund,
         result.transactionDate,
-        currentDate,
+        calcEndDate,
         redemptionMap.get(result.id),
         growthRatesMap
       );
+
+      let entries = valueWithRedemptions.monthlyBreakdown.map((m) => ({
+        monthYear: m.monthYear,
+        endingBalance: m.endingBalance,
+        redemptions: m.redemptions,
+        hasData: m.hasData,
+      }));
+
+      // For rollovers, the first month should use full monthly rate (not partial)
+      // because the capital was already invested via the parent account.
+      // We recalculate the entire chain since each month depends on the previous.
+      if (isRollover && entries.length > 0) {
+        const breakdown = valueWithRedemptions.monthlyBreakdown;
+        let balance = netInvestorFund;
+
+        for (let i = 0; i < breakdown.length; i++) {
+          const m = breakdown[i];
+          // Apply redemptions first
+          balance -= m.redemptions;
+          if (balance < 0) balance = 0;
+
+          // Apply full month growth (no partial, even for first month)
+          if (m.growthRate > 0) {
+            balance = balance * (1 + m.growthRate / 100);
+          }
+
+          entries[i].endingBalance = balance;
+        }
+      }
 
       accountData.push({
         id: result.id,
@@ -183,12 +219,8 @@ export async function getStatementOfAccountData(
         reportedInvested,
         parentAccountId: result.parentAccountId,
         transactionDate: result.transactionDate,
-        monthlyEntries: valueWithRedemptions.monthlyBreakdown.map((m) => ({
-          monthYear: m.monthYear,
-          endingBalance: m.endingBalance,
-          redemptions: m.redemptions,
-          hasData: m.hasData,
-        })),
+        endDate: result.endDate,
+        monthlyEntries: entries,
       });
     }
 
@@ -201,12 +233,17 @@ export async function getStatementOfAccountData(
       const adminFeeRate = !isRollover && adminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
       const netInvestorFund = grossCapital * (1 - adminFeeRate);
 
+      // Stop calculation at end_date if account has ended
+      const calcEndDate = result.endDate && result.endDate < currentDate
+        ? result.endDate
+        : currentDate;
+
       const npvResult = await calculateNetPresentValueWithRedemptions(
         result.id,
         grossCapital,
         annualRate,
         result.transactionDate,
-        currentDate,
+        calcEndDate,
         isRollover,
         adminFeeApplied,
         redemptionMap.get(result.id),
@@ -216,9 +253,10 @@ export async function getStatementOfAccountData(
       accountData.push({
         id: result.id,
         netInvestorFund,
-        reportedInvested: netInvestorFund, // fix rate accounts are originals, not rollovers here
+        reportedInvested: netInvestorFund,
         parentAccountId: null,
         transactionDate: result.transactionDate,
+        endDate: result.endDate,
         monthlyEntries: npvResult.monthlyBreakdown.map((m) => ({
           monthYear: m.monthYear,
           endingBalance: m.endingBalance,
@@ -286,6 +324,11 @@ export async function getStatementOfAccountData(
         // Skip parent account if its rollover child is active this month
         // (the child already uses parent's reportedInvested amount)
         if (activeRolloverParents.has(account.id)) {
+          continue;
+        }
+
+        // Skip accounts that have ended before this month
+        if (account.endDate && startOfMonth(account.endDate) < monthCursor) {
           continue;
         }
 
