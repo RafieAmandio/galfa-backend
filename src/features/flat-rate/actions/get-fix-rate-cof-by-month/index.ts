@@ -7,7 +7,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, gte, lte, lt, isNotNull } from "drizzle-orm";
+import { eq, and, gte, lte, lt, or, isNull, isNotNull } from "drizzle-orm";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { startOfMonth, endOfMonth, format } from "date-fns";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
@@ -115,14 +115,10 @@ export async function getFixRateCoFByMonth(
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .where(
         and(
-          // Only include active accounts
-          eq(accounts.status, "active"),
           // Account was created before or during the month
           lte(accounts.transaction_date, monthEnd),
           // Account was active during the month (either no end date or ended after month start)
-          accounts.end_date === null
-            ? undefined
-            : gte(accounts.end_date, monthStart)
+          or(isNull(accounts.end_date), gte(accounts.end_date, monthStart))
         )
       )
       .orderBy(accounts.transaction_date);
@@ -216,27 +212,41 @@ export async function getFixRateCoFByMonth(
           presentValue = netCapital * Math.pow(1 + monthlyRate, monthsElapsed);
         }
 
-        // Calculate total gain (Present Value - Original Net Capital)
-        // For rollover accounts, we only count gain earned since rollover date
-        let totalGain: number;
-        let returnPercentage: number;
-
-        if (account.isRollover) {
-          // For rollover accounts, gain is only the interest earned since rollover start
-          totalGain = presentValue - netCapital;
-          returnPercentage =
-            netCapital > 0 ? (presentValue / netCapital - 1) * 100 : 0;
-
-          // Note: Negative gains in rollover accounts are handled but not logged
-        } else {
-          // For original accounts, gain is total accumulated interest
-          totalGain = presentValue - netCapital;
-          returnPercentage =
-            netCapital > 0 ? (presentValue / netCapital - 1) * 100 : 0;
+        // Extract just this month's interest from the monthly breakdown
+        // The CoF for the allocated profit calculation needs the MONTHLY gain, not cumulative
+        let monthlyGain = 0;
+        try {
+          const npvForMonth = await calculateNetPresentValueWithRedemptions(
+            account.id,
+            grossAmount,
+            annualRate,
+            account.transactionDate,
+            monthEnd,
+            account.isRollover || false,
+            account.adminFeeApplied || false,
+            redemptionMap.get(account.id),
+            adminFeeRate
+          );
+          // Find the target month's entry in the breakdown
+          const targetMonthKey = `${monthEnd.toLocaleString("en-US", { month: "long" })} ${monthEnd.getFullYear()}`;
+          const monthEntry = npvForMonth.monthlyBreakdown.find(
+            (m) => m.monthYear === targetMonthKey
+          );
+          if (monthEntry) {
+            monthlyGain = monthEntry.interestEarned;
+          }
+        } catch {
+          // Fallback: simple monthly interest
+          monthlyGain = netCapital * (annualRate / 12);
         }
 
-        // Add to totals
-        totalGainFund += totalGain;
+        // Calculate total gain for display purposes
+        const totalGain = presentValue - netCapital;
+        const returnPercentage =
+          netCapital > 0 ? (presentValue / netCapital - 1) * 100 : 0;
+
+        // Add monthly gain to CoF total (not cumulative gain)
+        totalGainFund += monthlyGain;
         totalNetCapitalWorking += netCapital;
         totalPresentValue += presentValue;
 

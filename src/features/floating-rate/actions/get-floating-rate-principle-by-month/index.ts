@@ -84,10 +84,10 @@ export const getFloatingRatePrincipleByMonth = cache(async function (
       .where(
         and(
           eq(accountTypes.name, "floating"),
-          eq(accounts.status, "active"),
           // Investment started before or during the month
           lte(accounts.transaction_date, monthEnd),
-          // Investment either has no end date (still active) or ended after the month started
+          // Investment either has no end date or ended after the month started
+          // (this checks if the account was active during the month, regardless of current status)
           or(isNull(accounts.end_date), gte(accounts.end_date, monthStart))
         )
       )

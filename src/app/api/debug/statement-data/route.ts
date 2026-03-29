@@ -9,6 +9,14 @@ export async function GET(request: NextRequest) {
   const debug = searchParams.get("debug");
 
   if (debug === "growth") {
+    const { getFloatingRateAllocatedProfitPublic } = await import(
+      "@/features/floating-rate/actions/get-floating-rate-allocated-profit/index"
+    );
+    // Debug specific month
+    const month = searchParams.get("month") || "2025-02";
+    const monthDate = new Date(month + "-15");
+    const allocResult = await getFloatingRateAllocatedProfitPublic(monthDate);
+
     const growthMap = await getBatchFloatingRateGrowthPercentages(
       new Date("2025-01-01"),
       new Date("2026-03-01")
@@ -17,7 +25,10 @@ export async function GET(request: NextRequest) {
     for (const [key, value] of growthMap) {
       entries[key] = value;
     }
-    return NextResponse.json({ growthRates: entries });
+    return NextResponse.json({
+      allocatedProfit: allocResult,
+      growthRates: entries
+    });
   }
 
   const result = await getStatementOfAccountData(email);
