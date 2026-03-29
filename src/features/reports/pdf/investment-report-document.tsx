@@ -1,16 +1,9 @@
-import { Document, Page } from "@react-pdf/renderer";
-import { styles } from "./pdf-styles";
-import { ReportHeader } from "./pdf-components/report-header";
-import { PortfolioSummary } from "./pdf-components/portfolio-summary";
-import { PerformanceChart } from "./pdf-components/performance-chart";
-import { IHSGComparisonChart } from "./pdf-components/ihsg-comparison-chart";
-import { FlatRateTable } from "./pdf-components/flat-rate-table";
-import { FloatingRateTable } from "./pdf-components/floating-rate-table";
-import { StatementOfAccount } from "./pdf-components/statement-of-account";
-import { InstallmentTable } from "./pdf-components/installment-table";
-import { CapitalMarketTable } from "./pdf-components/capital-market-table";
-import { FundAllocationsTable } from "./pdf-components/fund-allocations-table";
-import { ReportFooter } from "./pdf-components/report-footer";
+import { Document } from "@react-pdf/renderer";
+import { TitleSlide } from "./slides/title-slide";
+import { InvestmentPerformanceSlide } from "./slides/investment-performance-slide";
+import { FundAllocationsSlide } from "./slides/fund-allocations-slide";
+import { StatementOfAccountSlide } from "./slides/statement-of-account-slide";
+import { CapitalMarketSlide } from "./slides/capital-market-slide";
 import type { InvestorReportData } from "../actions/get-report-data";
 
 interface InvestmentReportDocumentProps {
@@ -21,41 +14,71 @@ export function InvestmentReportDocument({
   data,
 }: InvestmentReportDocumentProps) {
   const reportDate = new Date();
+  const reportMonth = reportDate.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  let pageNumber = 2; // Start at 2 (title slide has no number)
+
+  // Check if any statement year has redemptions
+  const hasAnyRedemptions = data.statementOfAccount?.years.some((year) =>
+    year.months.some((m) => m.redeemed > 0)
+  ) ?? false;
+
+  const investorName = data.statementOfAccount?.investorName || data.email;
+
+  // Group capital market investments by year
+  const cmByYear = new Map<number, typeof data.capitalMarketInvestments>();
+  for (const inv of data.capitalMarketInvestments) {
+    const year = new Date(inv.performanceDate).getFullYear();
+    if (!cmByYear.has(year)) cmByYear.set(year, []);
+    cmByYear.get(year)!.push(inv);
+  }
+  const cmYears = Array.from(cmByYear.entries()).sort(([a], [b]) => a - b);
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
-        <ReportHeader investorEmail={data.email} reportDate={reportDate} />
+      {/* Slide 1: Title */}
+      <TitleSlide reportMonth={reportMonth} />
 
-        <PortfolioSummary
-          totalNetFund={data.summary.totalNetInvestedFund}
-          currentValue={data.summary.totalNetPresentValue}
-          gainLoss={data.summary.totalGainLoss}
-          gainLossPercentage={data.summary.totalGainLossPercentage}
-          activeInvestments={data.summary.activeInvestments}
-          adminFees={data.summary.totalAdminFees}
+      {/* Slide 2: Investment Performance */}
+      {data.vcPerformance.length > 0 && (
+        <InvestmentPerformanceSlide
+          data={data.vcPerformance}
+          pageNumber={pageNumber++}
         />
+      )}
 
-        <PerformanceChart data={data.vcPerformance} />
+      {/* Slide 3: Fund Allocations */}
+      {data.fundAllocations.length > 0 && (
+        <FundAllocationsSlide
+          allocations={data.fundAllocations}
+          pageNumber={pageNumber++}
+        />
+      )}
 
-        <IHSGComparisonChart data={data.vcPerformance} />
+      {/* Slides 4+: Statement of Account (one year per slide) */}
+      {data.statementOfAccount?.years.map((yearData) => (
+        <StatementOfAccountSlide
+          key={yearData.year}
+          investorName={investorName}
+          yearData={yearData}
+          hasAnyRedemptions={hasAnyRedemptions}
+          pageNumber={pageNumber++}
+        />
+      ))}
 
-        <FlatRateTable investments={data.flatRateInvestments} />
-
-        <FloatingRateTable investments={data.floatingRateInvestments} />
-
-        {data.statementOfAccount && (
-          <StatementOfAccount data={data.statementOfAccount} />
-        )}
-
-        <InstallmentTable investments={data.installmentInvestments} />
-
-        <CapitalMarketTable investments={data.capitalMarketInvestments} />
-
-        <FundAllocationsTable allocations={data.fundAllocations} />
-
-        <ReportFooter generatedAt={reportDate} />
-      </Page>
+      {/* Capital Market Fund Performance (one year per slide) */}
+      {cmYears.map(([year, investments]) => (
+        <CapitalMarketSlide
+          key={year}
+          investorName={investorName}
+          year={year}
+          investments={investments}
+          pageNumber={pageNumber++}
+        />
+      ))}
     </Document>
   );
 }
