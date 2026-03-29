@@ -6,6 +6,7 @@ import { getInvestorInstallmentInvestments } from "@/features/installment/action
 import { getAllVCPerformance } from "@/features/investments/actions/get-all-vc-performance";
 import { getFundAllocations } from "@/features/fund-allocations/actions/get-fund-allocations";
 import { getInvestorCapitalMarketInvestments } from "@/features/capital-market/actions/get-investor-capital-market-investments";
+import { getStatementOfAccountData, type StatementOfAccountData } from "./get-statement-of-account-data";
 
 interface FlatRateInvestmentData {
   accountNumber: string;
@@ -80,6 +81,7 @@ export interface InvestorReportData {
   capitalMarketInvestments: CapitalMarketInvestmentData[];
   vcPerformance: VCPerformanceDataPoint[];
   fundAllocations: FundAllocationData[];
+  statementOfAccount: StatementOfAccountData | null;
 }
 
 export async function getReportData(
@@ -87,7 +89,7 @@ export async function getReportData(
 ): Promise<{ success: boolean; data?: InvestorReportData; error?: string }> {
   try {
     // Fetch all investment data in parallel
-    const [flatRateData, floatingRateResult, installmentData, capitalMarketResult, vcPerformanceResult, fundAllocationsResult] =
+    const [flatRateData, floatingRateResult, installmentData, capitalMarketResult, vcPerformanceResult, fundAllocationsResult, statementResult] =
       await Promise.all([
         getInvestorSummary(investorEmail),
         getInvestorFloatingRateInvestments(investorEmail),
@@ -95,6 +97,7 @@ export async function getReportData(
         getInvestorCapitalMarketInvestments(investorEmail),
         getAllVCPerformance(),
         getFundAllocations(),
+        getStatementOfAccountData(investorEmail),
       ]);
 
     // Process flat rate investments
@@ -253,6 +256,7 @@ export async function getReportData(
       capitalMarketInvestments,
       vcPerformance,
       fundAllocations,
+      statementOfAccount: statementResult.success && statementResult.data ? statementResult.data : null,
     };
 
     return { success: true, data: reportData };

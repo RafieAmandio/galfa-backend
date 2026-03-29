@@ -6,6 +6,7 @@ import { PerformanceChart } from "./pdf-components/performance-chart";
 import { IHSGComparisonChart } from "./pdf-components/ihsg-comparison-chart";
 import { FlatRateTable } from "./pdf-components/flat-rate-table";
 import { FloatingRateTable } from "./pdf-components/floating-rate-table";
+import { StatementOfAccount } from "./pdf-components/statement-of-account";
 import { InstallmentTable } from "./pdf-components/installment-table";
 import { CapitalMarketTable } from "./pdf-components/capital-market-table";
 import { FundAllocationsTable } from "./pdf-components/fund-allocations-table";
@@ -42,6 +43,10 @@ export function InvestmentReportDocument({
         <FlatRateTable investments={data.flatRateInvestments} />
 
         <FloatingRateTable investments={data.floatingRateInvestments} />
+
+        {data.statementOfAccount && (
+          <StatementOfAccount data={data.statementOfAccount} />
+        )}
 
         <InstallmentTable investments={data.installmentInvestments} />
 
