@@ -225,6 +225,8 @@ export async function getStatementOfAccountData(
     }
 
     // Process fix rate accounts
+    // Interest is always calculated on the ORIGINAL principal (not reduced by redemptions)
+    // This matches the business logic: investors earn fixed interest on locked-in capital
     for (const result of fixResults) {
       const grossCapital = parseFloat(result.grossCapital);
       const annualRate = parseFloat(result.annualRate);
@@ -232,23 +234,70 @@ export async function getStatementOfAccountData(
       const adminFeeApplied = result.adminFeeApplied !== false;
       const adminFeeRate = !isRollover && adminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
       const netInvestorFund = grossCapital * (1 - adminFeeRate);
+      const monthlyRate = annualRate / 12;
 
-      // Stop calculation at end_date if account has ended
       const calcEndDate = result.endDate && result.endDate < currentDate
         ? result.endDate
         : currentDate;
 
-      const npvResult = await calculateNetPresentValueWithRedemptions(
-        result.id,
-        grossCapital,
-        annualRate,
-        result.transactionDate,
-        calcEndDate,
-        isRollover,
-        adminFeeApplied,
-        redemptionMap.get(result.id),
-        adminFeeRate
-      );
+      // Get redemptions for this account
+      const accountRedemptions = redemptionMap.get(result.id) || [];
+
+      // Build monthly entries manually: interest always on original principal
+      const entries: MonthlyEntry[] = [];
+      let monthCur = startOfMonth(result.transactionDate);
+      const endMon = startOfMonth(calcEndDate);
+      let cumulativeGain = 0;
+      let cumulativeRedemptions = 0;
+      let isFirst = true;
+
+      while (!isAfter(monthCur, endMon)) {
+        const monthStart = monthCur;
+        const monthEnd = new Date(monthCur.getFullYear(), monthCur.getMonth() + 1, 0);
+        const totalDaysInMonth = monthEnd.getDate();
+
+        // Calculate days active
+        let daysActive: number;
+        const isStartMonth = isFirst;
+        const isEndMonth = monthCur.getTime() === endMon.getTime() &&
+          calcEndDate.getTime() < new Date(monthCur.getFullYear(), monthCur.getMonth() + 1, 0).getTime();
+
+        if (isStartMonth && isEndMonth) {
+          daysActive = Math.max(0, calcEndDate.getDate() - result.transactionDate.getDate());
+        } else if (isStartMonth) {
+          daysActive = totalDaysInMonth - result.transactionDate.getDate();
+        } else if (isEndMonth) {
+          daysActive = calcEndDate.getDate();
+        } else {
+          daysActive = totalDaysInMonth;
+        }
+
+        // Interest on ORIGINAL principal (not reduced by redemptions)
+        const effectiveRate = (daysActive / totalDaysInMonth) * monthlyRate;
+        const monthlyGain = netInvestorFund * effectiveRate;
+        cumulativeGain += monthlyGain;
+
+        // Track redemptions in this month
+        const monthRedemptions = accountRedemptions.filter((r) => {
+          const rd = new Date(r.transactionDate);
+          return rd >= monthStart && rd <= monthEnd;
+        });
+        const redemptionAmount = monthRedemptions.reduce((sum, r) => sum + r.amount, 0);
+        cumulativeRedemptions += redemptionAmount;
+
+        // Present value = original capital + cumulative gains - cumulative redemptions
+        const presentValue = netInvestorFund + cumulativeGain - cumulativeRedemptions;
+
+        entries.push({
+          monthYear: format(monthCur, "MMMM yyyy"),
+          endingBalance: presentValue,
+          redemptions: redemptionAmount,
+          hasData: true,
+        });
+
+        monthCur = addMonths(monthCur, 1);
+        isFirst = false;
+      }
 
       accountData.push({
         id: result.id,
@@ -257,12 +306,7 @@ export async function getStatementOfAccountData(
         parentAccountId: null,
         transactionDate: result.transactionDate,
         endDate: result.endDate,
-        monthlyEntries: npvResult.monthlyBreakdown.map((m) => ({
-          monthYear: m.monthYear,
-          endingBalance: m.endingBalance,
-          redemptions: m.redemptions,
-          hasData: true,
-        })),
+        monthlyEntries: entries,
       });
     }
 
@@ -371,7 +415,9 @@ export async function getStatementOfAccountData(
       const year = date.getFullYear();
       const monthName = MONTH_NAMES[date.getMonth()];
 
-      const totalProfit = data.presentValue - data.totalInvested;
+      // Total Profit = cumulative gains (not net of redemptions)
+      // = Present Value + Cumulative Redemptions - Total Invested
+      const totalProfit = data.presentValue + data.cumulativeRedemptions - data.totalInvested;
       const profitRatio =
         data.totalInvested > 0 ? (totalProfit / data.totalInvested) * 100 : 0;
 
