@@ -89,11 +89,25 @@ export async function redeemInstallmentAccount(
 
     const account = accountResult[0];
 
-    // Check if account is active
-    if (account.status !== "active") {
+    // Check if account is redeemed/closed
+    if (account.status === "redeemed" || account.status === "closed") {
       return {
         success: false,
         message: `Cannot redeem from ${account.status} account`,
+      };
+    }
+
+    // Guard: redemption date must be within account date range
+    if (request.redemptionDate < account.transactionDate) {
+      return {
+        success: false,
+        message: `Redemption date cannot be before account start date (${account.transactionDate.toLocaleDateString()})`,
+      };
+    }
+    if (account.endDate && request.redemptionDate > account.endDate) {
+      return {
+        success: false,
+        message: `Redemption date cannot be after account end date (${account.endDate.toLocaleDateString()})`,
       };
     }
 
