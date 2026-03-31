@@ -56,6 +56,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { Mutation, getAllMutations } from "../actions/get-all-mutations";
+import { EditMutationModal } from "./edit-mutation-modal";
 
 export function MutationsAdminTable() {
   const [data, setData] = useState<Mutation[]>([]);
@@ -72,6 +73,7 @@ export function MutationsAdminTable() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [globalFilterInput, setGlobalFilterInput] = useState("");
   const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
+  const [editingMutation, setEditingMutation] = useState<Mutation | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -455,6 +457,19 @@ export function MutationsAdminTable() {
         ),
         filterFn: dateRangeFilter,
       },
+      {
+        id: "actions",
+        header: () => <span className="font-semibold">Actions</span>,
+        cell: ({ row }) => (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditingMutation(row.original)}
+          >
+            Edit
+          </Button>
+        ),
+      },
     ],
     [data]
   );
@@ -509,6 +524,7 @@ export function MutationsAdminTable() {
     );
 
   return (
+    <>
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -733,5 +749,17 @@ export function MutationsAdminTable() {
         </div>
       </div>
     </div>
+
+      {editingMutation && (
+        <EditMutationModal
+          mutation={editingMutation}
+          open={!!editingMutation}
+          onOpenChange={(open) => {
+            if (!open) setEditingMutation(null);
+          }}
+          onSuccess={fetchData}
+        />
+      )}
+    </>
   );
 }
