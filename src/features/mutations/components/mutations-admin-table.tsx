@@ -331,6 +331,21 @@ export function MutationsAdminTable() {
       },
 
       {
+        accessorKey: "accountNumber",
+        header: ({ column }) => (
+          <div className="flex items-center">
+            <span className="font-semibold">Account</span>
+            <TextFilter column={column} label="Account" />
+          </div>
+        ),
+        cell: ({ getValue }) => (
+          <div className="text-sm font-medium max-w-[150px] truncate" title={getValue() as string}>
+            {(getValue() as string) || "-"}
+          </div>
+        ),
+        filterFn: "includesString",
+      },
+      {
         accessorKey: "type",
         header: ({ column }) => (
           <div className="flex items-center">

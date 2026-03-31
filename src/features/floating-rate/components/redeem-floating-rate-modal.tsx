@@ -23,7 +23,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, ChevronsUpDown, Check, Search } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check, Search, Pencil, Trash2, Loader2 } from "lucide-react";
+import { updateMutation, deleteMutation } from "@/features/mutations/actions/update-mutation";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { getFloatingRateAccountsForRedemptionQueryOptions } from "@/features/floating-rate/actions/get-floating-rate-accounts-for-redemption/query-options";
@@ -49,6 +50,68 @@ interface RedemptionHistory {
   status: string;
   transactionDate: Date;
   createdAt: Date;
+}
+
+function RedemptionHistoryCard({ redemption, formatCurrency, onUpdate }: {
+  redemption: RedemptionHistory;
+  formatCurrency: (n: number) => string;
+  onUpdate: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [amt, setAmt] = useState(redemption.amount.toString());
+  const [dt, setDt] = useState(format(new Date(redemption.transactionDate), "yyyy-MM-dd"));
+  const [desc, setDesc] = useState(redemption.description || "");
+  const [error, setError] = useState<string | null>(null);
+
+  if (editing) {
+    return (
+      <div className="p-3 bg-blue-50 rounded-md border border-blue-200 space-y-2">
+        <Input type="number" value={amt} onChange={e => setAmt(e.target.value)} className="h-8 text-sm" placeholder="Amount" />
+        <Input type="date" value={dt} onChange={e => setDt(e.target.value)} className="h-8 text-sm" />
+        <Input value={desc} onChange={e => setDesc(e.target.value)} className="h-8 text-sm" placeholder="Description" />
+        {error && <p className="text-xs text-red-500">{error}</p>}
+        <div className="flex gap-2">
+          <Button size="sm" className="h-7 text-xs" disabled={loading} onClick={async () => {
+            setLoading(true); setError(null);
+            const r = await updateMutation({ mutationId: redemption.id, amount: Number(amt), transactionDate: new Date(dt + "T00:00:00"), description: desc });
+            setLoading(false);
+            if (r.success) { setEditing(false); onUpdate(); } else setError(r.message);
+          }}>{loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Save"}</Button>
+          <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditing(false)}>Cancel</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-3 bg-gray-50 rounded-md border group">
+      <div className="text-sm">
+        <div className="flex justify-between items-start">
+          <div className="font-medium text-gray-900">{formatCurrency(redemption.amount)}</div>
+          <div className="opacity-0 group-hover:opacity-100 flex gap-1">
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setEditing(true)}>
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-500" disabled={loading} onClick={async () => {
+              if (!confirm("Delete this redemption?")) return;
+              setLoading(true);
+              const r = await deleteMutation(redemption.id);
+              setLoading(false);
+              if (r.success) onUpdate();
+            }}>
+              {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+            </Button>
+          </div>
+        </div>
+        <div className="text-gray-600">{format(new Date(redemption.transactionDate), "PPP")}</div>
+        {redemption.description && <div className="text-gray-500 mt-1">{redemption.description}</div>}
+        <div className={`inline-block px-2 py-1 text-xs rounded mt-1 ${redemption.status === "completed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}>
+          {redemption.status}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export function RedeemFloatingRateModal({
@@ -651,33 +714,17 @@ export function RedeemFloatingRateModal({
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {redemptionHistory.map((redemption) => (
-                  <div
+                  <RedemptionHistoryCard
                     key={redemption.id}
-                    className="p-3 bg-gray-50 rounded-md border"
-                  >
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">
-                        {formatCurrency(redemption.amount)}
-                      </div>
-                      <div className="text-gray-600">
-                        {format(new Date(redemption.transactionDate), "PPP")}
-                      </div>
-                      {redemption.description && (
-                        <div className="text-gray-500 mt-1">
-                          {redemption.description}
-                        </div>
-                      )}
-                      <div
-                        className={`inline-block px-2 py-1 text-xs rounded mt-1 ${
-                          redemption.status === "completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
-                      >
-                        {redemption.status}
-                      </div>
-                    </div>
-                  </div>
+                    redemption={redemption}
+                    formatCurrency={formatCurrency}
+                    onUpdate={async () => {
+                      if (selectedAccountId) {
+                        const history = await getFloatingRateAccountRedemptions(selectedAccountId);
+                        setRedemptionHistory(history);
+                      }
+                    }}
+                  />
                 ))}
               </div>
             )}
