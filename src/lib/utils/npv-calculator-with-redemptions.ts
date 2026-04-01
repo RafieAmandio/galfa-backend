@@ -151,13 +151,9 @@ export async function calculateNetPresentValueWithRedemptions(
       }
     });
 
-    // Reduce principal for interest calculation when redemptions occur
-    if (redemptionsThisMonth > 0) {
-      remainingPrincipalForInterest -= redemptionsThisMonth;
-      if (remainingPrincipalForInterest < 0) {
-        remainingPrincipalForInterest = 0;
-      }
-    }
+    // Interest is always calculated on the ORIGINAL principal (netCapital),
+    // not reduced by redemptions. Redemptions are cash withdrawals from
+    // accumulated gains, not principal reductions.
 
     // If balance is fully redeemed (below threshold), end calculation here
     const isFullyRedeemed =
