@@ -10,6 +10,8 @@ interface VCPerformanceRecord {
   date: Date;
   aum: number;
   ihsgValue: number | null;
+  monthlyGrossRoi: number | null;
+  monthlyNettRoi: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +49,8 @@ export const getAllVCPerformance = cache(
           date: vcPerformance.date,
           aum: vcPerformance.aum,
           ihsgValue: vcPerformance.ihsgValue,
+          monthlyGrossRoi: vcPerformance.monthlyGrossRoi,
+          monthlyNettRoi: vcPerformance.monthlyNettRoi,
           createdAt: vcPerformance.created_at,
           updatedAt: vcPerformance.updated_at,
         })
@@ -61,6 +65,8 @@ export const getAllVCPerformance = cache(
           date: record.date,
           aum: Number(record.aum),
           ihsgValue: record.ihsgValue ? Number(record.ihsgValue) : null,
+          monthlyGrossRoi: record.monthlyGrossRoi ? Number(record.monthlyGrossRoi) : null,
+          monthlyNettRoi: record.monthlyNettRoi ? Number(record.monthlyNettRoi) : null,
           createdAt: record.createdAt,
           updatedAt: record.updatedAt,
         })

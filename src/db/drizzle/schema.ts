@@ -137,6 +137,8 @@ export const vcPerformance = pgTable("vc_performance", {
   aum: numeric("aum").notNull(),
   profitTaken: numeric("profit_taken").notNull(),
   ihsgValue: numeric("ihsg_value"), // IHSG index value for comparison
+  monthlyGrossRoi: numeric("monthly_gross_roi"), // Monthly gross ROI percentage
+  monthlyNettRoi: numeric("monthly_nett_roi"), // Monthly nett ROI percentage (investor)
   created_at: timestamp("created_at", { withTimezone: true }).notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).notNull(),
 });

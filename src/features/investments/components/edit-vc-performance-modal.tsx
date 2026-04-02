@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Edit, DollarSign, BarChart3 } from "lucide-react";
+import { CalendarIcon, Edit, DollarSign, BarChart3, Percent } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { updateVCPerformance } from "../actions/update-vc-performance";
@@ -27,6 +27,8 @@ interface VCPerformanceRecord {
   date: Date;
   aum: number;
   ihsgValue?: number | null;
+  monthlyGrossRoi?: number | null;
+  monthlyNettRoi?: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,6 +54,8 @@ export function EditVCPerformanceModal({
   );
   const [aum, setAum] = useState(record.aum.toString());
   const [ihsgValue, setIhsgValue] = useState(record.ihsgValue?.toString() || "");
+  const [monthlyGrossRoi, setMonthlyGrossRoi] = useState(record.monthlyGrossRoi?.toString() || "");
+  const [monthlyNettRoi, setMonthlyNettRoi] = useState(record.monthlyNettRoi?.toString() || "");
 
   // Reset form when record changes or modal opens
   useEffect(() => {
@@ -59,6 +63,8 @@ export function EditVCPerformanceModal({
       setSelectedDate(new Date(record.date));
       setAum(record.aum.toString());
       setIhsgValue(record.ihsgValue?.toString() || "");
+      setMonthlyGrossRoi(record.monthlyGrossRoi?.toString() || "");
+      setMonthlyNettRoi(record.monthlyNettRoi?.toString() || "");
       setError(null);
     }
   }, [open, record]);
@@ -67,6 +73,8 @@ export function EditVCPerformanceModal({
     setSelectedDate(new Date(record.date));
     setAum(record.aum.toString());
     setIhsgValue(record.ihsgValue?.toString() || "");
+    setMonthlyGrossRoi(record.monthlyGrossRoi?.toString() || "");
+    setMonthlyNettRoi(record.monthlyNettRoi?.toString() || "");
     setError(null);
   };
 
@@ -116,6 +124,8 @@ export function EditVCPerformanceModal({
         aum: parseFloat(aum) || 0,
         profitTaken: 0,
         ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
+        monthlyGrossRoi: monthlyGrossRoi ? parseFloat(monthlyGrossRoi) : undefined,
+        monthlyNettRoi: monthlyNettRoi ? parseFloat(monthlyNettRoi) : undefined,
       });
 
       if (result.success) {
@@ -238,6 +248,44 @@ export function EditVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               IHSG closing value for comparison chart
+            </p>
+          </div>
+
+          {/* Monthly Gross ROI */}
+          <div className="space-y-2">
+            <Label htmlFor="monthlyGrossRoi" className="flex items-center space-x-1">
+              <Percent className="h-4 w-4" />
+              <span>Monthly Gross ROI % (Optional)</span>
+            </Label>
+            <Input
+              id="monthlyGrossRoi"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 2 for 2%"
+              value={monthlyGrossRoi}
+              onChange={(e) => setMonthlyGrossRoi(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Monthly gross return on investment percentage
+            </p>
+          </div>
+
+          {/* Monthly Nett ROI */}
+          <div className="space-y-2">
+            <Label htmlFor="monthlyNettRoi" className="flex items-center space-x-1">
+              <Percent className="h-4 w-4" />
+              <span>Monthly Nett ROI % (Optional)</span>
+            </Label>
+            <Input
+              id="monthlyNettRoi"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 1.42 for 1.42%"
+              value={monthlyNettRoi}
+              onChange={(e) => setMonthlyNettRoi(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Monthly net return on investment for investors
             </p>
           </div>
 

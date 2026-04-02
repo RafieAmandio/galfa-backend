@@ -38,6 +38,8 @@ interface PerformanceRecord {
   date: Date;
   aum: number;
   ihsgValue: number | null;
+  monthlyGrossRoi: number | null;
+  monthlyNettRoi: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -248,6 +250,8 @@ export function PerformanceTable() {
                   <TableHead>Month/Year</TableHead>
                   <TableHead className="text-right">Assets Under Management</TableHead>
                   <TableHead className="text-right">IHSG</TableHead>
+                  <TableHead className="text-right">Gross ROI</TableHead>
+                  <TableHead className="text-right">Nett ROI</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="w-[80px]">Status</TableHead>
@@ -287,6 +291,16 @@ export function PerformanceTable() {
                             })
                           : "-"}
                       </TableCell>
+                      <TableCell className="text-sm text-right font-medium text-blue-700">
+                        {record.monthlyGrossRoi != null
+                          ? `${record.monthlyGrossRoi}%`
+                          : "-"}
+                      </TableCell>
+                      <TableCell className="text-sm text-right font-medium text-amber-700">
+                        {record.monthlyNettRoi != null
+                          ? `${record.monthlyNettRoi}%`
+                          : "-"}
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {formatDateTime(record.createdAt)}
                       </TableCell>
@@ -321,6 +335,8 @@ export function PerformanceTable() {
                   <TableCell className="text-right font-semibold text-sm text-[#192473]">
                     {formatCurrency(totalAum)}
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">-</TableCell>
                   <TableCell className="text-muted-foreground text-sm">-</TableCell>
                   <TableCell className="text-muted-foreground text-sm">-</TableCell>
                   <TableCell className="text-muted-foreground text-sm">-</TableCell>

@@ -52,6 +52,8 @@ export interface VCPerformanceDataPoint {
   date: Date;
   aum: number;
   ihsgValue: number | null;
+  monthlyGrossRoi: number | null;
+  monthlyNettRoi: number | null;
 }
 
 export interface FundAllocationData {
@@ -164,6 +166,8 @@ export async function getReportData(
               date: record.date,
               aum: record.aum,
               ihsgValue: record.ihsgValue,
+              monthlyGrossRoi: record.monthlyGrossRoi ?? null,
+              monthlyNettRoi: record.monthlyNettRoi ?? null,
             }))
         : [];
 

@@ -11,6 +11,8 @@ interface UpdateVCPerformanceRequest {
   aum: number;
   profitTaken: number;
   ihsgValue?: number;
+  monthlyGrossRoi?: number;
+  monthlyNettRoi?: number;
 }
 
 interface UpdateVCPerformanceResponse {
@@ -21,6 +23,8 @@ interface UpdateVCPerformanceResponse {
     aum: number;
     profitTaken: number;
     ihsgValue: number | null;
+    monthlyGrossRoi: number | null;
+    monthlyNettRoi: number | null;
   };
   message: string;
 }
@@ -30,7 +34,7 @@ export async function updateVCPerformance(
 ): Promise<UpdateVCPerformanceResponse> {
   try {
     const db = createDrizzleConnection();
-    const { id, date, aum, profitTaken, ihsgValue } = request;
+    const { id, date, aum, profitTaken, ihsgValue, monthlyGrossRoi, monthlyNettRoi } = request;
 
     // Validation
     if (!date) {
@@ -109,6 +113,8 @@ export async function updateVCPerformance(
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
         ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
+        monthlyGrossRoi: monthlyGrossRoi !== undefined ? monthlyGrossRoi.toString() : null,
+        monthlyNettRoi: monthlyNettRoi !== undefined ? monthlyNettRoi.toString() : null,
         updated_at: new Date(),
       })
       .where(eq(vcPerformance.id, id))
@@ -118,6 +124,8 @@ export async function updateVCPerformance(
         aum: vcPerformance.aum,
         profitTaken: vcPerformance.profitTaken,
         ihsgValue: vcPerformance.ihsgValue,
+        monthlyGrossRoi: vcPerformance.monthlyGrossRoi,
+        monthlyNettRoi: vcPerformance.monthlyNettRoi,
       });
 
     return {
@@ -128,6 +136,8 @@ export async function updateVCPerformance(
         aum: Number(updatedRecord.aum),
         profitTaken: Number(updatedRecord.profitTaken),
         ihsgValue: updatedRecord.ihsgValue ? Number(updatedRecord.ihsgValue) : null,
+        monthlyGrossRoi: updatedRecord.monthlyGrossRoi ? Number(updatedRecord.monthlyGrossRoi) : null,
+        monthlyNettRoi: updatedRecord.monthlyNettRoi ? Number(updatedRecord.monthlyNettRoi) : null,
       },
       message: `Successfully updated performance record for ${format(
         new Date(targetYear, targetMonth - 1, 1),

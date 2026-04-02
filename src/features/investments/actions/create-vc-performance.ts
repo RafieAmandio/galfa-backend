@@ -10,6 +10,8 @@ interface CreateVCPerformanceRequest {
   aum: number;
   profitTaken: number;
   ihsgValue?: number;
+  monthlyGrossRoi?: number;
+  monthlyNettRoi?: number;
 }
 
 interface CreateVCPerformanceResponse {
@@ -20,6 +22,8 @@ interface CreateVCPerformanceResponse {
     aum: number;
     profitTaken: number;
     ihsgValue: number | null;
+    monthlyGrossRoi: number | null;
+    monthlyNettRoi: number | null;
   };
   message: string;
 }
@@ -29,7 +33,7 @@ export async function createVCPerformance(
 ): Promise<CreateVCPerformanceResponse> {
   try {
     const db = createDrizzleConnection();
-    const { date, aum, profitTaken, ihsgValue } = request;
+    const { date, aum, profitTaken, ihsgValue, monthlyGrossRoi, monthlyNettRoi } = request;
 
     // Validation
     if (!date) {
@@ -91,6 +95,8 @@ export async function createVCPerformance(
         aum: aum.toString(),
         profitTaken: profitTaken.toString(),
         ihsgValue: ihsgValue !== undefined ? ihsgValue.toString() : null,
+        monthlyGrossRoi: monthlyGrossRoi !== undefined ? monthlyGrossRoi.toString() : null,
+        monthlyNettRoi: monthlyNettRoi !== undefined ? monthlyNettRoi.toString() : null,
         created_at: new Date(),
         updated_at: new Date(),
       })
@@ -100,6 +106,8 @@ export async function createVCPerformance(
         aum: vcPerformance.aum,
         profitTaken: vcPerformance.profitTaken,
         ihsgValue: vcPerformance.ihsgValue,
+        monthlyGrossRoi: vcPerformance.monthlyGrossRoi,
+        monthlyNettRoi: vcPerformance.monthlyNettRoi,
       });
 
     return {
@@ -110,6 +118,8 @@ export async function createVCPerformance(
         aum: Number(newRecord.aum),
         profitTaken: Number(newRecord.profitTaken),
         ihsgValue: newRecord.ihsgValue ? Number(newRecord.ihsgValue) : null,
+        monthlyGrossRoi: newRecord.monthlyGrossRoi ? Number(newRecord.monthlyGrossRoi) : null,
+        monthlyNettRoi: newRecord.monthlyNettRoi ? Number(newRecord.monthlyNettRoi) : null,
       },
       message: `Successfully created performance record for ${format(
         new Date(targetYear, targetMonth - 1, 1),

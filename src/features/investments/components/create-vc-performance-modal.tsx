@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, Plus, DollarSign, BarChart3, TrendingUp } from "lucide-react";
+import { CalendarIcon, Plus, DollarSign, BarChart3, TrendingUp, Percent } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { createVCPerformance } from "../actions/create-vc-performance";
@@ -41,11 +41,15 @@ export function CreateVCPerformanceModal({
   );
   const [aum, setAum] = useState("");
   const [ihsgValue, setIhsgValue] = useState("");
+  const [monthlyGrossRoi, setMonthlyGrossRoi] = useState("");
+  const [monthlyNettRoi, setMonthlyNettRoi] = useState("");
 
   const resetForm = () => {
     setSelectedDate(new Date());
     setAum("");
     setIhsgValue("");
+    setMonthlyGrossRoi("");
+    setMonthlyNettRoi("");
     setError(null);
   };
 
@@ -94,6 +98,8 @@ export function CreateVCPerformanceModal({
         aum: parseFloat(aum) || 0,
         profitTaken: 0,
         ihsgValue: ihsgValue ? parseFloat(ihsgValue) : undefined,
+        monthlyGrossRoi: monthlyGrossRoi ? parseFloat(monthlyGrossRoi) : undefined,
+        monthlyNettRoi: monthlyNettRoi ? parseFloat(monthlyNettRoi) : undefined,
       });
 
       if (result.success) {
@@ -204,6 +210,44 @@ export function CreateVCPerformanceModal({
             />
             <p className="text-xs text-gray-500">
               IHSG closing value for comparison chart
+            </p>
+          </div>
+
+          {/* Monthly Gross ROI */}
+          <div className="space-y-2">
+            <Label htmlFor="monthlyGrossRoi" className="flex items-center space-x-1">
+              <Percent className="h-4 w-4" />
+              <span>Monthly Gross ROI % (Optional)</span>
+            </Label>
+            <Input
+              id="monthlyGrossRoi"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 2 for 2%"
+              value={monthlyGrossRoi}
+              onChange={(e) => setMonthlyGrossRoi(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Monthly gross return on investment percentage
+            </p>
+          </div>
+
+          {/* Monthly Nett ROI */}
+          <div className="space-y-2">
+            <Label htmlFor="monthlyNettRoi" className="flex items-center space-x-1">
+              <Percent className="h-4 w-4" />
+              <span>Monthly Nett ROI % (Optional)</span>
+            </Label>
+            <Input
+              id="monthlyNettRoi"
+              type="number"
+              step="0.01"
+              placeholder="e.g. 1.42 for 1.42%"
+              value={monthlyNettRoi}
+              onChange={(e) => setMonthlyNettRoi(e.target.value)}
+            />
+            <p className="text-xs text-gray-500">
+              Monthly net return on investment for investors
             </p>
           </div>
 
