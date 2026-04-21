@@ -87,7 +87,14 @@ export async function calculateNetPresentValueWithRedemptions(
   // Interest is always computed on remainingPrincipal, not on currentValue
   let remainingPrincipalForInterest = netCapital;
   let calculationDate = new Date(startDate);
-  const endDate = currentDate;
+  // Hide the in-progress month: cap end at the last day of the previous month
+  const lastCompletedMonthEnd = new Date(
+    currentDate.getFullYear(),
+    currentDate.getMonth(),
+    0
+  );
+  const endDate =
+    lastCompletedMonthEnd < currentDate ? lastCompletedMonthEnd : currentDate;
   const monthlyBreakdown: MonthlyCalculation[] = [];
 
   // Calculate total days invested

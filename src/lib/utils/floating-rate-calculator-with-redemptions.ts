@@ -86,7 +86,10 @@ export async function calculateFloatingRateValueWithRedemptions(
 
   let currentValue = netInvestorFund;
   let calculationDate = startOfMonth(transactionDate);
-  const endDate = startOfMonth(currentDate);
+  // Hide the in-progress month: cap end at the start of the previous month
+  const endDate = startOfMonth(
+    new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+  );
   const monthlyBreakdown: MonthlyFloatingRateCalculation[] = [];
 
   // Calculate total days invested
