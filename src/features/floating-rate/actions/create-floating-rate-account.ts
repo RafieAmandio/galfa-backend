@@ -22,6 +22,8 @@ interface CreateFloatingRateAccountRequest {
   transactionDate: Date;
   endDate: Date;
   description?: string;
+  isRollover?: boolean;
+  parentAccountId?: number;
 }
 
 interface CreateFloatingRateAccountResult {
@@ -193,10 +195,11 @@ export async function createFloatingRateAccount(
         transaction_date: request.transactionDate,
         end_date: request.endDate,
         status: "active",
-        is_rollover: false, // Floating rate accounts don't support rollover
-        parent_account_id: null,
+        is_rollover: request.isRollover || false,
+        parent_account_id: request.parentAccountId || null,
         admin_fee_applied: true,
-        rollover_sequence: null,
+        rollover_sequence:
+          request.isRollover && request.parentAccountId ? 1 : null,
         created_at: new Date(),
         updated_at: new Date(),
       })

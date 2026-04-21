@@ -113,6 +113,7 @@ export const getInvestorFloatingRateInvestments = cache(async function (
         endDate: accounts.end_date,
         status: accounts.status,
         isRollover: accounts.is_rollover,
+        parentAccountId: accounts.parent_account_id,
         rolloverSequence: accounts.rollover_sequence,
         createdAt: accounts.created_at,
         // Floating rate specific fields
@@ -153,19 +154,28 @@ export const getInvestorFloatingRateInvestments = cache(async function (
       };
     }
 
+    // Identify parents in this result set so we can detect leaves later
+    const parentIdSet = new Set(
+      results.filter((r) => r.parentAccountId).map((r) => r.parentAccountId)
+    );
+
     let totalGrossCapital = 0;
     let totalNetInvestorFund = 0;
     let totalAdminFees = 0;
 
     // Process basic investment data and calculate totals
+    // Capital totals: only count root (non-rollover) accounts — rollovers re-compound
+    // existing money, not new investment.
     const investmentData = results.map((result) => {
       const grossCapital = parseFloat(result.grossCapital);
       const adminFeeAmount = parseFloat(result.adminFee);
       const netInvestorFund = grossCapital - adminFeeAmount;
 
-      totalGrossCapital += grossCapital;
-      totalNetInvestorFund += netInvestorFund;
-      totalAdminFees += adminFeeAmount;
+      if (!result.isRollover) {
+        totalGrossCapital += grossCapital;
+        totalNetInvestorFund += netInvestorFund;
+        totalAdminFees += adminFeeAmount;
+      }
 
       return {
         ...result,
@@ -322,12 +332,17 @@ export const getInvestorFloatingRateInvestments = cache(async function (
       })
     );
 
-    // Calculate totals from the processed investments
-    totalPresentValueFund = investments.reduce(
+    // Present value & gained fund: only count leaves (accounts not parent of another)
+    // so a rollover chain isn't double-counted.
+    const leafInvestments = investments.filter((inv) => !parentIdSet.has(inv.id));
+    totalPresentValueFund = leafInvestments.reduce(
       (sum, inv) => sum + inv.presentValueFund,
       0
     );
-    totalGainedFund = investments.reduce((sum, inv) => sum + inv.gainedFund, 0);
+    totalGainedFund = leafInvestments.reduce(
+      (sum, inv) => sum + inv.gainedFund,
+      0
+    );
     const totalRedemptions = investments.reduce(
       (sum, inv) => sum + inv.totalRedemptions,
       0

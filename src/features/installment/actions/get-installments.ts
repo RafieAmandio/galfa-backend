@@ -354,6 +354,8 @@ export async function getInvestorInstallmentInvestments(
       startDate: accounts.transaction_date,
       endDate: accounts.end_date,
       status: accounts.status,
+      isRollover: accounts.is_rollover,
+      parentAccountId: accounts.parent_account_id,
       // Installment specific fields
       monthlyCof: installmentAccounts.monthly_cof,
       adminFee: installmentAccounts.admin_fee,
@@ -379,6 +381,11 @@ export async function getInvestorInstallmentInvestments(
   let totalNetInvestorFund = 0;
   let totalRedeemedAmount = 0;
   let totalRedemptions = 0;
+
+  // Identify parents so capital totals only count root (non-rollover) accounts.
+  const parentIdSet = new Set(
+    results.filter((r) => r.parentAccountId).map((r) => r.parentAccountId)
+  );
 
   // Batch-fetch all redemptions in a single query
   const installmentAccountIds = results.map((r) => r.id);
@@ -431,9 +438,16 @@ export async function getInvestorInstallmentInvestments(
           ? monthlyData[monthlyData.length - 1].netPresentValue
           : netCapital;
 
-      totalNetInvestorFund += netCapital;
-      totalRedeemedAmount += totalRedeemedForAccount;
-      totalRedemptions += currentValueWithRedemptions.totalRedemptions;
+      // Capital total: only root (non-rollover) accounts represent actual money invested.
+      if (!result.isRollover) {
+        totalNetInvestorFund += netCapital;
+      }
+      // Redemptions: only count leaves (no rollover child) so chains aren't double-counted.
+      const isLeaf = !parentIdSet.has(result.id);
+      if (isLeaf) {
+        totalRedeemedAmount += totalRedeemedForAccount;
+        totalRedemptions += currentValueWithRedemptions.totalRedemptions;
+      }
 
       return {
         id: result.id,

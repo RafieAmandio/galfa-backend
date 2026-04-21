@@ -86,38 +86,28 @@ export async function getInvestorSummary(
     return null;
   }
 
-  // Find parent accounts that have rollover children
+  // Find parent accounts that have rollover children (within this result set)
   const parentAccountIds = new Set(
     results
-      .filter((r) => r.isRollover && r.parentAccountId)
+      .filter((r) => r.parentAccountId)
       .map((r) => r.parentAccountId)
   );
 
-  // Separate parent accounts from active accounts
-  const parentAccounts = results.filter((result) =>
-    parentAccountIds.has(result.id)
-  );
-  const activeAccounts = results.filter((result) => {
-    const isParentWithRollover = parentAccountIds.has(result.id);
-    if (isParentWithRollover) {
-      return false;
-    }
-    return true;
-  });
-
+  // We process ALL accounts so the table shows the full chain (Fund 1, 1R, 1RR, ...).
+  // Totals are computed selectively below:
+  //   - Capital: only root accounts (is_rollover = false) — actual money invested
+  //   - Present value: only leaf accounts (not parent of any other) — no double-count of chain
   const investments: InvestmentDetail[] = [];
   let totalNetInvestedFund = 0;
   let totalGrossInvestedFund = 0;
   let totalAdminFees = 0;
   let totalNetPresentValue = 0;
 
-  // Flat rate investments have no admin fee - skip parent account fee calculation
-
   // Batch-fetch all redemptions in a single query
-  const accountIds = activeAccounts.map((r) => r.id);
+  const accountIds = results.map((r) => r.id);
   const redemptionMap = await getBatchRedemptions(accountIds);
 
-  const investmentPromises = activeAccounts.map(
+  const investmentPromises = results.map(
     async (result, index: number) => {
       const grossCapital = Number(result.grossCapital);
       const annualRate = Number(result.annualRate);
@@ -147,6 +137,7 @@ export async function getInvestorSummary(
 
       // Return investment data for accumulation
       return {
+        id: result.id,
         grossCapital,
         netCapital,
         adminFee,
@@ -174,13 +165,22 @@ export async function getInvestorSummary(
   const processedInvestments = await Promise.all(investmentPromises);
 
   // Accumulate totals
-  processedInvestments.forEach((processed, index) => {
-    totalGrossInvestedFund += processed.grossCapital;
-    totalNetInvestedFund += processed.netCapital;
-    totalAdminFees += processed.adminFee;
-    totalNetPresentValue += processed.npvCurrentValue;
+  processedInvestments.forEach((processed) => {
+    const isRollover = processed.investmentDetail.isRollover;
+    const isLeaf = !parentAccountIds.has(processed.id);
 
-    // Add investment detail
+    // Capital totals: only count original (root) investments — rollovers are recompounded gains
+    if (!isRollover) {
+      totalGrossInvestedFund += processed.grossCapital;
+      totalNetInvestedFund += processed.netCapital;
+      totalAdminFees += processed.adminFee;
+    }
+
+    // Present value: only count leaves so chain values aren't double-counted
+    if (isLeaf) {
+      totalNetPresentValue += processed.npvCurrentValue;
+    }
+
     investments.push(processed.investmentDetail);
   });
 
