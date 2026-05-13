@@ -53,7 +53,10 @@ import {
   Filter,
   X,
   Trash,
+  Trash2,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteModal } from "@/components/bulk-delete-modal";
 import {
   Popover,
   PopoverContent,
@@ -79,6 +82,7 @@ export function FlatRateInvestmentsTable() {
   const [globalFilterInput, setGlobalFilterInput] = useState("");
   const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
   const [expanded, setExpanded] = useState({});
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
   const formatCurrency = (amount: number) =>
@@ -182,6 +186,31 @@ export function FlatRateInvestmentsTable() {
   // Column definitions
   const columns = useMemo<ColumnDef<FlatRateInvestment>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 40,
+      },
       {
         id: "expander",
         header: "",
@@ -602,10 +631,22 @@ export function FlatRateInvestmentsTable() {
               <h3 className="font-medium text-sm text-foreground">
                 Investment Accounts
               </h3>
-              <Button onClick={fetchData} variant="outline" size="sm">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
+              <div className="flex items-center space-x-2">
+                {table.getFilteredSelectedRowModel().rows.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Selected ({table.getFilteredSelectedRowModel().rows.length})
+                  </Button>
+                )}
+                <Button onClick={fetchData} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
@@ -808,6 +849,7 @@ export function FlatRateInvestmentsTable() {
                     {filteredData.length > 0 && (
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                         <TableCell></TableCell>
+                        <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>
                         <TableCell className=" font-bold text-green-600">
                           {formatCurrency(totals.grossCapital)}
@@ -931,6 +973,22 @@ export function FlatRateInvestmentsTable() {
           </div>
         </div>
       </div>
+
+      <BulkDeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        accountType="flat-rate"
+        selectedAccounts={table
+          .getFilteredSelectedRowModel()
+          .rows.map((row) => ({
+            id: row.original.id,
+            accountNumber: row.original.name,
+          }))}
+        onDeleteComplete={() => {
+          setRowSelection({});
+          fetchData();
+        }}
+      />
     </div>
   );
 }

@@ -56,7 +56,10 @@ import {
   Filter,
   X,
   DollarSign,
+  Trash2,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BulkDeleteModal } from "@/components/bulk-delete-modal";
 import { format } from "date-fns";
 import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -117,6 +120,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
   const [rowSelection, setRowSelection] = useState({});
   const [globalFilter, setGlobalFilter] = useState("");
   const [globalFilterInput, setGlobalFilterInput] = useState("");
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const debouncedGlobalFilter = useDebounce(globalFilterInput, 300);
   const [expanded, setExpanded] = useState({});
 
@@ -245,6 +249,31 @@ export default function FloatingRateInvestmentsMonthlyTable({
   // Column definitions
   const columns = useMemo<ColumnDef<any>[]>(
     () => [
+      {
+        id: "select",
+        header: ({ table }) => (
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
+            aria-label="Select all"
+          />
+        ),
+        cell: ({ row }) => (
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Select row"
+          />
+        ),
+        enableSorting: false,
+        enableHiding: false,
+        size: 40,
+      },
       {
         id: "expander",
         header: "",
@@ -780,14 +809,26 @@ export default function FloatingRateInvestmentsMonthlyTable({
                 </h3>
                 {isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
               </div>
-              <Button
-                onClick={() => window.location.reload()}
-                variant="outline"
-                size="sm"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
+              <div className="flex items-center space-x-2">
+                {table.getFilteredSelectedRowModel().rows.length > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Selected ({table.getFilteredSelectedRowModel().rows.length})
+                  </Button>
+                )}
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
             </div>
 
             <div className="flex items-center justify-between">
@@ -1092,6 +1133,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                     {tableData.length > 0 && (
                       <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
                         <TableCell></TableCell>
+                        <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>
                         <TableCell className="text-muted-foreground">
                           -
@@ -1214,6 +1256,22 @@ export default function FloatingRateInvestmentsMonthlyTable({
           </div>
         </div>
       </div>
+
+      <BulkDeleteModal
+        isOpen={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        accountType="floating-rate"
+        selectedAccounts={table
+          .getFilteredSelectedRowModel()
+          .rows.map((row) => ({
+            id: row.original.id,
+            accountNumber: row.original.accountNumber,
+          }))}
+        onDeleteComplete={() => {
+          setRowSelection({});
+          onDeleted?.();
+        }}
+      />
     </div>
   );
 }
