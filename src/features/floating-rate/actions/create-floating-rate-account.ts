@@ -9,9 +9,8 @@ import {
   authUsers,
   mutations,
 } from "@/db/drizzle/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
 interface CreateFloatingRateAccountRequest {
@@ -245,5 +244,155 @@ export async function createFloatingRateAccount(
       success: false,
       message: "An error occurred while creating the investment account",
     };
+  }
+}
+
+export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
+  success: boolean;
+  message: string;
+  accounts?: Array<{
+    id: number;
+    accountNumber: string;
+    investorEmail: string | null;
+    investorName: string | null;
+    grossCapital: string;
+    adminFee: string;
+    transactionDate: Date;
+    endDate: Date | null;
+    status: string;
+    maturedValue: number;
+    isRollover: boolean | null;
+  }>;
+}> {
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    return { success: false, message: "Unauthorized: Admin access required" };
+  }
+
+  const db = createDrizzleConnection();
+
+  try {
+    const maturedAccounts = await db
+      .select({
+        id: accounts.id,
+        accountNumber: accounts.account_number,
+        investorEmail: authUsers.email,
+        investorName: profiles.full_name,
+        grossCapital: accounts.capital,
+        adminFee: floatingRateAccounts.admin_fee,
+        transactionDate: accounts.transaction_date,
+        endDate: accounts.end_date,
+        status: accounts.status,
+        isRollover: accounts.is_rollover,
+      })
+      .from(accounts)
+      .innerJoin(
+        floatingRateAccounts,
+        eq(accounts.id, floatingRateAccounts.account_id)
+      )
+      .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+      .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+      .where(
+        and(
+          eq(accounts.status, "mature"),
+          isNull(accounts.parent_account_id)
+        )
+      )
+      .orderBy(accounts.end_date);
+
+    const { calculateFloatingRateValueWithRedemptions } = await import(
+      "@/lib/utils/floating-rate-calculator-with-redemptions"
+    );
+
+    const accountsWithMaturedValue = await Promise.all(
+      maturedAccounts.map(async (account) => {
+        if (!account.endDate) {
+          return {
+            ...account,
+            maturedValue: parseFloat(account.grossCapital),
+          };
+        }
+
+        try {
+          const netInvestorFund =
+            parseFloat(account.grossCapital) - parseFloat(account.adminFee);
+
+          const result = await calculateFloatingRateValueWithRedemptions(
+            account.id,
+            netInvestorFund,
+            account.transactionDate,
+            account.endDate
+          );
+
+          return {
+            ...account,
+            maturedValue: result.currentValue,
+          };
+        } catch (error) {
+          console.error(
+            `Error calculating matured value for floating account ${account.id}:`,
+            error
+          );
+          return {
+            ...account,
+            maturedValue: parseFloat(account.grossCapital),
+          };
+        }
+      })
+    );
+
+    return {
+      success: true,
+      message: "Matured floating rate accounts retrieved successfully",
+      accounts: accountsWithMaturedValue,
+    };
+  } catch (error) {
+    console.error("Get matured floating rate accounts error:", error);
+    return {
+      success: false,
+      message: "An error occurred while retrieving matured accounts",
+    };
+  }
+}
+
+export async function validateFloatingRateParentAccount(
+  parentAccountId: number
+): Promise<{ valid: boolean; message: string }> {
+  const adminCheck = await checkAdminAccess();
+  if (!adminCheck.isAdmin) {
+    return { valid: false, message: "Unauthorized: Admin access required" };
+  }
+
+  const db = createDrizzleConnection();
+
+  try {
+    const parentAccount = await db
+      .select({
+        id: accounts.id,
+        status: accounts.status,
+      })
+      .from(accounts)
+      .innerJoin(
+        floatingRateAccounts,
+        eq(accounts.id, floatingRateAccounts.account_id)
+      )
+      .where(eq(accounts.id, parentAccountId))
+      .limit(1);
+
+    if (parentAccount.length === 0) {
+      return { valid: false, message: "Parent account not found" };
+    }
+
+    if (parentAccount[0].status !== "mature") {
+      return {
+        valid: false,
+        message: `Parent account status is "${parentAccount[0].status}" — only mature accounts can be rolled over`,
+      };
+    }
+
+    return { valid: true, message: "Parent account is valid for rollover" };
+  } catch (error) {
+    console.error("Validate floating rate parent account error:", error);
+    return { valid: false, message: "An error occurred during validation" };
   }
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createFloatingRateAccount } from "../actions/create-floating-rate-account";
+import {
+  createFloatingRateAccount,
+  getMaturedFloatingRateAccountsForRollover,
+  validateFloatingRateParentAccount,
+} from "../actions/create-floating-rate-account";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,9 +33,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon, PlusIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
 
 interface CreateFloatingRateModalProps {
   onAccountCreated?: () => void;
@@ -44,6 +48,20 @@ interface InvestorOption {
   fullName: string | null;
 }
 
+interface RolloverAccountOption {
+  id: number;
+  accountNumber: string;
+  investorEmail: string | null;
+  investorName: string | null;
+  grossCapital: string;
+  adminFee: string;
+  transactionDate: Date;
+  endDate: Date | null;
+  status: string;
+  maturedValue: number;
+  isRollover: boolean | null;
+}
+
 export function CreateFloatingRateModal({
   onAccountCreated,
   trigger,
@@ -51,21 +69,42 @@ export function CreateFloatingRateModal({
 }: CreateFloatingRateModalProps) {
   const [open, setOpen] = useState(false);
   const investors = investorEmails || [];
+  const [rolloverAccounts, setRolloverAccounts] = useState<RolloverAccountOption[]>([]);
   const [selectedInvestorEmail, setSelectedInvestorEmail] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [capital, setCapital] = useState("");
-  const [adminFeePercentage, setAdminFeePercentage] = useState("5"); // Default to 5%
+  const [adminFeePercentage, setAdminFeePercentage] = useState("5");
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [isRollover, setIsRollover] = useState(false);
+  const [selectedRolloverAccountId, setSelectedRolloverAccountId] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const loadingInvestors = false; // Investors come from props
+  const [loadingRolloverAccounts, setLoadingRolloverAccounts] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
-  // Investors now come from server-side props - no need to fetch
+  // Load rollover accounts when modal opens
+  useEffect(() => {
+    if (open) {
+      const loadRolloverAccounts = async () => {
+        setLoadingRolloverAccounts(true);
+        try {
+          const result = await getMaturedFloatingRateAccountsForRollover();
+          if (result.success && result.accounts) {
+            setRolloverAccounts(result.accounts);
+          }
+        } catch (error) {
+          console.error("Error loading rollover accounts:", error);
+        } finally {
+          setLoadingRolloverAccounts(false);
+        }
+      };
+      loadRolloverAccounts();
+    }
+  }, [open]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -76,10 +115,28 @@ export function CreateFloatingRateModal({
       setAdminFeePercentage("5");
       setTransactionDate(new Date());
       setEndDate(undefined);
+      setIsRollover(false);
+      setSelectedRolloverAccountId("");
       setDescription("");
       setMessage(null);
     }
   }, [open]);
+
+  // Auto-populate fields when a rollover account is selected
+  useEffect(() => {
+    if (isRollover && selectedRolloverAccountId) {
+      const selected = rolloverAccounts.find(
+        (acc) => acc.id.toString() === selectedRolloverAccountId
+      );
+      if (selected) {
+        setSelectedInvestorEmail(selected.investorEmail || "");
+        setCapital(selected.maturedValue.toString());
+        if (selected.endDate) {
+          setTransactionDate(new Date(selected.endDate));
+        }
+      }
+    }
+  }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
 
   // Calculate admin fee and net capital
   const calculateFinancials = () => {
@@ -150,6 +207,21 @@ export function CreateFloatingRateModal({
       return;
     }
 
+    if (isRollover && selectedRolloverAccountId) {
+      try {
+        const validation = await validateFloatingRateParentAccount(
+          parseInt(selectedRolloverAccountId)
+        );
+        if (!validation.valid) {
+          setMessage({ type: "error", text: validation.message });
+          return;
+        }
+      } catch {
+        setMessage({ type: "error", text: "Failed to validate rollover account" });
+        return;
+      }
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -158,10 +230,14 @@ export function CreateFloatingRateModal({
         investorEmail: selectedInvestorEmail,
         accountNumber: accountNumber.trim(),
         capital: capitalAmount,
-        adminFeePercentage: adminFeePercent / 100, // Convert to decimal
+        adminFeePercentage: adminFeePercent / 100,
         transactionDate,
         endDate,
         description,
+        isRollover,
+        parentAccountId: selectedRolloverAccountId
+          ? parseInt(selectedRolloverAccountId)
+          : undefined,
       });
 
       if (result.success) {
@@ -177,6 +253,8 @@ export function CreateFloatingRateModal({
         setAdminFeePercentage("5");
         setTransactionDate(new Date());
         setEndDate(undefined);
+        setIsRollover(false);
+        setSelectedRolloverAccountId("");
         setDescription("");
 
         // Notify parent component
@@ -229,12 +307,76 @@ export function CreateFloatingRateModal({
         </DialogHeader>
 
         <div className="py-4">
-          {loadingInvestors ? (
-            <div className="flex justify-center py-8">
-              <div className="text-muted-foreground">Loading investors...</div>
-            </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Rollover Toggle */}
+              <div className="flex items-center space-x-3 p-4 bg-yellow-50 rounded-md border border-yellow-200">
+                <Checkbox
+                  id="isRollover"
+                  checked={isRollover}
+                  onCheckedChange={(checked) => setIsRollover(checked === true)}
+                />
+                <label
+                  htmlFor="isRollover"
+                  className="text-sm font-medium text-yellow-900 cursor-pointer"
+                >
+                  This is a rollover investment (extend a matured account)
+                </label>
+              </div>
+
+              {/* Rollover Account Selection */}
+              {isRollover && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">
+                    Select Matured Account to Rollover *
+                  </Label>
+                  <Select
+                    value={selectedRolloverAccountId}
+                    onValueChange={setSelectedRolloverAccountId}
+                    required={isRollover}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a matured account to rollover..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rolloverAccounts.map((account) => (
+                        <SelectItem
+                          key={account.id}
+                          value={account.id.toString()}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {account.accountNumber} - Gross:{" "}
+                              {formatCurrency(parseFloat(account.grossCapital))}
+                            </span>
+                            <span className="text-sm text-green-600 font-medium">
+                              Matured Value: {formatCurrency(account.maturedValue)}
+                            </span>
+                            <span className="text-sm text-muted-foreground">
+                              {account.investorEmail} | Status: {account.status}
+                              {account.endDate &&
+                                ` | Ended: ${format(
+                                  new Date(account.endDate),
+                                  "d MMMM yyyy"
+                                )}`}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Select the matured account to extend. The investor, capital
+                    amount, and start date will be auto-filled.
+                  </p>
+                  {rolloverAccounts.length === 0 && (
+                    <p className="text-sm text-orange-600">
+                      No matured floating rate accounts found. Only accounts with
+                      &quot;mature&quot; status can be rolled over.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Investor Selection */}
               <div className="space-y-2">
                 <Label htmlFor="investor" className="text-sm font-medium">
@@ -244,6 +386,7 @@ export function CreateFloatingRateModal({
                   value={selectedInvestorEmail}
                   onValueChange={setSelectedInvestorEmail}
                   required
+                  disabled={isRollover && selectedRolloverAccountId !== ""}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose an investor" />
@@ -261,9 +404,15 @@ export function CreateFloatingRateModal({
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-sm text-muted-foreground">
-                  Select the investor for this floating rate account
-                </p>
+                {isRollover && selectedRolloverAccountId ? (
+                  <p className="text-sm text-blue-600">
+                    Auto-selected from rollover account
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Select the investor for this floating rate account
+                  </p>
+                )}
               </div>
 
               {/* Account Number */}
@@ -298,10 +447,17 @@ export function CreateFloatingRateModal({
                   required
                   min="1"
                   step="1"
+                  disabled={isRollover && selectedRolloverAccountId !== ""}
                 />
-                <p className="text-sm text-muted-foreground">
-                  Total investment amount
-                </p>
+                {isRollover && selectedRolloverAccountId ? (
+                  <p className="text-sm text-blue-600">
+                    Auto-filled with matured value from rollover account
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Total investment amount
+                  </p>
+                )}
               </div>
 
               {/* Admin Fee Percentage */}
@@ -341,6 +497,7 @@ export function CreateFloatingRateModal({
                         "w-full justify-start text-left font-normal",
                         !transactionDate && "text-muted-foreground"
                       )}
+                      disabled={isRollover && selectedRolloverAccountId !== ""}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {transactionDate ? (
@@ -359,9 +516,15 @@ export function CreateFloatingRateModal({
                     />
                   </PopoverContent>
                 </Popover>
-                <p className="text-sm text-muted-foreground">
-                  Date when the investment begins
-                </p>
+                {isRollover && selectedRolloverAccountId ? (
+                  <p className="text-sm text-blue-600">
+                    Auto-set to maturity date of rollover account
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Date when the investment begins
+                  </p>
+                )}
               </div>
 
               {/* End Date */}
@@ -416,15 +579,60 @@ export function CreateFloatingRateModal({
                 </p>
               </div>
 
+              {/* Rollover Details */}
+              {isRollover && selectedRolloverAccountId && (() => {
+                const selectedAccount = rolloverAccounts.find(
+                  (acc) => acc.id.toString() === selectedRolloverAccountId
+                );
+                if (!selectedAccount) return null;
+                return (
+                  <div className="bg-blue-50 p-4 rounded-md border border-blue-200">
+                    <h3 className="font-medium text-blue-900 mb-3">
+                      Rollover Details
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Original Account:</span>
+                        <span className="font-medium">{selectedAccount.accountNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Gross Capital:</span>
+                        <span className="font-medium">
+                          {formatCurrency(parseFloat(selectedAccount.grossCapital))}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Growth Period:</span>
+                        <span className="font-medium">
+                          {format(selectedAccount.transactionDate, "d MMMM yyyy")}
+                          {" → "}
+                          {selectedAccount.endDate
+                            ? format(new Date(selectedAccount.endDate), "d MMMM yyyy")
+                            : "N/A"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-blue-300 pt-2">
+                        <span className="text-blue-700 font-medium">Rolling Over:</span>
+                        <span className="font-bold text-green-600">
+                          {formatCurrency(selectedAccount.maturedValue)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Financial Summary */}
               {parseFloat(capital || "0") > 0 && (
                 <div className="bg-slate-50 p-4 rounded-md border border-slate-200">
                   <h3 className="font-medium text-slate-900 mb-3">
-                    Financial Summary
+                    {isRollover ? "New Investment Period" : "Financial Summary"}
                   </h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-600">Gross Capital:</span>
+                      <span className="text-slate-600">
+                        {isRollover ? "Rollover Capital:" : "Gross Capital:"}
+                      </span>
                       <span className="font-medium">
                         {formatCurrency(parseFloat(capital || "0"))}
                       </span>
@@ -486,7 +694,6 @@ export function CreateFloatingRateModal({
                 </Button>
               </div>
             </form>
-          )}
         </div>
       </DialogContent>
     </Dialog>
