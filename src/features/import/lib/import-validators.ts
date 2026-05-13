@@ -37,6 +37,7 @@ const floatingRateSchema = z
       .max(100, "Admin fee must be <= 100%"),
     startDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     endDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
+    isRollover: z.boolean(),
     description: z.string(),
   })
   .refine((data) => new Date(data.endDate) > new Date(data.startDate), {

@@ -18,6 +18,7 @@ export interface FloatingRateRow {
   adminFeePercentage: number;
   startDate: string;
   endDate: string;
+  isRollover: boolean;
   description: string;
 }
 
@@ -117,7 +118,8 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         adminFeePercentage: Number(row[3]) || 0,
         startDate: parseDateCell(row[4]),
         endDate: parseDateCell(row[5]),
-        description: String(row[6] ?? "").trim(),
+        isRollover: parseBoolean(row[6]),
+        description: String(row[7] ?? "").trim(),
       });
     }
   }

@@ -33,6 +33,7 @@ interface FloatingRateImportRow {
   adminFeePercentage: number;
   startDate: string;
   endDate: string;
+  isRollover: boolean;
   description: string;
 }
 
@@ -214,6 +215,7 @@ export async function bulkImportAccounts(
         adminFeePercentage: row.adminFeePercentage / 100, // Convert percentage to decimal
         transactionDate: new Date(row.startDate),
         endDate: new Date(row.endDate),
+        isRollover: row.isRollover,
         description: row.description || undefined,
       });
       results.push({

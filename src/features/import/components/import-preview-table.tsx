@@ -217,6 +217,7 @@ export function ImportPreviewTable({
                     <TableHead className="text-right">Admin Fee (%)</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
+                    <TableHead>Rollover</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -242,6 +243,9 @@ export function ImportPreviewTable({
                       </TableCell>
                       <TableCell className="text-sm">{r.data.startDate}</TableCell>
                       <TableCell className="text-sm">{r.data.endDate}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.data.isRollover ? "Yes" : "No"}
+                      </TableCell>
                       <TableCell>
                         <StatusCell result={r} />
                       </TableCell>

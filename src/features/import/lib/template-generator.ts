@@ -18,6 +18,7 @@ const FLOATING_RATE_HEADERS = [
   "Admin Fee (%)",
   "Start Date",
   "End Date",
+  "Is Rollover",
   "Description",
 ];
 
@@ -51,6 +52,7 @@ const FLOATING_RATE_EXAMPLE = [
   5,
   "2025-01-01",
   "2026-01-01",
+  "No",
   "Initial floating investment",
 ];
 
