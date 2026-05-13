@@ -54,13 +54,14 @@ interface RolloverAccountOption {
   investorEmail: string | null;
   investorName: string | null;
   originalCapital: string;
-  annualRate: string;
+  annualRate: string | null;
   transactionDate: Date;
   endDate: Date | null;
   status: string;
   maturedValue: number;
   isRollover: boolean | null;
   adminFeeApplied: boolean | null;
+  accountType: "fixed" | "floating";
 }
 
 export function CreateFlatRateModal({
@@ -147,18 +148,15 @@ export function CreateFlatRateModal({
       );
 
       if (selectedAccount) {
-        // Set the investor to the selected account's investor
         setSelectedInvestorEmail(selectedAccount.investorEmail || "");
-
-        // Set capital to the matured value
         setCapital(selectedAccount.maturedValue.toString());
 
-        // Set annual rate to the same rate
-        setAnnualRate(
-          (parseFloat(selectedAccount.annualRate) * 100).toString()
-        );
+        if (selectedAccount.annualRate) {
+          setAnnualRate(
+            (parseFloat(selectedAccount.annualRate) * 100).toString()
+          );
+        }
 
-        // Set transaction date to the maturity date of the parent account
         if (selectedAccount.endDate) {
           setTransactionDate(new Date(selectedAccount.endDate));
         }
@@ -423,7 +421,15 @@ export function CreateFlatRateModal({
                         >
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {account.accountNumber} - Original:{" "}
+                              {account.accountNumber}{" "}
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                account.accountType === "fixed"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-blue-100 text-blue-700"
+                              }`}>
+                                {account.accountType === "fixed" ? "Fixed" : "Floating"}
+                              </span>
+                              {" "}- Original:{" "}
                               {formatCurrency(
                                 parseFloat(account.originalCapital)
                               )}

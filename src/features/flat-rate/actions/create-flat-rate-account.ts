@@ -4,6 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import {
   accounts,
   fixRateAccounts,
+  floatingRateAccounts,
   accountTypes,
   profiles,
   authUsers,
@@ -268,16 +269,16 @@ export async function getMaturedAccountsForRollover(): Promise<{
     investorEmail: string | null;
     investorName: string | null;
     originalCapital: string;
-    annualRate: string;
+    annualRate: string | null;
     transactionDate: Date;
     endDate: Date | null;
     status: string;
-    maturedValue: number; // Calculated value at maturity including all compound interest
+    maturedValue: number;
     isRollover: boolean | null;
     adminFeeApplied: boolean | null;
+    accountType: "fixed" | "floating";
   }>;
 }> {
-  // Check admin access
   const adminCheck = await checkAdminAccess();
   if (!adminCheck.isAdmin) {
     return {
@@ -296,8 +297,9 @@ export async function getMaturedAccountsForRollover(): Promise<{
         investorEmail: authUsers.email,
         investorName: profiles.full_name,
         originalCapital: accounts.capital,
-        annualRate: fixRateAccounts.annual_rate,
-        adminFeeRate: fixRateAccounts.admin_fee,
+        fixAnnualRate: fixRateAccounts.annual_rate,
+        fixAdminFee: fixRateAccounts.admin_fee,
+        floatingAdminFee: floatingRateAccounts.admin_fee,
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
         status: accounts.status,
@@ -305,58 +307,116 @@ export async function getMaturedAccountsForRollover(): Promise<{
         adminFeeApplied: accounts.admin_fee_applied,
       })
       .from(accounts)
-      .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+      .leftJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+      .leftJoin(
+        floatingRateAccounts,
+        eq(accounts.id, floatingRateAccounts.account_id)
+      )
       .innerJoin(profiles, eq(accounts.user_id, profiles.id))
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .where(
         and(
-          eq(accounts.status, "mature"), // Only mature accounts can be rolled over
-          isNull(accounts.parent_account_id) // Exclude accounts that are already children of rollovers
+          eq(accounts.status, "mature"),
+          isNull(accounts.parent_account_id)
         )
       )
       .orderBy(accounts.end_date);
 
-    // Calculate matured value for each account
+    const { calculateNetPresentValueWithRedemptions } = await import(
+      "@/lib/utils/npv-calculator-with-redemptions"
+    );
+    const { calculateFloatingRateValueWithRedemptions } = await import(
+      "@/lib/utils/floating-rate-calculator-with-redemptions"
+    );
+
     const accountsWithMaturedValue = await Promise.all(
       maturedAccounts.map(async (account) => {
+        const isFixedRate = account.fixAnnualRate !== null;
+        const accountType: "fixed" | "floating" = isFixedRate
+          ? "fixed"
+          : "floating";
+
         if (!account.endDate) {
           return {
-            ...account,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            originalCapital: account.originalCapital,
+            annualRate: account.fixAnnualRate,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
+            adminFeeApplied: account.adminFeeApplied,
             maturedValue: parseFloat(account.originalCapital),
+            accountType,
           };
         }
 
         try {
-          // Calculate the matured value using NPV calculator
-          const { calculateNetPresentValueWithRedemptions } = await import(
-            "@/lib/utils/npv-calculator-with-redemptions"
-          );
+          let maturedValue: number;
 
-          const npvResult = await calculateNetPresentValueWithRedemptions(
-            account.id,
-            parseFloat(account.originalCapital),
-            parseFloat(account.annualRate),
-            account.transactionDate,
-            account.endDate,
-            account.isRollover || false,
-            account.adminFeeApplied || true,
-            undefined,
-            Number(account.adminFeeRate || 0)
-          );
+          if (isFixedRate) {
+            const npvResult = await calculateNetPresentValueWithRedemptions(
+              account.id,
+              parseFloat(account.originalCapital),
+              parseFloat(account.fixAnnualRate!),
+              account.transactionDate,
+              account.endDate,
+              account.isRollover || false,
+              account.adminFeeApplied || true,
+              undefined,
+              Number(account.fixAdminFee || 0)
+            );
+            maturedValue = npvResult.currentValue;
+          } else {
+            const netInvestorFund =
+              parseFloat(account.originalCapital) -
+              parseFloat(account.floatingAdminFee || "0");
+            const result = await calculateFloatingRateValueWithRedemptions(
+              account.id,
+              netInvestorFund,
+              account.transactionDate,
+              account.endDate
+            );
+            maturedValue = result.currentValue;
+          }
 
           return {
-            ...account,
-            maturedValue: npvResult.currentValue,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            originalCapital: account.originalCapital,
+            annualRate: account.fixAnnualRate,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
+            adminFeeApplied: account.adminFeeApplied,
+            maturedValue,
+            accountType,
           };
         } catch (error) {
           console.error(
             `Error calculating matured value for account ${account.id}:`,
             error
           );
-          // Fallback to original capital if calculation fails
           return {
-            ...account,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            originalCapital: account.originalCapital,
+            annualRate: account.fixAnnualRate,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
+            adminFeeApplied: account.adminFeeApplied,
             maturedValue: parseFloat(account.originalCapital),
+            accountType,
           };
         }
       })
@@ -407,7 +467,6 @@ export async function validateParentAccount(parentAccountId: number): Promise<{
         investorEmail: authUsers.email,
       })
       .from(accounts)
-      .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
       .innerJoin(profiles, eq(accounts.user_id, profiles.id))
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
       .where(eq(accounts.id, parentAccountId))

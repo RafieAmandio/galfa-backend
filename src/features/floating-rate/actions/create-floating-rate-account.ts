@@ -4,6 +4,7 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import {
   accounts,
   floatingRateAccounts,
+  fixRateAccounts,
   accountTypes,
   profiles,
   authUsers,
@@ -247,7 +248,7 @@ export async function createFloatingRateAccount(
   }
 }
 
-export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
+export async function getMaturedAccountsForFloatingRollover(): Promise<{
   success: boolean;
   message: string;
   accounts?: Array<{
@@ -256,12 +257,12 @@ export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
     investorEmail: string | null;
     investorName: string | null;
     grossCapital: string;
-    adminFee: string;
     transactionDate: Date;
     endDate: Date | null;
     status: string;
     maturedValue: number;
     isRollover: boolean | null;
+    accountType: "fixed" | "floating";
   }>;
 }> {
   const adminCheck = await checkAdminAccess();
@@ -279,14 +280,21 @@ export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
         investorEmail: authUsers.email,
         investorName: profiles.full_name,
         grossCapital: accounts.capital,
-        adminFee: floatingRateAccounts.admin_fee,
         transactionDate: accounts.transaction_date,
         endDate: accounts.end_date,
         status: accounts.status,
         isRollover: accounts.is_rollover,
+        adminFeeApplied: accounts.admin_fee_applied,
+        fixAnnualRate: fixRateAccounts.annual_rate,
+        fixAdminFee: fixRateAccounts.admin_fee,
+        floatingAdminFee: floatingRateAccounts.admin_fee,
       })
       .from(accounts)
-      .innerJoin(
+      .leftJoin(
+        fixRateAccounts,
+        eq(accounts.id, fixRateAccounts.account_id)
+      )
+      .leftJoin(
         floatingRateAccounts,
         eq(accounts.id, floatingRateAccounts.account_id)
       )
@@ -303,39 +311,92 @@ export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
     const { calculateFloatingRateValueWithRedemptions } = await import(
       "@/lib/utils/floating-rate-calculator-with-redemptions"
     );
+    const { calculateNetPresentValueWithRedemptions } = await import(
+      "@/lib/utils/npv-calculator-with-redemptions"
+    );
 
     const accountsWithMaturedValue = await Promise.all(
       maturedAccounts.map(async (account) => {
+        const isFixedRate = account.fixAnnualRate !== null;
+        const accountType: "fixed" | "floating" = isFixedRate
+          ? "fixed"
+          : "floating";
+
         if (!account.endDate) {
           return {
-            ...account,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            grossCapital: account.grossCapital,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
             maturedValue: parseFloat(account.grossCapital),
+            accountType,
           };
         }
 
         try {
-          const netInvestorFund =
-            parseFloat(account.grossCapital) - parseFloat(account.adminFee);
+          let maturedValue: number;
 
-          const result = await calculateFloatingRateValueWithRedemptions(
-            account.id,
-            netInvestorFund,
-            account.transactionDate,
-            account.endDate
-          );
+          if (isFixedRate) {
+            const npvResult = await calculateNetPresentValueWithRedemptions(
+              account.id,
+              parseFloat(account.grossCapital),
+              parseFloat(account.fixAnnualRate!),
+              account.transactionDate,
+              account.endDate,
+              account.isRollover || false,
+              account.adminFeeApplied !== false,
+              undefined,
+              Number(account.fixAdminFee || 0)
+            );
+            maturedValue = npvResult.currentValue;
+          } else {
+            const netInvestorFund =
+              parseFloat(account.grossCapital) -
+              parseFloat(account.floatingAdminFee || "0");
+            const result = await calculateFloatingRateValueWithRedemptions(
+              account.id,
+              netInvestorFund,
+              account.transactionDate,
+              account.endDate
+            );
+            maturedValue = result.currentValue;
+          }
 
           return {
-            ...account,
-            maturedValue: result.currentValue,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            grossCapital: account.grossCapital,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
+            maturedValue,
+            accountType,
           };
         } catch (error) {
           console.error(
-            `Error calculating matured value for floating account ${account.id}:`,
+            `Error calculating matured value for account ${account.id}:`,
             error
           );
           return {
-            ...account,
+            id: account.id,
+            accountNumber: account.accountNumber,
+            investorEmail: account.investorEmail,
+            investorName: account.investorName,
+            grossCapital: account.grossCapital,
+            transactionDate: account.transactionDate,
+            endDate: account.endDate,
+            status: account.status,
+            isRollover: account.isRollover,
             maturedValue: parseFloat(account.grossCapital),
+            accountType,
           };
         }
       })
@@ -343,11 +404,11 @@ export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
 
     return {
       success: true,
-      message: "Matured floating rate accounts retrieved successfully",
+      message: "Matured accounts retrieved successfully",
       accounts: accountsWithMaturedValue,
     };
   } catch (error) {
-    console.error("Get matured floating rate accounts error:", error);
+    console.error("Get matured accounts for rollover error:", error);
     return {
       success: false,
       message: "An error occurred while retrieving matured accounts",
@@ -355,7 +416,7 @@ export async function getMaturedFloatingRateAccountsForRollover(): Promise<{
   }
 }
 
-export async function validateFloatingRateParentAccount(
+export async function validateParentAccountForRollover(
   parentAccountId: number
 ): Promise<{ valid: boolean; message: string }> {
   const adminCheck = await checkAdminAccess();
@@ -372,10 +433,6 @@ export async function validateFloatingRateParentAccount(
         status: accounts.status,
       })
       .from(accounts)
-      .innerJoin(
-        floatingRateAccounts,
-        eq(accounts.id, floatingRateAccounts.account_id)
-      )
       .where(eq(accounts.id, parentAccountId))
       .limit(1);
 
@@ -392,7 +449,7 @@ export async function validateFloatingRateParentAccount(
 
     return { valid: true, message: "Parent account is valid for rollover" };
   } catch (error) {
-    console.error("Validate floating rate parent account error:", error);
+    console.error("Validate parent account for rollover error:", error);
     return { valid: false, message: "An error occurred during validation" };
   }
 }

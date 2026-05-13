@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react";
 import {
   createFloatingRateAccount,
-  getMaturedFloatingRateAccountsForRollover,
-  validateFloatingRateParentAccount,
+  getMaturedAccountsForFloatingRollover,
+  validateParentAccountForRollover,
 } from "../actions/create-floating-rate-account";
 import {
   Dialog,
@@ -54,12 +54,12 @@ interface RolloverAccountOption {
   investorEmail: string | null;
   investorName: string | null;
   grossCapital: string;
-  adminFee: string;
   transactionDate: Date;
   endDate: Date | null;
   status: string;
   maturedValue: number;
   isRollover: boolean | null;
+  accountType: "fixed" | "floating";
 }
 
 export function CreateFloatingRateModal({
@@ -92,7 +92,7 @@ export function CreateFloatingRateModal({
       const loadRolloverAccounts = async () => {
         setLoadingRolloverAccounts(true);
         try {
-          const result = await getMaturedFloatingRateAccountsForRollover();
+          const result = await getMaturedAccountsForFloatingRollover();
           if (result.success && result.accounts) {
             setRolloverAccounts(result.accounts);
           }
@@ -209,7 +209,7 @@ export function CreateFloatingRateModal({
 
     if (isRollover && selectedRolloverAccountId) {
       try {
-        const validation = await validateFloatingRateParentAccount(
+        const validation = await validateParentAccountForRollover(
           parseInt(selectedRolloverAccountId)
         );
         if (!validation.valid) {
@@ -345,7 +345,15 @@ export function CreateFloatingRateModal({
                         >
                           <div className="flex flex-col">
                             <span className="font-medium">
-                              {account.accountNumber} - Gross:{" "}
+                              {account.accountNumber}{" "}
+                              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                account.accountType === "fixed"
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-blue-100 text-blue-700"
+                              }`}>
+                                {account.accountType === "fixed" ? "Fixed" : "Floating"}
+                              </span>
+                              {" "}- Gross:{" "}
                               {formatCurrency(parseFloat(account.grossCapital))}
                             </span>
                             <span className="text-sm text-green-600 font-medium">
@@ -370,7 +378,7 @@ export function CreateFloatingRateModal({
                   </p>
                   {rolloverAccounts.length === 0 && (
                     <p className="text-sm text-orange-600">
-                      No matured floating rate accounts found. Only accounts with
+                      No matured accounts found. Only accounts with
                       &quot;mature&quot; status can be rolled over.
                     </p>
                   )}
