@@ -20,6 +20,7 @@ interface FixedRateImportRow {
   accountNumber: string;
   capital: number;
   annualRate: number;
+  adminFeePercentage: number;
   startDate: string;
   endDate: string;
   isRollover: boolean;
@@ -174,6 +175,7 @@ export async function bulkImportAccounts(
         transactionDate: new Date(row.startDate),
         endDate: new Date(row.endDate),
         isRollover: row.isRollover,
+        adminFeePercentage: row.adminFeePercentage,
         description: row.description || undefined,
       });
       results.push({

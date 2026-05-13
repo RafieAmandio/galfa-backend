@@ -5,6 +5,7 @@ export interface FixedRateRow {
   accountNumber: string;
   capital: number;
   annualRate: number;
+  adminFeePercentage: number;
   startDate: string;
   endDate: string;
   isRollover: boolean;
@@ -94,10 +95,11 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         accountNumber: String(row[1] ?? "").trim(),
         capital: Number(row[2]) || 0,
         annualRate: Number(row[3]) || 0,
-        startDate: parseDateCell(row[4]),
-        endDate: parseDateCell(row[5]),
-        isRollover: parseBoolean(row[6]),
-        description: String(row[7] ?? "").trim(),
+        adminFeePercentage: Number(row[4]) || 0,
+        startDate: parseDateCell(row[5]),
+        endDate: parseDateCell(row[6]),
+        isRollover: parseBoolean(row[7]),
+        description: String(row[8] ?? "").trim(),
       });
     }
   }

@@ -163,6 +163,7 @@ export function ImportPreviewTable({
                     <TableHead>Account No.</TableHead>
                     <TableHead className="text-right">Capital</TableHead>
                     <TableHead className="text-right">Rate (%)</TableHead>
+                    <TableHead className="text-right">Admin Fee (%)</TableHead>
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Rollover</TableHead>
@@ -187,6 +188,7 @@ export function ImportPreviewTable({
                         {r.data.capital.toLocaleString("id-ID")}
                       </TableCell>
                       <TableCell className="text-sm text-right">{r.data.annualRate}</TableCell>
+                      <TableCell className="text-sm text-right">{r.data.adminFeePercentage}</TableCell>
                       <TableCell className="text-sm">{r.data.startDate}</TableCell>
                       <TableCell className="text-sm">{r.data.endDate}</TableCell>
                       <TableCell className="text-sm">

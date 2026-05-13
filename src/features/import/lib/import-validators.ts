@@ -16,6 +16,10 @@ const fixedRateSchema = z
       .number()
       .positive("Annual rate must be positive")
       .max(100, "Annual rate must be <= 100%"),
+    adminFeePercentage: z
+      .number()
+      .min(0, "Admin fee must be >= 0")
+      .max(100, "Admin fee must be <= 100%"),
     startDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     endDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     isRollover: z.boolean(),
