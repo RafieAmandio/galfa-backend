@@ -23,12 +23,20 @@ const fixedRateSchema = z
     startDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     endDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     isRollover: z.boolean(),
+    parentAccountNumber: z.string(),
     description: z.string(),
   })
   .refine((data) => new Date(data.endDate) > new Date(data.startDate), {
     message: "End date must be after start date",
     path: ["endDate"],
-  });
+  })
+  .refine(
+    (data) => !data.isRollover || data.parentAccountNumber.length > 0,
+    {
+      message: "Parent Account No is required when Is Rollover is Yes",
+      path: ["parentAccountNumber"],
+    }
+  );
 
 const floatingRateSchema = z
   .object({
@@ -42,12 +50,20 @@ const floatingRateSchema = z
     startDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     endDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     isRollover: z.boolean(),
+    parentAccountNumber: z.string(),
     description: z.string(),
   })
   .refine((data) => new Date(data.endDate) > new Date(data.startDate), {
     message: "End date must be after start date",
     path: ["endDate"],
-  });
+  })
+  .refine(
+    (data) => !data.isRollover || data.parentAccountNumber.length > 0,
+    {
+      message: "Parent Account No is required when Is Rollover is Yes",
+      path: ["parentAccountNumber"],
+    }
+  );
 
 const installmentSchema = z
   .object({
@@ -69,12 +85,21 @@ const installmentSchema = z
         message: "Investment type must be 'principle' or 'interest_only'",
       }),
     }),
+    isRollover: z.boolean(),
+    parentAccountNumber: z.string(),
     description: z.string(),
   })
   .refine((data) => new Date(data.endDate) > new Date(data.startDate), {
     message: "End date must be after start date",
     path: ["endDate"],
-  });
+  })
+  .refine(
+    (data) => !data.isRollover || data.parentAccountNumber.length > 0,
+    {
+      message: "Parent Account No is required when Is Rollover is Yes",
+      path: ["parentAccountNumber"],
+    }
+  );
 
 export interface ValidationResult<T> {
   rowIndex: number;

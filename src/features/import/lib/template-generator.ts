@@ -9,6 +9,7 @@ const FIXED_RATE_HEADERS = [
   "Start Date",
   "End Date",
   "Is Rollover",
+  "Parent Account No",
   "Description",
 ];
 
@@ -20,6 +21,7 @@ const FLOATING_RATE_HEADERS = [
   "Start Date",
   "End Date",
   "Is Rollover",
+  "Parent Account No",
   "Description",
 ];
 
@@ -32,6 +34,8 @@ const INSTALLMENT_HEADERS = [
   "Start Date",
   "End Date",
   "Investment Type",
+  "Is Rollover",
+  "Parent Account No",
   "Description",
 ];
 
@@ -44,6 +48,7 @@ const FIXED_RATE_EXAMPLE = [
   "2025-01-01",
   "2026-01-01",
   "No",
+  "",
   "Initial investment",
 ];
 
@@ -55,6 +60,7 @@ const FLOATING_RATE_EXAMPLE = [
   "2025-01-01",
   "2026-01-01",
   "No",
+  "",
   "Initial floating investment",
 ];
 
@@ -67,6 +73,8 @@ const INSTALLMENT_EXAMPLE = [
   "2025-01-01",
   "2026-01-01",
   "principle",
+  "No",
+  "",
   "Monthly installment investment",
 ];
 

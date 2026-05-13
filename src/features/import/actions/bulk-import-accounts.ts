@@ -24,6 +24,7 @@ interface FixedRateImportRow {
   startDate: string;
   endDate: string;
   isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -35,6 +36,7 @@ interface FloatingRateImportRow {
   startDate: string;
   endDate: string;
   isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -47,6 +49,8 @@ interface InstallmentImportRow {
   startDate: string;
   endDate: string;
   investmentType: string;
+  isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -63,6 +67,28 @@ interface BulkImportResult {
   totalSuccess: number;
   totalFailed: number;
   results: RowResult[];
+}
+
+async function lookupParentAccountId(
+  parentAccountNumber: string
+): Promise<{ id: number | null; error?: string }> {
+  if (!parentAccountNumber) return { id: null };
+
+  const db = createDrizzleConnection();
+  const result = await db
+    .select({ id: accounts.id })
+    .from(accounts)
+    .where(eq(accounts.account_number, parentAccountNumber))
+    .limit(1);
+
+  if (result.length === 0) {
+    return {
+      id: null,
+      error: `Parent account "${parentAccountNumber}" not found`,
+    };
+  }
+
+  return { id: result[0].id };
 }
 
 export async function bulkImportAccounts(
@@ -167,6 +193,22 @@ export async function bulkImportAccounts(
       continue;
     }
     try {
+      let parentAccountId: number | undefined;
+      if (row.parentAccountNumber) {
+        const lookup = await lookupParentAccountId(row.parentAccountNumber);
+        if (lookup.error) {
+          results.push({
+            type: "Fixed Rate",
+            rowIndex: i,
+            accountNumber: row.accountNumber,
+            success: false,
+            message: lookup.error,
+          });
+          continue;
+        }
+        parentAccountId = lookup.id ?? undefined;
+      }
+
       const result = await createFlatRateAccount({
         investorEmail: row.investorEmail,
         accountNumber: row.accountNumber,
@@ -175,6 +217,7 @@ export async function bulkImportAccounts(
         transactionDate: new Date(row.startDate),
         endDate: new Date(row.endDate),
         isRollover: row.isRollover,
+        parentAccountId,
         adminFeePercentage: row.adminFeePercentage,
         description: row.description || undefined,
       });
@@ -210,6 +253,22 @@ export async function bulkImportAccounts(
       continue;
     }
     try {
+      let parentAccountId: number | undefined;
+      if (row.parentAccountNumber) {
+        const lookup = await lookupParentAccountId(row.parentAccountNumber);
+        if (lookup.error) {
+          results.push({
+            type: "Floating Rate",
+            rowIndex: i,
+            accountNumber: row.accountNumber,
+            success: false,
+            message: lookup.error,
+          });
+          continue;
+        }
+        parentAccountId = lookup.id ?? undefined;
+      }
+
       const result = await createFloatingRateAccount({
         investorEmail: row.investorEmail,
         accountNumber: row.accountNumber,
@@ -218,6 +277,7 @@ export async function bulkImportAccounts(
         transactionDate: new Date(row.startDate),
         endDate: new Date(row.endDate),
         isRollover: row.isRollover,
+        parentAccountId,
         description: row.description || undefined,
       });
       results.push({
@@ -263,6 +323,22 @@ export async function bulkImportAccounts(
           message: `Account number "${row.accountNumber}" already exists`,
         });
         continue;
+      }
+
+      let parentAccountId: number | null = null;
+      if (row.parentAccountNumber) {
+        const lookup = await lookupParentAccountId(row.parentAccountNumber);
+        if (lookup.error) {
+          results.push({
+            type: "Installment",
+            rowIndex: i,
+            accountNumber: row.accountNumber,
+            success: false,
+            message: lookup.error,
+          });
+          continue;
+        }
+        parentAccountId = lookup.id;
       }
 
       const db = createDrizzleConnection();
@@ -328,8 +404,11 @@ export async function bulkImportAccounts(
           status: "active",
           created_at: new Date(),
           updated_at: new Date(),
-          is_rollover: false,
+          is_rollover: row.isRollover,
+          parent_account_id: parentAccountId,
           admin_fee_applied: true,
+          rollover_sequence:
+            row.isRollover && parentAccountId ? 1 : null,
           user_id: investorProfile[0].id,
         })
         .returning();

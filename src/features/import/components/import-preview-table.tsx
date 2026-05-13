@@ -167,6 +167,7 @@ export function ImportPreviewTable({
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Rollover</TableHead>
+                    <TableHead>Parent Acct</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,6 +195,7 @@ export function ImportPreviewTable({
                       <TableCell className="text-sm">
                         {r.data.isRollover ? "Yes" : "No"}
                       </TableCell>
+                      <TableCell className="text-sm">{r.data.parentAccountNumber || "-"}</TableCell>
                       <TableCell>
                         <StatusCell result={r} />
                       </TableCell>
@@ -220,6 +222,7 @@ export function ImportPreviewTable({
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Rollover</TableHead>
+                    <TableHead>Parent Acct</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -248,6 +251,7 @@ export function ImportPreviewTable({
                       <TableCell className="text-sm">
                         {r.data.isRollover ? "Yes" : "No"}
                       </TableCell>
+                      <TableCell className="text-sm">{r.data.parentAccountNumber || "-"}</TableCell>
                       <TableCell>
                         <StatusCell result={r} />
                       </TableCell>
@@ -275,6 +279,8 @@ export function ImportPreviewTable({
                     <TableHead>Start Date</TableHead>
                     <TableHead>End Date</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Rollover</TableHead>
+                    <TableHead>Parent Acct</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -302,6 +308,10 @@ export function ImportPreviewTable({
                       <TableCell className="text-sm">{r.data.startDate}</TableCell>
                       <TableCell className="text-sm">{r.data.endDate}</TableCell>
                       <TableCell className="text-sm">{r.data.investmentType}</TableCell>
+                      <TableCell className="text-sm">
+                        {r.data.isRollover ? "Yes" : "No"}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.parentAccountNumber || "-"}</TableCell>
                       <TableCell>
                         <StatusCell result={r} />
                       </TableCell>

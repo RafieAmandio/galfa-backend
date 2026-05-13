@@ -9,6 +9,7 @@ export interface FixedRateRow {
   startDate: string;
   endDate: string;
   isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -20,6 +21,7 @@ export interface FloatingRateRow {
   startDate: string;
   endDate: string;
   isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -32,6 +34,8 @@ export interface InstallmentRow {
   startDate: string;
   endDate: string;
   investmentType: string;
+  isRollover: boolean;
+  parentAccountNumber: string;
   description: string;
 }
 
@@ -81,15 +85,15 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
   };
 
   // Parse Fixed Rate sheet
+  // Columns: Email, Account No, Capital, Annual Rate, Admin Fee, Start Date, End Date, Is Rollover, Parent Account No, Description
   const fixedRateSheet = wb.Sheets["Fixed Rate"];
   if (fixedRateSheet) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(fixedRateSheet, {
       header: 1,
     });
-    // Skip header row
     for (let i = 1; i < rows.length; i++) {
       const row = rows[i];
-      if (!row || !row[0]) continue; // Skip empty rows
+      if (!row || !row[0]) continue;
       result.fixedRate.push({
         investorEmail: String(row[0] ?? "").trim().toLowerCase(),
         accountNumber: String(row[1] ?? "").trim(),
@@ -99,12 +103,14 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         startDate: parseDateCell(row[5]),
         endDate: parseDateCell(row[6]),
         isRollover: parseBoolean(row[7]),
-        description: String(row[8] ?? "").trim(),
+        parentAccountNumber: String(row[8] ?? "").trim(),
+        description: String(row[9] ?? "").trim(),
       });
     }
   }
 
   // Parse Floating Rate sheet
+  // Columns: Email, Account No, Capital, Admin Fee, Start Date, End Date, Is Rollover, Parent Account No, Description
   const floatingRateSheet = wb.Sheets["Floating Rate"];
   if (floatingRateSheet) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(floatingRateSheet, {
@@ -121,12 +127,14 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         startDate: parseDateCell(row[4]),
         endDate: parseDateCell(row[5]),
         isRollover: parseBoolean(row[6]),
-        description: String(row[7] ?? "").trim(),
+        parentAccountNumber: String(row[7] ?? "").trim(),
+        description: String(row[8] ?? "").trim(),
       });
     }
   }
 
   // Parse Installment sheet
+  // Columns: Email, Account No, Capital, Monthly CoF, Admin Fee, Start Date, End Date, Investment Type, Is Rollover, Parent Account No, Description
   const installmentSheet = wb.Sheets["Installment"];
   if (installmentSheet) {
     const rows = XLSX.utils.sheet_to_json<unknown[]>(installmentSheet, {
@@ -144,7 +152,9 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         startDate: parseDateCell(row[5]),
         endDate: parseDateCell(row[6]),
         investmentType: String(row[7] ?? "").trim(),
-        description: String(row[8] ?? "").trim(),
+        isRollover: parseBoolean(row[8]),
+        parentAccountNumber: String(row[9] ?? "").trim(),
+        description: String(row[10] ?? "").trim(),
       });
     }
   }
