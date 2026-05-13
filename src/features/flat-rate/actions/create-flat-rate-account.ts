@@ -10,7 +10,7 @@ import {
   authUsers,
   mutations,
 } from "@/db/drizzle/schema";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
@@ -314,12 +314,7 @@ export async function getMaturedAccountsForRollover(): Promise<{
       )
       .innerJoin(profiles, eq(accounts.user_id, profiles.id))
       .innerJoin(authUsers, eq(profiles.id, authUsers.id))
-      .where(
-        and(
-          eq(accounts.status, "mature"),
-          isNull(accounts.parent_account_id)
-        )
-      )
+      .where(eq(accounts.status, "mature"))
       .orderBy(accounts.end_date);
 
     const { calculateNetPresentValueWithRedemptions } = await import(
