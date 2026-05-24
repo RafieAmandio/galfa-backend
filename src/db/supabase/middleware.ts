@@ -67,9 +67,10 @@ export async function supabaseMiddleware(request: NextRequest) {
   const cookieNames = incomingCookies.map((c) => c.name);
   const hasSbCookie = cookieNames.some((n) => n.includes("sb:"));
   const adminDisabled = process.env.DISABLE_ADMIN_CHECK === "true";
+  const pathname = request.nextUrl.pathname;
 
   console.info("middleware", {
-    path: request.nextUrl.pathname,
+    path: pathname,
     method: request.method,
     hasUser: Boolean(user),
     host,
@@ -80,156 +81,94 @@ export async function supabaseMiddleware(request: NextRequest) {
     adminDisabled,
   });
 
-  // AUTHORIZATION HERE
   // Protect investor summary page
-  if (!user && request.nextUrl.pathname.startsWith("/investor/summary")) {
-    // no user, redirect to login page
+  if (!user && pathname.startsWith("/investor/summary")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    console.info("redirect", {
-      from: request.nextUrl.pathname,
-      to: url.pathname,
-      reason: "unauthenticated",
-    });
     return NextResponse.redirect(url);
   }
 
   // Protect other authenticated routes
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
-    // no user, potentially respond by redirecting the user to the login page
+  if (!user && pathname.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
-    console.info("redirect", {
-      from: request.nextUrl.pathname,
-      to: url.pathname,
-      reason: "unauthenticated",
-    });
     return NextResponse.redirect(url);
   }
 
-  // ONLY FOR ADMIN
-  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/dashboard/admin/")) {
-    const { data: userData, error: userError } = await supabase
-      .from("user_role_members")
-      .select("user_role_id")
-      .eq("user_id", user.id);
+  // Early return for unauthenticated users or routes that don't need role checks
+  if (!user || adminDisabled) {
+    if (adminDisabled && user && pathname === "/") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/dashboard";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
+  // Determine if this route needs a role check at all
+  const needsAdminDashboardCheck = pathname.startsWith("/dashboard/admin/");
+  const needsFlatRateCheck = pathname.startsWith("/flat-rate");
+  const needsAdminRouteCheck = pathname.startsWith("/admin/");
+  const isHomePage = pathname === "/";
+
+  const needsRoleCheck = needsAdminDashboardCheck || needsFlatRateCheck || needsAdminRouteCheck || isHomePage;
+
+  if (!needsRoleCheck) {
+    return supabaseResponse;
+  }
+
+  // Single role query for all route checks
+  const [roleMembersResult, roleAssignmentsResult] = await Promise.all([
+    needsAdminDashboardCheck
+      ? supabase.from("user_role_members").select("user_role_id").eq("user_id", user.id)
+      : Promise.resolve({ data: null, error: null }),
+    supabase.from("role_assignments").select("role_name").eq("user_id", user.id),
+  ]);
+
+  const hasAdminRole = roleAssignmentsResult.data?.some(
+    (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
+  );
+
+  // ONLY FOR ADMIN - /dashboard/admin/ routes
+  if (needsAdminDashboardCheck) {
+    const { data: userData, error: userError } = roleMembersResult;
 
     if (!userData || userError) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
-      console.info("redirect", {
-        from: request.nextUrl.pathname,
-        to: url.pathname,
-        reason: "no_roles",
-      });
       return NextResponse.redirect(url);
     }
 
     if (!userData.some((data) => data.user_role_id === 2)) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
-      console.info("redirect", {
-        from: request.nextUrl.pathname,
-        to: url.pathname,
-        reason: "not_admin_role",
-      });
       return NextResponse.redirect(url);
     }
   }
 
   // ADMIN-ONLY ROUTES - Flat Rate Page
-  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/flat-rate")) {
-    // Check role assignments for admin role
-    const { data: roleData, error: roleError } = await supabase
-      .from("role_assignments")
-      .select("role_name")
-      .eq("user_id", user.id);
-
-    const hasAdminRole = roleData?.some(
-      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
-    );
-
-    // If not admin, redirect to investor summary
-    if (roleError || !hasAdminRole) {
+  if (needsFlatRateCheck) {
+    if (roleAssignmentsResult.error || !hasAdminRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
-      console.info("redirect", {
-        from: request.nextUrl.pathname,
-        to: url.pathname,
-        reason: "not_admin_flat_rate",
-      });
       return NextResponse.redirect(url);
     }
   }
 
   // ADMIN-ONLY ROUTES - Admin Pages
-  if (!adminDisabled && user && request.nextUrl.pathname.startsWith("/admin/")) {
-    // Check role assignments for admin role
-    const { data: roleData, error: roleError } = await supabase
-      .from("role_assignments")
-      .select("role_name")
-      .eq("user_id", user.id);
-
-    console.info("admin_route_check", {
-      path: request.nextUrl.pathname,
-      userId: user.id,
-      userEmail: user.email,
-      roleData,
-      roleError: roleError?.message,
-      adminDisabled,
-    });
-
-    const hasAdminRole = roleData?.some(
-      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
-    );
-
-    // If not admin, redirect to investor summary
-    if (roleError || !hasAdminRole) {
+  if (needsAdminRouteCheck) {
+    if (roleAssignmentsResult.error || !hasAdminRole) {
       const url = request.nextUrl.clone();
       url.pathname = "/investor/summary";
-      console.info("redirect", {
-        from: request.nextUrl.pathname,
-        to: url.pathname,
-        reason: "not_admin_role",
-        hasAdminRole,
-        roleError: roleError?.message,
-      });
       return NextResponse.redirect(url);
     }
   }
 
   // REDIRECT ADMINS FROM HOME PAGE TO ADMIN DASHBOARD
-  if (user && request.nextUrl.pathname === "/") {
-    // Check role assignments
-    const { data: roleData, error: roleError } = await supabase
-      .from("role_assignments")
-      .select("role_name")
-      .eq("user_id", user.id);
-
-    console.info("home_page_admin_check", {
-      userId: user.id,
-      userEmail: user.email,
-      roleData,
-      roleError: roleError?.message,
-      adminDisabled,
-    });
-
-    const hasAdminRole = roleData?.some(
-      (role: { role_name: string }) => role.role_name?.toLowerCase() === "admin"
-    );
-
-    // If admin, redirect to admin dashboard
-    if (adminDisabled || hasAdminRole) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/admin/dashboard";
-      console.info("redirect", {
-        from: request.nextUrl.pathname,
-        to: url.pathname,
-        reason: "admin_to_dashboard",
-        hasAdminRole,
-      });
-      return NextResponse.redirect(url);
-    }
+  if (isHomePage && hasAdminRole) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin/dashboard";
+    return NextResponse.redirect(url);
   }
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're

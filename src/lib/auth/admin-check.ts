@@ -48,15 +48,22 @@ export const checkAdminAccess = cache(async (): Promise<AdminCheckResult> => {
 
     const db = createDrizzleConnection();
 
-    // Check if user is super admin in auth.users table
-    const authUserResult = await db
-      .select({
-        isSuperAdmin: authUsers.is_super_admin,
-        email: authUsers.email,
-      })
-      .from(authUsers)
-      .where(eq(authUsers.id, user.id))
-      .limit(1);
+    const [authUserResult, roleResult] = await Promise.all([
+      db
+        .select({
+          isSuperAdmin: authUsers.is_super_admin,
+          email: authUsers.email,
+        })
+        .from(authUsers)
+        .where(eq(authUsers.id, user.id))
+        .limit(1),
+      db
+        .select({
+          roleName: roleAssignments.role_name,
+        })
+        .from(roleAssignments)
+        .where(eq(roleAssignments.user_id, user.id)),
+    ]);
 
     if (authUserResult.length > 0 && authUserResult[0].isSuperAdmin) {
       return {
@@ -65,15 +72,6 @@ export const checkAdminAccess = cache(async (): Promise<AdminCheckResult> => {
       };
     }
 
-    // Check role assignments for admin role (using new simplified schema)
-    const roleResult = await db
-      .select({
-        roleName: roleAssignments.role_name,
-      })
-      .from(roleAssignments)
-      .where(eq(roleAssignments.user_id, user.id));
-
-    // Check if user has admin role (filter out null/undefined values)
     const hasAdminRole = roleResult.some(
       (role) => role.roleName && role.roleName.toLowerCase() === "admin"
     );
