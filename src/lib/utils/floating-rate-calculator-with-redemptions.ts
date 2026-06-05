@@ -78,7 +78,8 @@ export async function calculateFloatingRateValueWithRedemptions(
   transactionDate: Date,
   currentDate: Date = new Date(),
   prefetchedRedemptions?: BatchRedemption[],
-  prefetchedGrowthRates?: Map<string, GrowthData>
+  prefetchedGrowthRates?: Map<string, GrowthData>,
+  investmentEndDate?: Date | null
 ): Promise<FloatingRateValueWithRedemptions> {
   // Use pre-fetched redemptions if provided, otherwise query individually
   const redemptions = prefetchedRedemptions ?? await getAccountRedemptions(accountId);
@@ -86,15 +87,20 @@ export async function calculateFloatingRateValueWithRedemptions(
 
   let currentValue = netInvestorFund;
   let calculationDate = startOfMonth(transactionDate);
-  // Hide the in-progress month: cap end at the start of the previous month
-  const endDate = startOfMonth(
+  // Hide the in-progress month: cap end at the last completed month
+  const lastCompletedMonth = startOfMonth(
     new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
   );
+  // If fund has an end date, don't compute past it
+  const endDate = investmentEndDate && startOfMonth(investmentEndDate) < lastCompletedMonth
+    ? startOfMonth(investmentEndDate)
+    : lastCompletedMonth;
   const monthlyBreakdown: MonthlyFloatingRateCalculation[] = [];
 
   // Calculate total days invested
+  const effectiveEnd = investmentEndDate && investmentEndDate < currentDate ? investmentEndDate : currentDate;
   const daysInvested = Math.ceil(
-    (currentDate.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
+    (effectiveEnd.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
   let isFirstMonth = true;

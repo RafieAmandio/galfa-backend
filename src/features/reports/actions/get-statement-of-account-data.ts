@@ -181,7 +181,8 @@ export async function getStatementOfAccountData(
         result.transactionDate,
         calcEndDate,
         redemptionMap.get(result.id),
-        growthRatesMap
+        growthRatesMap,
+        result.endDate
       );
 
       let entries = valueWithRedemptions.monthlyBreakdown.map((m) => ({

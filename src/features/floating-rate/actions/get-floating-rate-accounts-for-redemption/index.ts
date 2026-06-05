@@ -94,7 +94,8 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
           account.transactionDate,
           redemptionDate,
           redemptionMap.get(account.id),
-          growthRatesMap
+          growthRatesMap,
+          account.endDate
         );
 
         // Only return accounts with positive balance

@@ -118,7 +118,10 @@ export async function redeemFloatingRateAccount(
       request.accountId,
       netInvestorFund,
       account.transactionDate,
-      request.redemptionDate
+      request.redemptionDate,
+      undefined,
+      undefined,
+      account.endDate
     );
 
     // Validate redemption amount

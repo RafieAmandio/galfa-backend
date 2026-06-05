@@ -198,7 +198,8 @@ export const getFloatingRateInvestments = cache(
                 investment.transactionDate,
                 new Date(),
                 redemptionMap.get(investment.id),
-                growthRatesMap
+                growthRatesMap,
+                investment.endDate
               );
 
             presentValueFund = valueWithRedemptions.currentValue;

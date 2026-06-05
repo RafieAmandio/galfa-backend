@@ -373,6 +373,9 @@ export async function getMaturedAccountsForRollover(): Promise<{
               account.id,
               netInvestorFund,
               account.transactionDate,
+              account.endDate,
+              undefined,
+              undefined,
               account.endDate
             );
             maturedValue = result.currentValue;
