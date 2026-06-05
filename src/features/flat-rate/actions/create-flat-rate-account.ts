@@ -323,6 +323,12 @@ export async function getMaturedAccountsForRollover(): Promise<{
     const { calculateFloatingRateValueWithRedemptions } = await import(
       "@/lib/utils/floating-rate-calculator-with-redemptions"
     );
+    const { getBatchRedemptions } = await import(
+      "@/lib/utils/batch-redemptions"
+    );
+
+    const accountIds = maturedAccounts.map((a) => a.id);
+    const redemptionMap = await getBatchRedemptions(accountIds);
 
     const accountsWithMaturedValue = await Promise.all(
       maturedAccounts.map(async (account) => {
@@ -361,7 +367,7 @@ export async function getMaturedAccountsForRollover(): Promise<{
               account.endDate,
               account.isRollover || false,
               account.adminFeeApplied || true,
-              undefined,
+              redemptionMap.get(account.id),
               Number(account.fixAdminFee || 0)
             );
             maturedValue = npvResult.currentValue;
@@ -374,7 +380,7 @@ export async function getMaturedAccountsForRollover(): Promise<{
               netInvestorFund,
               account.transactionDate,
               account.endDate,
-              undefined,
+              redemptionMap.get(account.id),
               undefined,
               account.endDate
             );

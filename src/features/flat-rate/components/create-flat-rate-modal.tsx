@@ -455,7 +455,12 @@ export function CreateFlatRateModal({
                     Select the matured account to extend. The investor, capital
                     amount, and start date will be auto-filled.
                   </p>
-                  {rolloverAccounts.length === 0 && (
+                  {loadingRolloverAccounts && (
+                    <p className="text-sm text-muted-foreground">
+                      Loading matured accounts...
+                    </p>
+                  )}
+                  {!loadingRolloverAccounts && rolloverAccounts.length === 0 && (
                     <p className="text-sm text-orange-600">
                       No matured accounts found. Only accounts with "mature"
                       status can be rolled over.
