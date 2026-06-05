@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/db/supabase/browser";
 import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
 import type { FundAllocation } from "@/features/fund-allocations/actions/get-fund-allocations";
@@ -70,6 +71,7 @@ export function InvestorSummaryView({
   vcPerformance,
   error,
 }: InvestorSummaryViewProps) {
+  const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const supabase = createBrowserClient();
 
@@ -179,7 +181,7 @@ export function InvestorSummaryView({
               <h3 className="font-bold text-red-800 mb-1">Unable to Load Portfolio</h3>
               <p className="text-red-700 text-sm mb-4">{error}</p>
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => router.refresh()}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-xl hover:bg-red-700 transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />

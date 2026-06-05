@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   flexRender,
@@ -66,6 +67,7 @@ interface InvestorFloatingRateInvestmentsTableProps {
 export default function InvestorFloatingRateInvestmentsTable({
   data,
 }: InvestorFloatingRateInvestmentsTableProps) {
+  const router = useRouter();
   const loading = false;
   const error = null;
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -555,7 +557,7 @@ export default function InvestorFloatingRateInvestmentsTable({
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} variant="outline">
+          <Button onClick={() => router.refresh()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -651,7 +653,7 @@ export default function InvestorFloatingRateInvestmentsTable({
               </CardTitle>
               <div className="flex items-center space-x-2">
                 <Button
-                  onClick={() => window.location.reload()}
+                  onClick={() => router.refresh()}
                   variant="outline"
                   size="sm"
                 >

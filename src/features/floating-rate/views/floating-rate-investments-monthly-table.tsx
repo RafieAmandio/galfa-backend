@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   ColumnDef,
   flexRender,
@@ -111,7 +112,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
   onDeleted,
   isFetching = false,
 }: FloatingRateInvestmentsMonthlyTableProps) {
-  // Remove data fetching state - data comes from props
+  const router = useRouter();
   const loading = false;
   const error = null;
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -705,7 +706,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-center">
         <p className="text-red-600 text-sm mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()} variant="outline" size="sm">
+        <Button onClick={() => router.refresh()} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-2" />
           Try Again
         </Button>
@@ -821,7 +822,7 @@ export default function FloatingRateInvestmentsMonthlyTable({
                   </Button>
                 )}
                 <Button
-                  onClick={() => window.location.reload()}
+                  onClick={() => router.refresh()}
                   variant="outline"
                   size="sm"
                 >
