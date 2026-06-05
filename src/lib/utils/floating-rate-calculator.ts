@@ -11,10 +11,9 @@ import {
 } from "date-fns";
 
 /**
- * Calculate compound growth for floating rate investments
- * Two scenarios:
- * 1. Investment starts mid-month: Present Value Fund = Net Investor Fund * (1 + Growth Rate)^(remainingDaysInMonth/totalDaysInMonth)
- * 2. Investment continues from previous month: Present Value Fund = Previous Month Value * (1 + Growth Rate)
+ * Calculate simple-interest growth for floating rate investments.
+ * Each month's gain = Net Investor Fund × monthly rate (always on original principal).
+ * Partial first/last months are proportioned linearly by days.
  */
 
 export interface FloatingRateCalculationInput {
@@ -77,41 +76,51 @@ export function calculateFloatingRateMonthlyValues(
     let daysActive: number;
     const totalDaysInMonth = getDaysInMonth(monthGrowth.month);
 
+    const isLastMonth =
+      investmentEnd !== null &&
+      isSameMonth(investmentEnd, monthGrowth.month);
+
     if (isFirstMonth) {
-      // Investment starts this month - use partial month calculation
       const effectiveStartDate = max([investmentStart, monthStart]);
       const effectiveEndDate = investmentEnd
         ? min([investmentEnd, monthEnd])
         : monthEnd;
 
-      // Calculate remaining days AFTER the start date (not including start date)
       daysActive = differenceInDays(effectiveEndDate, effectiveStartDate);
       const daysFraction = daysActive / totalDaysInMonth;
 
       if (monthGrowth.hasData && monthGrowth.growthPercentage > 0) {
-        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate * daysFraction) — linear proportioning
-        presentValueFund =
-          netInvestorFund *
-          (1 + (monthGrowth.growthPercentage / 100) * daysFraction);
+        gainedFund =
+          netInvestorFund * (monthGrowth.growthPercentage / 100) * daysFraction;
       } else {
-        presentValueFund = netInvestorFund;
+        gainedFund = 0;
       }
 
-      gainedFund = presentValueFund - netInvestorFund;
-      previousMonthValue = netInvestorFund; // For first month, previous value is the initial net investor fund
+      presentValueFund = netInvestorFund + gainedFund;
+      previousMonthValue = netInvestorFund;
+    } else if (isLastMonth) {
+      const effectiveEndDate = min([investmentEnd!, monthEnd]);
+      daysActive = effectiveEndDate.getDate();
+      const daysFraction = daysActive / totalDaysInMonth;
+
+      if (monthGrowth.hasData && monthGrowth.growthPercentage > 0) {
+        gainedFund =
+          netInvestorFund * (monthGrowth.growthPercentage / 100) * daysFraction;
+      } else {
+        gainedFund = 0;
+      }
+
+      presentValueFund = previousMonthValue + gainedFund;
     } else {
-      // Investment continues from previous month - use full month calculation
       daysActive = totalDaysInMonth;
 
       if (monthGrowth.hasData && monthGrowth.growthPercentage > 0) {
-        // Formula: Present Value Fund = Previous Month Value * (1 + Growth Rate)
-        presentValueFund =
-          previousMonthValue * (1 + monthGrowth.growthPercentage / 100);
+        gainedFund = netInvestorFund * (monthGrowth.growthPercentage / 100);
       } else {
-        presentValueFund = previousMonthValue;
+        gainedFund = 0;
       }
 
-      gainedFund = presentValueFund - previousMonthValue;
+      presentValueFund = previousMonthValue + gainedFund;
     }
 
     const monthLabel = monthGrowth.month.toLocaleDateString("en-US", {

@@ -165,16 +165,14 @@ export async function calculateFloatingRateValueWithRedemptions(
     const isFullyRedeemed =
       balanceAfterRedemptions < 1000 && redemptionsThisMonth > 0;
 
-    // Calculate growth based on floating rate logic
+    // Calculate growth using simple interest on original net investor fund
     let gainedFund = 0;
-    let newBalance = balanceAfterRedemptions;
 
     if (growthData.hasData && growthData.growthPercentage > 0) {
       if (
         isFirstMonth &&
         calculationDate.getTime() === startOfMonth(transactionDate).getTime()
       ) {
-        // First month: calculate partial month growth
         const daysPassed = Math.max(
           0,
           Math.ceil(
@@ -186,21 +184,14 @@ export async function calculateFloatingRateValueWithRedemptions(
         const totalDaysInMonth = monthEnd.getDate();
         const daysFraction = daysPassed / totalDaysInMonth;
 
-        // Formula: Present Value Fund = Net Investor Fund * (1 + Growth Rate * daysFraction) — linear proportioning
-        newBalance =
-          balanceAfterRedemptions *
-          (1 + (growthData.growthPercentage / 100) * daysFraction);
-        gainedFund = newBalance - balanceAfterRedemptions;
+        gainedFund =
+          netInvestorFund * (growthData.growthPercentage / 100) * daysFraction;
       } else {
-        // Subsequent months: use full month calculation
-        // Formula: Present Value Fund = Previous Month Value * (1 + Growth Rate)
-        newBalance =
-          balanceAfterRedemptions * (1 + growthData.growthPercentage / 100);
-        gainedFund = newBalance - balanceAfterRedemptions;
+        gainedFund = netInvestorFund * (growthData.growthPercentage / 100);
       }
     }
 
-    currentValue = newBalance;
+    currentValue = balanceAfterRedemptions + gainedFund;
 
     const monthKey = format(calculationDate, "MMMM yyyy");
     const daysInPeriod = isFirstMonth
