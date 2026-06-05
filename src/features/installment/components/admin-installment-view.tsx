@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { CreateInstallmentAccountModal } from "@/features/installment/components/create-installment-account-modal";
 import { RedeemInstallmentModal } from "@/features/installment/components/redeem-installment-modal";
 import { AdminInstallmentTable } from "@/features/installment/views/admin-installment-table";
@@ -14,6 +15,7 @@ interface AdminInstallmentViewProps {
 export function AdminInstallmentView({
   investorEmails,
 }: AdminInstallmentViewProps) {
+  const router = useRouter();
   const [redemptionAccounts, setRedemptionAccounts] = useState<any[] | null>(
     null
   );
@@ -37,7 +39,7 @@ export function AdminInstallmentView({
   }, []);
 
   const handleRedemptionComplete = () => {
-    window.location.reload();
+    router.refresh();
   };
 
   return (

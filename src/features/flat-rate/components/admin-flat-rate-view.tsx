@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { FlatRateInvestmentsTable } from "@/features/flat-rate/views/flat-rate-investments-table";
 import { RedeemFlatRateModal } from "@/features/flat-rate/components/redeem-flat-rate-modal";
 import { CreateFlatRateModal } from "@/features/flat-rate/components/create-flat-rate-modal";
@@ -13,6 +14,8 @@ interface AdminFlatRateViewProps {
 }
 
 export function AdminFlatRateView({ user }: AdminFlatRateViewProps) {
+  const router = useRouter();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -28,12 +31,12 @@ export function AdminFlatRateView({ user }: AdminFlatRateViewProps) {
         <div className="flex items-center gap-2">
           <CreateFlatRateModal
             onAccountCreated={() => {
-              window.location.reload();
+              router.refresh();
             }}
           />
           <RedeemFlatRateModal
             onRedemptionComplete={() => {
-              window.location.reload();
+              router.refresh();
             }}
           />
         </div>

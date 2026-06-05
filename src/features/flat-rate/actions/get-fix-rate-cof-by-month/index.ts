@@ -181,42 +181,10 @@ export async function getFixRateCoFByMonth(
 
         // Calculate present value as of the target month end
         let presentValue = netCapital; // Fallback value
+        let monthlyGain = 0;
 
         try {
           const npvResult = await calculateNetPresentValueWithRedemptions(
-            account.id,
-            grossAmount,
-            annualRate,
-            account.transactionDate,
-            monthEnd, // Calculate value as of end of target month
-            account.isRollover || false,
-            account.adminFeeApplied || false, // Don't default to true - use actual value
-            redemptionMap.get(account.id),
-            adminFeeRate
-          );
-
-          presentValue = npvResult.currentValue;
-        } catch (error) {
-          console.error(
-            `Error calculating NPV for account ${account.id}:`,
-            error
-          );
-          // Fallback to simple compound calculation if NPV fails
-          console.warn(
-            `NPV calculation failed for account ${account.id}, using fallback calculation`
-          );
-          const monthsElapsed =
-            (monthEnd.getTime() - account.transactionDate.getTime()) /
-            (1000 * 60 * 60 * 24 * 30.44); // Approximate months
-          const monthlyRate = annualRate / 12;
-          presentValue = netCapital * Math.pow(1 + monthlyRate, monthsElapsed);
-        }
-
-        // Extract just this month's interest from the monthly breakdown
-        // The CoF for the allocated profit calculation needs the MONTHLY gain, not cumulative
-        let monthlyGain = 0;
-        try {
-          const npvForMonth = await calculateNetPresentValueWithRedemptions(
             account.id,
             grossAmount,
             annualRate,
@@ -227,17 +195,24 @@ export async function getFixRateCoFByMonth(
             redemptionMap.get(account.id),
             adminFeeRate
           );
-          // Find the target month's entry in the breakdown
+
+          presentValue = npvResult.currentValue;
+
+          // Extract this month's interest from the existing breakdown
           const targetMonthKey = `${monthEnd.toLocaleString("en-US", { month: "long" })} ${monthEnd.getFullYear()}`;
-          const monthEntry = npvForMonth.monthlyBreakdown.find(
+          const monthEntry = npvResult.monthlyBreakdown.find(
             (m) => m.monthYear === targetMonthKey
           );
           if (monthEntry) {
             monthlyGain = monthEntry.interestEarned;
           }
-        } catch {
-          // Fallback: simple monthly interest
-          monthlyGain = netCapital * (annualRate / 12);
+        } catch (error) {
+          console.error(
+            `Error calculating NPV for account ${account.id}:`,
+            error
+          );
+          const monthlyRate = annualRate / 12;
+          monthlyGain = netCapital * monthlyRate;
         }
 
         // Calculate total gain for display purposes

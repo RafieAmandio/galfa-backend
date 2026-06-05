@@ -467,8 +467,7 @@ export function FlatRateInvestmentsTable() {
                 accountId={row.original.id}
                 accountNumber={row.original.name}
                 onAccountDeleted={() => {
-                  // Refresh the table data
-                  window.location.reload();
+                  fetchData();
                 }}
               >
                 <Button variant="destructive" size="sm">

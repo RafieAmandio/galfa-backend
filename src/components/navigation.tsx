@@ -146,7 +146,7 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       <aside className="fixed left-0 top-0 h-screen w-60 sidebar flex flex-col z-50">
         {/* Logo */}
         <div className="p-5 border-b border-white/10">
-          <Link href={isAdmin ? "/admin/dashboard" : "/investor/summary"} className="flex items-center">
+          <Link href={isAdmin ? "/admin/dashboard" : "/investor/summary"} prefetch={false} className="flex items-center">
             <Image
               src="/logo_galfa.png"
               alt="Galfa Logo"
@@ -193,6 +193,7 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                           <li key={child.href}>
                             <Link
                               href={child.href}
+                              prefetch={false}
                               className={cn(
                                 "sidebar-item text-sm py-2",
                                 isActiveRoute(child.href)
@@ -210,6 +211,7 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
                 ) : (
                   <Link
                     href={item.href}
+                    prefetch={false}
                     className={cn(
                       "sidebar-item",
                       isActiveRoute(item.href)
