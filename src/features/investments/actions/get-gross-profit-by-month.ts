@@ -44,38 +44,33 @@ export async function getGrossProfitByMonth(
     const previousMonthStart = startOfMonth(previousMonth);
     const previousMonthEnd = endOfMonth(previousMonth);
 
-    // Get current month AUM from vc_performance
-    const currentMonthAUMResult = await db
-      .select({
-        aum: vcPerformance.aum,
-        date: vcPerformance.date,
-      })
-      .from(vcPerformance)
-      .where(
-        and(
-          gte(vcPerformance.date, monthStart),
-          lt(vcPerformance.date, monthEnd)
+    const [currentMonthAUMResult, previousMonthAUMResult, inflowResult, outflowResult] = await Promise.all([
+      db
+        .select({
+          aum: vcPerformance.aum,
+          date: vcPerformance.date,
+        })
+        .from(vcPerformance)
+        .where(
+          and(
+            gte(vcPerformance.date, monthStart),
+            lt(vcPerformance.date, monthEnd)
+          )
         )
-      )
-      .limit(1);
-
-    // Get previous month AUM from vc_performance
-    const previousMonthAUMResult = await db
-      .select({
-        aum: vcPerformance.aum,
-        date: vcPerformance.date,
-      })
-      .from(vcPerformance)
-      .where(
-        and(
-          gte(vcPerformance.date, previousMonthStart),
-          lt(vcPerformance.date, previousMonthEnd)
+        .limit(1),
+      db
+        .select({
+          aum: vcPerformance.aum,
+          date: vcPerformance.date,
+        })
+        .from(vcPerformance)
+        .where(
+          and(
+            gte(vcPerformance.date, previousMonthStart),
+            lt(vcPerformance.date, previousMonthEnd)
+          )
         )
-      )
-      .limit(1);
-
-    // Get inflow and outflow data
-    const [inflowResult, outflowResult] = await Promise.all([
+        .limit(1),
       getInflowByMonth(selectedMonth),
       getOutflowByMonth(selectedMonth),
     ]);
