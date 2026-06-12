@@ -185,7 +185,7 @@ export async function calculateFloatingRateValueWithRedemptions(
             (Math.min(currentDate.getTime(), monthEnd.getTime()) -
               transactionDate.getTime()) /
               (1000 * 60 * 60 * 24)
-          )
+          ) - 1
         );
         const totalDaysInMonth = monthEnd.getDate();
         const daysFraction = daysPassed / totalDaysInMonth;

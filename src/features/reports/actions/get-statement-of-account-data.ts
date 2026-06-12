@@ -281,9 +281,9 @@ export async function getStatementOfAccountData(
           calcEndDate.getTime() < new Date(monthCur.getFullYear(), monthCur.getMonth() + 1, 0).getTime();
 
         if (isStartMonth && isEndMonth) {
-          daysActive = Math.max(0, calcEndDate.getDate() - result.transactionDate.getDate());
+          daysActive = Math.max(0, calcEndDate.getDate() - result.transactionDate.getDate() - 1);
         } else if (isStartMonth) {
-          daysActive = totalDaysInMonth - result.transactionDate.getDate();
+          daysActive = Math.max(0, totalDaysInMonth - result.transactionDate.getDate() - 1);
         } else if (isEndMonth) {
           daysActive = calcEndDate.getDate();
         } else {

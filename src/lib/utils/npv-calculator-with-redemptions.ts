@@ -123,18 +123,16 @@ export async function calculateNetPresentValueWithRedemptions(
 
     let daysInPeriod: number;
     if (isStartMonth && isEndMonth) {
-      // Single month: exclude start date
-      daysInPeriod = actualEndDate.getDate() - calculationDate.getDate();
+      daysInPeriod = actualEndDate.getDate() - calculationDate.getDate() - 1;
     } else if (isStartMonth) {
-      // First month: exclude start date, count to end of month
-      daysInPeriod = totalDaysInMonth - calculationDate.getDate();
+      // Interest starts the day AFTER the transaction date
+      daysInPeriod = totalDaysInMonth - calculationDate.getDate() - 1;
     } else if (isEndMonth) {
-      // Last month: from 1st to current date (inclusive)
       daysInPeriod = actualEndDate.getDate();
     } else {
-      // Full middle month
       daysInPeriod = totalDaysInMonth;
     }
+    if (daysInPeriod < 0) daysInPeriod = 0;
 
     const startingBalance = currentValue;
 
