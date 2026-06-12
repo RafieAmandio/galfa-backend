@@ -87,6 +87,7 @@ export async function getStatementOfAccountData(
         adminFee: fixRateAccounts.admin_fee,
         isRollover: accounts.is_rollover,
         adminFeeApplied: accounts.admin_fee_applied,
+        parentAccountId: accounts.parent_account_id,
         fullName: profiles.full_name,
       })
       .from(accounts)
@@ -127,19 +128,35 @@ export async function getStatementOfAccountData(
       getBatchRedemptions(allAccountIds),
     ]);
 
-    // Build a map of account id -> capital for resolving rollover parents
+    // Build maps for resolving rollover roots
     const allAccountCapitalMap = new Map<number, number>();
+    const allAccountParentMap = new Map<number, number | null>();
     for (const r of fixResults) {
       const gross = parseFloat(r.grossCapital);
       const isRollover = r.isRollover || false;
       const adminFeeApplied = r.adminFeeApplied !== false;
       const adminFeeRate = !isRollover && adminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
       allAccountCapitalMap.set(r.id, gross * (1 - adminFeeRate));
+      allAccountParentMap.set(r.id, r.parentAccountId ?? null);
     }
     for (const r of floatingResults) {
       const gross = parseFloat(r.grossCapital);
       const adminFeeAmount = parseFloat(r.adminFee);
       allAccountCapitalMap.set(r.id, gross - adminFeeAmount);
+      allAccountParentMap.set(r.id, r.parentAccountId ?? null);
+    }
+
+    // Resolve root capital: walk up the parent chain to find the original investment
+    function getRootCapital(accountId: number): number | undefined {
+      let currentId: number | null | undefined = accountId;
+      const visited = new Set<number>();
+      while (currentId != null && !visited.has(currentId)) {
+        visited.add(currentId);
+        const parentId = allAccountParentMap.get(currentId);
+        if (parentId == null || !allAccountCapitalMap.has(parentId)) break;
+        currentId = parentId;
+      }
+      return currentId != null ? allAccountCapitalMap.get(currentId) : undefined;
     }
 
     // Calculate monthly breakdowns for each account
@@ -160,13 +177,13 @@ export async function getStatementOfAccountData(
       const adminFeeAmount = parseFloat(result.adminFee);
       const netInvestorFund = grossCapital - adminFeeAmount;
 
-      // For rollovers, use the parent's original capital as "reported invested"
+      // For rollovers, trace back to the root account's original capital
       let reportedInvested = netInvestorFund;
       const isRollover = result.isRollover || false;
       if (isRollover && result.parentAccountId) {
-        const parentCapital = allAccountCapitalMap.get(result.parentAccountId);
-        if (parentCapital) {
-          reportedInvested = parentCapital;
+        const rootCapital = getRootCapital(result.parentAccountId);
+        if (rootCapital) {
+          reportedInvested = rootCapital;
         }
       }
 
@@ -300,11 +317,19 @@ export async function getStatementOfAccountData(
         isFirst = false;
       }
 
+      let reportedInvested = netInvestorFund;
+      if (isRollover && result.parentAccountId) {
+        const rootCapital = getRootCapital(result.parentAccountId);
+        if (rootCapital) {
+          reportedInvested = rootCapital;
+        }
+      }
+
       accountData.push({
         id: result.id,
         netInvestorFund,
-        reportedInvested: netInvestorFund,
-        parentAccountId: null,
+        reportedInvested,
+        parentAccountId: result.parentAccountId ?? null,
         transactionDate: result.transactionDate,
         endDate: result.endDate,
         monthlyEntries: entries,
