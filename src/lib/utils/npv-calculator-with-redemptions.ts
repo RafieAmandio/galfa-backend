@@ -2,7 +2,7 @@ import { getMonthlyCompoundRate } from "./rate-calculations";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
-import { format } from "date-fns";
+import { format, differenceInMonths, addDays } from "date-fns";
 import { ADMIN_FEE_PERCENTAGE } from "./constants";
 import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
@@ -83,14 +83,15 @@ export async function calculateNetPresentValueWithRedemptions(
 
   const monthlyRate = getMonthlyCompoundRate(annualRate);
   let currentValue = netCapital;
-  // Track principal separately for simple interest calculation
-  // Interest is always computed on remainingPrincipal, not on currentValue
   let remainingPrincipalForInterest = netCapital;
+  let cumulativeInterestEarned = 0;
   let calculationDate = new Date(startDate);
-  // Hide the in-progress month: cap end at the last day of the previous month
+  const now = new Date();
+  const inCurrentMonth = currentDate.getFullYear() === now.getFullYear() &&
+    currentDate.getMonth() === now.getMonth();
   const lastCompletedMonthEnd = new Date(
     currentDate.getFullYear(),
-    currentDate.getMonth(),
+    currentDate.getMonth() + (inCurrentMonth ? 0 : 1),
     0
   );
   const endDate =
@@ -123,10 +124,9 @@ export async function calculateNetPresentValueWithRedemptions(
 
     let daysInPeriod: number;
     if (isStartMonth && isEndMonth) {
-      daysInPeriod = actualEndDate.getDate() - calculationDate.getDate() - 1;
+      daysInPeriod = actualEndDate.getUTCDate() - calculationDate.getUTCDate() - 1;
     } else if (isStartMonth) {
-      // Interest starts the day AFTER the transaction date
-      daysInPeriod = totalDaysInMonth - calculationDate.getDate() - 1;
+      daysInPeriod = totalDaysInMonth - calculationDate.getUTCDate() - 1;
     } else if (isEndMonth) {
       daysInPeriod = actualEndDate.getDate();
     } else {
@@ -156,22 +156,27 @@ export async function calculateNetPresentValueWithRedemptions(
       }
     });
 
-    // Interest is always calculated on the ORIGINAL principal (netCapital),
-    // not reduced by redemptions. Redemptions are cash withdrawals from
-    // accumulated gains, not principal reductions.
-
     // If balance is fully redeemed (below threshold), end calculation here
     const isFullyRedeemed =
       balanceAfterRedemptions < 1000 && redemptionsThisMonth > 0;
 
-    // Calculate simple interest: always on remaining principal, not on accumulated value
     let effectiveRate: number;
     if (isStartMonth || isEndMonth) {
       effectiveRate = (daysInPeriod / totalDaysInMonth) * monthlyRate;
     } else {
       effectiveRate = monthlyRate;
     }
-    const interestEarned = remainingPrincipalForInterest * effectiveRate;
+    let interestEarned = remainingPrincipalForInterest * effectiveRate;
+
+    if (isEndMonth && !isStartMonth) {
+      const termMonths = differenceInMonths(addDays(currentDate, 1), startDate);
+      const expectedTotal = netCapital * monthlyRate * termMonths;
+      const adjustedInterest = expectedTotal - cumulativeInterestEarned;
+      if (adjustedInterest > 0) {
+        interestEarned = adjustedInterest;
+      }
+    }
+    cumulativeInterestEarned += interestEarned;
 
     currentValue = balanceAfterRedemptions + interestEarned;
 

@@ -87,11 +87,12 @@ export async function calculateFloatingRateValueWithRedemptions(
 
   let currentValue = netInvestorFund;
   let calculationDate = startOfMonth(transactionDate);
-  // Hide the in-progress month: cap end at the last completed month
-  const lastCompletedMonth = startOfMonth(
-    new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-  );
-  // If fund has an end date, don't compute past it
+  const now = new Date();
+  const inCurrentMonth = currentDate.getFullYear() === now.getFullYear() &&
+    currentDate.getMonth() === now.getMonth();
+  const lastCompletedMonth = inCurrentMonth
+    ? startOfMonth(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
+    : startOfMonth(currentDate);
   const endDate = investmentEndDate && startOfMonth(investmentEndDate) < lastCompletedMonth
     ? startOfMonth(investmentEndDate)
     : lastCompletedMonth;

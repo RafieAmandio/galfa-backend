@@ -34,3 +34,4 @@ export async function GET(request: NextRequest) {
   const result = await getStatementOfAccountData(email);
   return NextResponse.json(result, { status: 200 });
 }
+
