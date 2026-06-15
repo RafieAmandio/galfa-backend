@@ -243,8 +243,7 @@ export async function getStatementOfAccountData(
         // Calculate days active
         let daysActive: number;
         const isStartMonth = isFirst;
-        const isEndMonth = monthCur.getTime() === endMon.getTime() &&
-          calcEndDate.getTime() < new Date(monthCur.getFullYear(), monthCur.getMonth() + 1, 0).getTime();
+        const isEndMonth = monthCur.getTime() === endMon.getTime();
 
         if (isStartMonth && isEndMonth) {
           daysActive = Math.max(0, calcEndDate.getUTCDate() - result.transactionDate.getUTCDate() - 1);
@@ -376,6 +375,17 @@ export async function getStatementOfAccountData(
         }
 
         if (account.parentAccountId && !(accountStart < monthCursor)) {
+          const monthData = account.monthlyEntries.find(
+            (m) => m.monthYear === monthKey
+          );
+          if (monthData) {
+            presentValue += monthData.endingBalance - account.netInvestorFund;
+            const prevCumulative =
+              accountCumulativeRedemptions.get(account.id) || 0;
+            const newCumulative = prevCumulative + monthData.redemptions;
+            accountCumulativeRedemptions.set(account.id, newCumulative);
+            cumulativeRedemptions += newCumulative;
+          }
           continue;
         }
 
