@@ -197,28 +197,6 @@ export async function getStatementOfAccountData(
         hasData: m.hasData,
       }));
 
-      // For rollovers, the first month should use full monthly rate (not partial)
-      // because the capital was already invested via the parent account.
-      // We recalculate the entire chain since each month depends on the previous.
-      if (isRollover && entries.length > 0) {
-        const breakdown = valueWithRedemptions.monthlyBreakdown;
-        let balance = netInvestorFund;
-
-        for (let i = 0; i < breakdown.length; i++) {
-          const m = breakdown[i];
-          // Apply redemptions first
-          balance -= m.redemptions;
-          if (balance < 0) balance = 0;
-
-          // Apply full month growth (no partial, even for first month)
-          if (m.growthRate > 0) {
-            balance = balance * (1 + m.growthRate / 100);
-          }
-
-          entries[i].endingBalance = balance;
-        }
-      }
-
       accountData.push({
         id: result.id,
         netInvestorFund,
@@ -281,7 +259,9 @@ export async function getStatementOfAccountData(
         const effectiveRate = (daysActive / totalDaysInMonth) * monthlyRate;
         let monthlyGain: number;
         if (isEndMonth && result.endDate) {
-          const termMonths = differenceInMonths(addDays(result.endDate, 1), result.transactionDate);
+          const startUTC = new Date(Date.UTC(result.transactionDate.getUTCFullYear(), result.transactionDate.getUTCMonth(), result.transactionDate.getUTCDate()));
+          const endUTC = new Date(Date.UTC(result.endDate.getUTCFullYear(), result.endDate.getUTCMonth(), result.endDate.getUTCDate()));
+          const termMonths = differenceInMonths(addDays(endUTC, 1), startUTC);
           const expectedTotal = netInvestorFund * monthlyRate * termMonths;
           monthlyGain = expectedTotal - cumulativeGain;
         } else {

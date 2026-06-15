@@ -180,16 +180,9 @@ export async function calculateFloatingRateValueWithRedemptions(
         isFirstMonth &&
         calculationDate.getTime() === startOfMonth(transactionDate).getTime()
       ) {
-        const daysPassed = Math.max(
-          0,
-          Math.ceil(
-            (Math.min(currentDate.getTime(), monthEnd.getTime()) -
-              transactionDate.getTime()) /
-              (1000 * 60 * 60 * 24)
-          ) - 1
-        );
         const totalDaysInMonth = monthEnd.getDate();
-        const daysFraction = daysPassed / totalDaysInMonth;
+        const daysPassed = totalDaysInMonth - transactionDate.getUTCDate() + 1;
+        const daysFraction = Math.max(0, daysPassed) / totalDaysInMonth;
 
         gainedFund =
           netInvestorFund * (growthData.growthPercentage / 100) * daysFraction;

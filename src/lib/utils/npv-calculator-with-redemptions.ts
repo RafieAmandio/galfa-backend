@@ -169,7 +169,9 @@ export async function calculateNetPresentValueWithRedemptions(
     let interestEarned = remainingPrincipalForInterest * effectiveRate;
 
     if (isEndMonth && !isStartMonth) {
-      const termMonths = differenceInMonths(addDays(currentDate, 1), startDate);
+      const startUTC = new Date(Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate()));
+      const endUTC = new Date(Date.UTC(currentDate.getUTCFullYear(), currentDate.getUTCMonth(), currentDate.getUTCDate()));
+      const termMonths = differenceInMonths(addDays(endUTC, 1), startUTC);
       const expectedTotal = netCapital * monthlyRate * termMonths;
       const adjustedInterest = expectedTotal - cumulativeInterestEarned;
       if (adjustedInterest > 0) {
