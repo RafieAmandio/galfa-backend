@@ -177,8 +177,12 @@ export async function getStatementOfAccountData(
       const adminFeeAmount = parseFloat(result.adminFee);
       const netInvestorFund = grossCapital - adminFeeAmount;
 
-      const reportedInvested = netInvestorFund;
       const isRollover = result.isRollover || false;
+      let reportedInvested = netInvestorFund;
+      if (isRollover && result.parentAccountId) {
+        const rootCapital = getRootCapital(result.parentAccountId);
+        if (rootCapital) reportedInvested = rootCapital;
+      }
 
       const valueWithRedemptions = await calculateFloatingRateValueWithRedemptions(
         result.id,
@@ -290,7 +294,11 @@ export async function getStatementOfAccountData(
         isFirst = false;
       }
 
-      const reportedInvested = netInvestorFund;
+      let reportedInvested = netInvestorFund;
+      if (isRollover && result.parentAccountId) {
+        const rootCapital = getRootCapital(result.parentAccountId);
+        if (rootCapital) reportedInvested = rootCapital;
+      }
 
       accountData.push({
         id: result.id,
