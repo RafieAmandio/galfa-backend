@@ -23,37 +23,54 @@ interface FloatingRateGrowthResult {
   data?: FloatingRateGrowthData;
 }
 
-/**
- * Internal function to calculate floating rate growth percentage
- * Used by both admin and investor functions
- * Business Rules:
- * - If performance % < 24%: growth % = performance % / 12
- * - If performance % >= 24%: growth % = 17%/12 ≈ 1.4167%
- */
+const PERFORMANCE_OVERRIDES: Record<string, number> = {
+  "2025-01": 17.00,
+  "2025-02": 17.08,
+  "2025-03": 17.00,
+  "2025-04": 17.05,
+  "2025-05": 12.66,
+  "2025-06": 13.31,
+  "2025-07": 17.03,
+  "2025-08": 14.03,
+  "2025-09": 47.03,
+  "2025-10": 55.25,
+  "2025-11": 12.00,
+  "2025-12": 7.92,
+  "2026-01": 27.81,
+  "2026-02": 9.60,
+  "2026-03": 9.60,
+};
+
 async function calculateFloatingRateGrowthInternal(
   month: Date
 ): Promise<FloatingRateGrowthResult> {
   try {
-    // Get the performance percentage from the allocated profit function
-    const allocatedProfitResult = await getFloatingRateAllocatedProfitPublic(
-      month
-    );
+    const monthKey = format(month, "yyyy-MM");
+    const overridePerf = PERFORMANCE_OVERRIDES[monthKey];
 
-    // Check if we have performance data
-    const hasPerformanceData = !!(
-      allocatedProfitResult.success && allocatedProfitResult.data
-    );
+    let performancePercentage: number;
+    let hasPerformanceData: boolean;
 
-    if (!hasPerformanceData) {
-      return {
-        success: false,
-        message:
-          "Unable to calculate growth percentage: no performance data available",
-      };
+    if (overridePerf !== undefined) {
+      performancePercentage = overridePerf;
+      hasPerformanceData = true;
+    } else {
+      const allocatedProfitResult = await getFloatingRateAllocatedProfitPublic(
+        month
+      );
+      hasPerformanceData = !!(
+        allocatedProfitResult.success && allocatedProfitResult.data
+      );
+      if (!hasPerformanceData) {
+        return {
+          success: false,
+          message:
+            "Unable to calculate growth percentage: no performance data available",
+        };
+      }
+      performancePercentage =
+        allocatedProfitResult.data!.performancePercentage;
     }
-
-    const performancePercentage =
-      allocatedProfitResult.data!.performancePercentage;
     let growthPercentage: number;
     let rule: string;
     let formula: string;
@@ -172,18 +189,23 @@ export async function getBatchFloatingRateGrowthPercentages(
     month = addMonths(month, 1);
   }
 
-  // Fetch allocated profit for all months in parallel
   const results = await Promise.all(
     months.map(async (m) => {
       const key = format(m, "yyyy-MM");
       try {
-        const allocatedProfitResult = await getFloatingRateAllocatedProfitPublic(m);
+        const overridePerf = PERFORMANCE_OVERRIDES[key];
+        let performancePercentage: number;
 
-        if (!allocatedProfitResult.success || !allocatedProfitResult.data) {
-          return { key, data: { growthPercentage: 0, performancePercentage: 0, appliedRule: "No data available", hasData: false } as GrowthData };
+        if (overridePerf !== undefined) {
+          performancePercentage = overridePerf;
+        } else {
+          const allocatedProfitResult = await getFloatingRateAllocatedProfitPublic(m);
+          if (!allocatedProfitResult.success || !allocatedProfitResult.data) {
+            return { key, data: { growthPercentage: 0, performancePercentage: 0, appliedRule: "No data available", hasData: false } as GrowthData };
+          }
+          performancePercentage = allocatedProfitResult.data.performancePercentage;
         }
 
-        const performancePercentage = allocatedProfitResult.data.performancePercentage;
         let growthPercentage: number;
         let appliedRule: string;
 
