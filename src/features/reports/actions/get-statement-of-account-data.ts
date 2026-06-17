@@ -260,16 +260,7 @@ export async function getStatementOfAccountData(
         }
 
         const effectiveRate = (daysActive / totalDaysInMonth) * monthlyRate;
-        let monthlyGain: number;
-        if (isEndMonth && result.endDate) {
-          const startUTC = new Date(Date.UTC(result.transactionDate.getUTCFullYear(), result.transactionDate.getUTCMonth(), result.transactionDate.getUTCDate()));
-          const endUTC = new Date(Date.UTC(result.endDate.getUTCFullYear(), result.endDate.getUTCMonth(), result.endDate.getUTCDate()));
-          const termMonths = differenceInMonths(addDays(endUTC, 1), startUTC);
-          const expectedTotal = netInvestorFund * monthlyRate * termMonths;
-          monthlyGain = expectedTotal - cumulativeGain;
-        } else {
-          monthlyGain = netInvestorFund * effectiveRate;
-        }
+        const monthlyGain = netInvestorFund * effectiveRate;
         cumulativeGain += monthlyGain;
 
         // Track redemptions in this month
@@ -292,6 +283,31 @@ export async function getStatementOfAccountData(
 
         monthCur = addMonths(monthCur, 1);
         isFirst = false;
+      }
+
+      if (result.endDate && entries.length > 0) {
+        const startUTC = new Date(Date.UTC(result.transactionDate.getUTCFullYear(), result.transactionDate.getUTCMonth(), result.transactionDate.getUTCDate()));
+        const endUTC = new Date(Date.UTC(result.endDate.getUTCFullYear(), result.endDate.getUTCMonth(), result.endDate.getUTCDate()));
+        const termMonths = differenceInMonths(addDays(endUTC, 1), startUTC);
+        const expectedTotal = netInvestorFund * monthlyRate * termMonths;
+        const remainder = expectedTotal - cumulativeGain;
+        if (Math.abs(remainder) > 0.01) {
+          cumulativeGain += remainder;
+          const adjustedPV = netInvestorFund + cumulativeGain - cumulativeRedemptions;
+          const lastEndMon = startOfMonth(calcEndDate);
+          const lastMonthEnd = new Date(lastEndMon.getFullYear(), lastEndMon.getMonth() + 1, 0);
+          const isFullEndMonth = calcEndDate.getDate() >= lastMonthEnd.getDate();
+          if (isFullEndMonth) {
+            entries.push({
+              monthYear: format(addMonths(lastEndMon, 1), "MMMM yyyy"),
+              endingBalance: adjustedPV,
+              redemptions: 0,
+              hasData: true,
+            });
+          } else {
+            entries[entries.length - 1].endingBalance = adjustedPV;
+          }
+        }
       }
 
       let reportedInvested = netInvestorFund;
