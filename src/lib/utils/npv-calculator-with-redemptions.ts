@@ -3,6 +3,10 @@ import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { format, differenceInMonths, addDays } from "date-fns";
+
+function getLocalDate(d: Date): number {
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+}
 import { ADMIN_FEE_PERCENTAGE } from "./constants";
 import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
@@ -128,7 +132,7 @@ export async function calculateNetPresentValueWithRedemptions(
     } else if (isStartMonth) {
       daysInPeriod = totalDaysInMonth - calculationDate.getUTCDate() - 1;
     } else if (isEndMonth) {
-      daysInPeriod = actualEndDate.getDate();
+      daysInPeriod = getLocalDate(actualEndDate);
     } else {
       daysInPeriod = totalDaysInMonth;
     }

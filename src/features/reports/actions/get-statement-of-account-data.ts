@@ -36,6 +36,10 @@ export interface StatementOfAccountData {
   years: StatementYearData[];
 }
 
+function getLocalDate(d: Date): number {
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+}
+
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
@@ -254,7 +258,7 @@ export async function getStatementOfAccountData(
         } else if (isStartMonth) {
           daysActive = Math.max(0, totalDaysInMonth - result.transactionDate.getUTCDate() - 1);
         } else if (isEndMonth) {
-          daysActive = calcEndDate.getDate();
+          daysActive = getLocalDate(calcEndDate);
         } else {
           daysActive = totalDaysInMonth;
         }
@@ -295,7 +299,7 @@ export async function getStatementOfAccountData(
           const childNIF = childGross * (1 - childAdminFeeRate);
           const lastEndMon = startOfMonth(calcEndDate);
           const lastMonthEnd = new Date(lastEndMon.getFullYear(), lastEndMon.getMonth() + 1, 0);
-          const isFullEndMonth = calcEndDate.getDate() >= lastMonthEnd.getDate();
+          const isFullEndMonth = getLocalDate(calcEndDate) >= lastMonthEnd.getDate();
           const parentEndBalance = netInvestorFund + cumulativeGain;
           const remainder = childNIF - parentEndBalance;
           if (isFullEndMonth && Math.abs(remainder) > 0.01) {
