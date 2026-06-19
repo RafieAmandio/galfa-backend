@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStatementOfAccountData } from "@/features/reports/actions/get-statement-of-account-data";
+import { getStatementOfAccountDataDebug } from "@/features/reports/actions/get-statement-of-account-data";
 import { getBatchFloatingRateGrowthPercentages } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage/index";
 import { format } from "date-fns";
 
@@ -12,7 +13,6 @@ export async function GET(request: NextRequest) {
     const { getFloatingRateAllocatedProfitPublic } = await import(
       "@/features/floating-rate/actions/get-floating-rate-allocated-profit/index"
     );
-    // Debug specific month
     const month = searchParams.get("month") || "2025-02";
     const monthDate = new Date(month + "-15");
     const allocResult = await getFloatingRateAllocatedProfitPublic(monthDate);
@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
       allocatedProfit: allocResult,
       growthRates: entries
     });
+  }
+
+  if (debug === "accounts") {
+    const result = await getStatementOfAccountDataDebug(email);
+    return NextResponse.json(result, { status: 200 });
   }
 
   const result = await getStatementOfAccountData(email);

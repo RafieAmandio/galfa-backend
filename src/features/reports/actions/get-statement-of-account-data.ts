@@ -203,7 +203,7 @@ export async function getStatementOfAccountData(
 
       accountData.push({
         id: result.id,
-        netInvestorFund,
+          netInvestorFund,
         reportedInvested,
         parentAccountId: result.parentAccountId,
         transactionDate: result.transactionDate,
@@ -286,26 +286,27 @@ export async function getStatementOfAccountData(
       }
 
       if (result.endDate && entries.length > 0) {
-        const startUTC = new Date(Date.UTC(result.transactionDate.getUTCFullYear(), result.transactionDate.getUTCMonth(), result.transactionDate.getUTCDate()));
-        const endUTC = new Date(Date.UTC(result.endDate.getUTCFullYear(), result.endDate.getUTCMonth(), result.endDate.getUTCDate()));
-        const termMonths = differenceInMonths(addDays(endUTC, 1), startUTC);
-        const expectedTotal = netInvestorFund * monthlyRate * termMonths;
-        const remainder = expectedTotal - cumulativeGain;
-        if (Math.abs(remainder) > 0.01) {
-          cumulativeGain += remainder;
-          const adjustedPV = netInvestorFund + cumulativeGain - cumulativeRedemptions;
+        const child = fixResults.find(r => r.parentAccountId === result.id);
+        if (child) {
+          const childGross = parseFloat(child.grossCapital);
+          const childIsRollover = child.isRollover || false;
+          const childAdminFeeApplied = child.adminFeeApplied !== false;
+          const childAdminFeeRate = !childIsRollover && childAdminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
+          const childNIF = childGross * (1 - childAdminFeeRate);
           const lastEndMon = startOfMonth(calcEndDate);
           const lastMonthEnd = new Date(lastEndMon.getFullYear(), lastEndMon.getMonth() + 1, 0);
           const isFullEndMonth = calcEndDate.getDate() >= lastMonthEnd.getDate();
-          if (isFullEndMonth) {
+          const parentEndBalance = netInvestorFund + cumulativeGain;
+          const remainder = childNIF - parentEndBalance;
+          if (isFullEndMonth && Math.abs(remainder) > 0.01) {
+            cumulativeGain += remainder;
+            const adjustedPV = netInvestorFund + cumulativeGain - cumulativeRedemptions;
             entries.push({
               monthYear: format(addMonths(lastEndMon, 1), "MMMM yyyy"),
               endingBalance: adjustedPV,
               redemptions: 0,
               hasData: true,
             });
-          } else {
-            entries[entries.length - 1].endingBalance = adjustedPV;
           }
         }
       }
@@ -318,7 +319,7 @@ export async function getStatementOfAccountData(
 
       accountData.push({
         id: result.id,
-        netInvestorFund,
+          netInvestorFund,
         reportedInvested,
         parentAccountId: result.parentAccountId ?? null,
         transactionDate: result.transactionDate,
@@ -497,4 +498,72 @@ export async function getStatementOfAccountData(
           : "Failed to fetch statement of account data",
     };
   }
+}
+
+export async function getStatementOfAccountDataDebug(investorEmail: string) {
+  const db = createDrizzleConnection();
+
+  const floatingResults = await db
+    .select({
+      id: accounts.id,
+      grossCapital: accounts.capital,
+      transactionDate: accounts.transaction_date,
+      endDate: accounts.end_date,
+      status: accounts.status,
+      adminFee: floatingRateAccounts.admin_fee,
+      isRollover: accounts.is_rollover,
+      parentAccountId: accounts.parent_account_id,
+      accountNumber: accounts.account_number,
+    })
+    .from(accounts)
+    .innerJoin(floatingRateAccounts, eq(accounts.id, floatingRateAccounts.account_id))
+    .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+    .where(eq(authUsers.email, investorEmail))
+    .orderBy(accounts.transaction_date);
+
+  const fixResults = await db
+    .select({
+      id: accounts.id,
+      grossCapital: accounts.capital,
+      transactionDate: accounts.transaction_date,
+      endDate: accounts.end_date,
+      status: accounts.status,
+      annualRate: fixRateAccounts.annual_rate,
+      adminFee: fixRateAccounts.admin_fee,
+      isRollover: accounts.is_rollover,
+      adminFeeApplied: accounts.admin_fee_applied,
+      parentAccountId: accounts.parent_account_id,
+      accountNumber: accounts.account_number,
+    })
+    .from(accounts)
+    .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+    .innerJoin(profiles, eq(accounts.user_id, profiles.id))
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+    .where(eq(authUsers.email, investorEmail))
+    .orderBy(accounts.transaction_date);
+
+  return {
+    floating: floatingResults.map(r => ({
+      id: r.id,
+      accountNumber: r.accountNumber,
+      grossCapital: r.grossCapital,
+      netInvestorFund: parseFloat(r.grossCapital) - parseFloat(r.adminFee),
+      transactionDate: r.transactionDate,
+      endDate: r.endDate,
+      isRollover: r.isRollover,
+      parentAccountId: r.parentAccountId,
+    })),
+    fixRate: fixResults.map(r => ({
+      id: r.id,
+      accountNumber: r.accountNumber,
+      grossCapital: r.grossCapital,
+      annualRate: r.annualRate,
+      transactionDate: r.transactionDate,
+      endDate: r.endDate,
+      isRollover: r.isRollover,
+      adminFeeApplied: r.adminFeeApplied,
+      parentAccountId: r.parentAccountId,
+    })),
+  };
 }

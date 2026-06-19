@@ -39,6 +39,7 @@ const PERFORMANCE_OVERRIDES: Record<string, number> = {
   "2026-01": 27.81,
   "2026-02": 9.60,
   "2026-03": 9.60,
+  "2026-04": 9.60,
 };
 
 async function calculateFloatingRateGrowthInternal(
@@ -76,24 +77,12 @@ async function calculateFloatingRateGrowthInternal(
     let formula: string;
     let breakdown: string;
 
-    // Apply business rules
-    if (performancePercentage < 24) {
-      // Rule 1: Performance < 24% → Growth = Performance / 12
-      growthPercentage = performancePercentage / 12;
-      rule = "Performance < 24%";
-      formula = "Growth % = Performance % / 12";
-      breakdown = `${performancePercentage.toFixed(
-        2
-      )}% / 12 = ${growthPercentage.toFixed(2)}%`;
-    } else {
-      // Rule 2: Performance >= 24% → Growth = 17%/12 ≈ 1.4167%
-      growthPercentage = 17 / 12;
-      rule = "Performance ≥ 24%";
-      formula = "Growth % = 17%/12 ≈ 1.4167% (capped rate)";
-      breakdown = `Performance: ${performancePercentage.toFixed(
-        2
-      )}% → Growth: ${(17 / 12).toFixed(4)}%`;
-    }
+    growthPercentage = performancePercentage / 12;
+    rule = "Growth = Performance / 12";
+    formula = "Growth % = Performance % / 12";
+    breakdown = `${performancePercentage.toFixed(
+      2
+    )}% / 12 = ${growthPercentage.toFixed(2)}%`;
 
     const data: FloatingRateGrowthData = {
       month,
@@ -206,16 +195,8 @@ export async function getBatchFloatingRateGrowthPercentages(
           performancePercentage = allocatedProfitResult.data.performancePercentage;
         }
 
-        let growthPercentage: number;
-        let appliedRule: string;
-
-        if (performancePercentage < 24) {
-          growthPercentage = performancePercentage / 12;
-          appliedRule = "Performance < 24%";
-        } else {
-          growthPercentage = 17 / 12;
-          appliedRule = "Performance ≥ 24%";
-        }
+        const growthPercentage = performancePercentage / 12;
+        const appliedRule = "Growth = Performance / 12";
 
         return { key, data: { growthPercentage, performancePercentage, appliedRule, hasData: true } as GrowthData };
       } catch {
