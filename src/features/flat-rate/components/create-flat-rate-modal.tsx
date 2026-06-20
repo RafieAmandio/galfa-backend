@@ -33,6 +33,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { format } from "date-fns";
 import { CalendarIcon, PlusIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -405,52 +413,75 @@ export function CreateFlatRateModal({
                   <Label className="text-sm font-medium">
                     Select Matured Account to Rollover *
                   </Label>
-                  <Select
-                    value={selectedRolloverAccountId}
-                    onValueChange={setSelectedRolloverAccountId}
-                    required={isRollover}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a matured account to rollover..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {rolloverAccounts.map((account) => (
-                        <SelectItem
-                          key={account.id}
-                          value={account.id.toString()}
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {account.accountNumber}{" "}
-                              <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                account.accountType === "fixed"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-blue-100 text-blue-700"
-                              }`}>
-                                {account.accountType === "fixed" ? "Fixed" : "Floating"}
-                              </span>
-                              {" "}- Original:{" "}
-                              {formatCurrency(
-                                parseFloat(account.originalCapital)
-                              )}
-                            </span>
-                            <span className="text-sm text-green-600 font-medium">
-                              Matured Value:{" "}
-                              {formatCurrency(account.maturedValue)}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {account.investorEmail} | Status: {account.status}
-                              {account.endDate &&
-                                ` | Ended: ${format(
-                                  new Date(account.endDate),
-                                  "d MMMM yyyy"
-                                )}`}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between h-auto min-h-10 font-normal"
+                      >
+                        {selectedRolloverAccountId ? (
+                          (() => {
+                            const selected = rolloverAccounts.find(
+                              (a) => a.id.toString() === selectedRolloverAccountId
+                            );
+                            return selected ? (
+                              <div className="flex flex-col items-start text-left">
+                                <span className="font-medium">{selected.accountNumber}</span>
+                                <span className="text-sm text-green-600">
+                                  Matured: {formatCurrency(selected.maturedValue)}
+                                </span>
+                              </div>
+                            ) : "Select a matured account...";
+                          })()
+                        ) : (
+                          <span className="text-muted-foreground">Search matured accounts...</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search by name, email, or fund..." />
+                        <CommandList>
+                          <CommandEmpty>No matured account found.</CommandEmpty>
+                          <CommandGroup>
+                            {rolloverAccounts.map((account) => (
+                              <CommandItem
+                                key={account.id}
+                                value={`${account.accountNumber} ${account.investorEmail}`}
+                                onSelect={() => {
+                                  setSelectedRolloverAccountId(account.id.toString());
+                                }}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="font-medium">
+                                    {account.accountNumber}{" "}
+                                    <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                      account.accountType === "fixed"
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-blue-100 text-blue-700"
+                                    }`}>
+                                      {account.accountType === "fixed" ? "Fixed" : "Floating"}
+                                    </span>
+                                    {" "}- Original:{" "}
+                                    {formatCurrency(parseFloat(account.originalCapital))}
+                                  </span>
+                                  <span className="text-sm text-green-600 font-medium">
+                                    Matured Value: {formatCurrency(account.maturedValue)}
+                                  </span>
+                                  <span className="text-sm text-muted-foreground">
+                                    {account.investorEmail} | Status: {account.status}
+                                    {account.endDate &&
+                                      ` | Ended: ${format(new Date(account.endDate), "d MMMM yyyy")}`}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   <p className="mt-1 text-sm text-muted-foreground">
                     Select the matured account to extend. The investor, capital
                     amount, and start date will be auto-filled.
@@ -550,9 +581,9 @@ export function CreateFlatRateModal({
                   onChange={(e) => setAnnualRate(e.target.value)}
                   placeholder="Enter annual rate (e.g., 17 for 17%)"
                   required
-                  min="1"
+                  min="0.01"
                   max="100"
-                  step="1"
+                  step="0.01"
                 />
                 {isRollover && selectedRolloverAccountId ? (
                   <p className="text-sm text-blue-600">
