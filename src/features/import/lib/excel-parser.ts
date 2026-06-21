@@ -47,7 +47,10 @@ export interface ParseResult {
 
 function parseDateCell(cell: unknown): string {
   if (cell instanceof Date) {
-    return cell.toISOString().split("T")[0];
+    const y = cell.getFullYear();
+    const m = String(cell.getMonth() + 1).padStart(2, "0");
+    const d = String(cell.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }
   if (typeof cell === "number") {
     // Excel serial date number
