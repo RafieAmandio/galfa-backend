@@ -576,14 +576,17 @@ export function CreateFlatRateModal({
                 </Label>
                 <Input
                   id="annualRate"
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={annualRate}
-                  onChange={(e) => setAnnualRate(e.target.value)}
-                  placeholder="Enter annual rate (e.g., 17 for 17%)"
+                  onChange={(e) => {
+                    const val = e.target.value.replace(',', '.');
+                    if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                      setAnnualRate(val);
+                    }
+                  }}
+                  placeholder="Enter annual rate (e.g., 9.25 for 9.25%)"
                   required
-                  min="0.01"
-                  max="100"
-                  step="0.01"
                 />
                 {isRollover && selectedRolloverAccountId ? (
                   <p className="text-sm text-blue-600">
