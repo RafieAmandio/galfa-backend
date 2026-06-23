@@ -560,6 +560,9 @@ export function CreateFloatingRateModal({
                       selected={transactionDate}
                       onSelect={(date) => date && setTransactionDate(date)}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>
@@ -600,6 +603,9 @@ export function CreateFloatingRateModal({
                       selected={endDate}
                       onSelect={(date) => date && setEndDate(date)}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
                       disabled={(date) => date <= transactionDate}
                     />
                   </PopoverContent>

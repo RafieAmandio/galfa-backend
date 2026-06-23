@@ -369,6 +369,9 @@ export function RedeemFlatRateModal({
                           setRedemptionDate(date);
                         }
                       }}
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>

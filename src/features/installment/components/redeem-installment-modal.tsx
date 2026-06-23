@@ -414,6 +414,9 @@ export function RedeemInstallmentModal({
                       selected={redemptionDate}
                       onSelect={(date) => setRedemptionDate(date || new Date())}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>

@@ -398,6 +398,9 @@ export function RedeemFloatingRateModal({
                       selected={redemptionDate}
                       onSelect={(date) => handleDateChange(date)}
                       initialFocus
+                      captionLayout="dropdown"
+                      fromYear={2020}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>
