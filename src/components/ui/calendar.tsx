@@ -48,17 +48,17 @@ function Calendar({
         ),
         month: cn("flex flex-col w-full gap-4", defaultClassNames.month),
         nav: cn(
-          "flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between",
+          "flex items-center gap-1 w-full absolute top-0 inset-x-0 justify-between pointer-events-none",
           defaultClassNames.nav
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
+          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none",
+          "size-(--cell-size) aria-disabled:opacity-50 p-0 select-none pointer-events-auto",
           defaultClassNames.button_next
         ),
         month_caption: cn(
@@ -66,16 +66,16 @@ function Calendar({
           defaultClassNames.month_caption
         ),
         dropdowns: cn(
-          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5",
+          "w-full flex items-center text-sm font-medium justify-center h-(--cell-size) gap-1.5 relative z-10",
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
-          "relative",
+          "relative inline-flex items-center",
           defaultClassNames.dropdown_root
         ),
-        dropdown: cn("appearance-none bg-background border border-input rounded-md px-2 py-1 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring", defaultClassNames.dropdown),
+        dropdown: cn("bg-background border border-input rounded-md px-2 py-1 text-sm font-medium cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring", defaultClassNames.dropdown),
         caption_label: cn(
-          "select-none font-medium hidden",
+          "select-none font-medium aria-hidden:hidden",
           defaultClassNames.caption_label
         ),
         table: "w-full border-collapse",
