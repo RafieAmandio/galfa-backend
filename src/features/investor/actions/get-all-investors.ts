@@ -17,15 +17,21 @@ export interface InvestorOption {
 export async function getAllInvestors(): Promise<InvestorOption[]> {
   const db = createDrizzleConnection();
 
-  const results = await db
-    .select({
-      id: profiles.id,
-      email: authUsers.email,
-      fullName: profiles.full_name,
-    })
-    .from(profiles)
-    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
-    .orderBy(authUsers.email);
+  const timeoutMs = 15_000;
+  const results = await Promise.race([
+    db
+      .select({
+        id: profiles.id,
+        email: authUsers.email,
+        fullName: profiles.full_name,
+      })
+      .from(profiles)
+      .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+      .orderBy(authUsers.email),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("getAllInvestors query timed out")), timeoutMs)
+    ),
+  ]);
 
   return results
     .filter((result) => result.email !== null)

@@ -29,6 +29,10 @@ export function createDrizzleConnection(config = dbDefaultConfig) {
         : connStr + (connStr.includes("?") ? "&" : "?") + "sslmode=require";
     globalConnection.connection = postgres(urlWithSSL, {
       prepare: false,
+      connect_timeout: 10,
+      idle_timeout: 20,
+      max: 3,
+      max_lifetime: 60 * 5,
     });
     try {
       const now = new Date();
