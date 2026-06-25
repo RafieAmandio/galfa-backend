@@ -28,8 +28,16 @@ import { InvestorOption } from "@/features/investor/actions/get-all-investors";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ChevronsUpDown, Check } from "lucide-react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
@@ -215,27 +223,51 @@ export function CreateInstallmentAccountModal({
             <Label htmlFor="investorEmail" className="text-sm font-medium">
               Select Investor *
             </Label>
-            <Select
-              value={selectedInvestorEmail}
-              onValueChange={setSelectedInvestorEmail}
-              required
-            >
-              <SelectTrigger id="investorEmail">
-                <SelectValue placeholder="Choose an investor" />
-              </SelectTrigger>
-              <SelectContent>
-                {investorEmails.map((investor) => (
-                  <SelectItem key={investor.id} value={investor.email}>
-                    {investor.email}
-                    {investor.fullName && (
-                      <span className="text-muted-foreground ml-2">
-                        ({investor.fullName})
-                      </span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className={cn(
+                    "w-full justify-between font-normal",
+                    !selectedInvestorEmail && "text-muted-foreground"
+                  )}
+                >
+                  {selectedInvestorEmail
+                    ? (() => {
+                        const inv = investorEmails.find(i => i.email === selectedInvestorEmail);
+                        return inv ? `${inv.email}${inv.fullName ? ` - ${inv.fullName}` : ""}` : selectedInvestorEmail;
+                      })()
+                    : "Search investor..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search by name or email..." />
+                  <CommandList>
+                    <CommandEmpty>No investor found.</CommandEmpty>
+                    <CommandGroup>
+                      {investorEmails.map((investor) => (
+                        <CommandItem
+                          key={investor.id}
+                          value={`${investor.email} ${investor.fullName || ""}`}
+                          onSelect={() => setSelectedInvestorEmail(investor.email)}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", selectedInvestorEmail === investor.email ? "opacity-100" : "opacity-0")} />
+                          <div className="flex flex-col">
+                            <span className="font-medium">{investor.email}</span>
+                            {investor.fullName && (
+                              <span className="text-xs text-muted-foreground">{investor.fullName}</span>
+                            )}
+                          </div>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             <FieldError error={getFieldError("investorEmail")} />
           </div>
 

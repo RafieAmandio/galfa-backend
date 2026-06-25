@@ -42,7 +42,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { format } from "date-fns";
-import { CalendarIcon, PlusIcon } from "lucide-react";
+import { CalendarIcon, PlusIcon, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CreateFlatRateModalProps {
@@ -503,27 +503,55 @@ export function CreateFlatRateModal({
               {/* Investor Selection */}
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Select Investor *</Label>
-                <Select
-                  value={selectedInvestorEmail}
-                  onValueChange={setSelectedInvestorEmail}
-                  required
-                  disabled={isRollover && selectedRolloverAccountId !== ""}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select an investor..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {investors.map((investor) => (
-                      <SelectItem key={investor.id} value={investor.email}>
-                        {investor.email}
-                        {investor.fullName && ` - ${investor.fullName}`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      disabled={isRollover && selectedRolloverAccountId !== ""}
+                      className={cn(
+                        "w-full justify-between font-normal",
+                        !selectedInvestorEmail && "text-muted-foreground"
+                      )}
+                    >
+                      {selectedInvestorEmail
+                        ? (() => {
+                            const inv = investors.find(i => i.email === selectedInvestorEmail);
+                            return inv ? `${inv.email}${inv.fullName ? ` - ${inv.fullName}` : ""}` : selectedInvestorEmail;
+                          })()
+                        : "Search investor..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No investor found.</CommandEmpty>
+                        <CommandGroup>
+                          {investors.map((investor) => (
+                            <CommandItem
+                              key={investor.id}
+                              value={`${investor.email} ${investor.fullName || ""}`}
+                              onSelect={() => setSelectedInvestorEmail(investor.email)}
+                            >
+                              <Check className={cn("mr-2 h-4 w-4", selectedInvestorEmail === investor.email ? "opacity-100" : "opacity-0")} />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{investor.email}</span>
+                                {investor.fullName && (
+                                  <span className="text-xs text-muted-foreground">{investor.fullName}</span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {isRollover && selectedRolloverAccountId && (
                   <p className="text-sm text-blue-600">
-                    ✓ Auto-selected from rollover account
+                    Auto-selected from rollover account
                   </p>
                 )}
               </div>
