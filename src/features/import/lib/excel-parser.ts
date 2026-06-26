@@ -47,9 +47,9 @@ export interface ParseResult {
 
 function parseDateCell(cell: unknown): string {
   if (cell instanceof Date) {
-    const y = cell.getFullYear();
-    const m = String(cell.getMonth() + 1).padStart(2, "0");
-    const d = String(cell.getDate()).padStart(2, "0");
+    const y = cell.getUTCFullYear();
+    const m = String(cell.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(cell.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
   if (typeof cell === "number") {
@@ -79,7 +79,7 @@ function parseBoolean(cell: unknown): boolean {
 }
 
 export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
-  const wb = XLSX.read(arrayBuffer, { type: "array", cellDates: true });
+  const wb = XLSX.read(arrayBuffer, { type: "array" });
 
   const result: ParseResult = {
     fixedRate: [],

@@ -214,8 +214,8 @@ export async function bulkImportAccounts(
         accountNumber: row.accountNumber,
         capital: row.capital,
         annualRate: row.annualRate / 100, // Convert percentage to decimal
-        transactionDate: new Date(row.startDate),
-        endDate: new Date(row.endDate),
+        transactionDate: new Date(row.startDate + "T00:00:00"),
+        endDate: new Date(row.endDate + "T00:00:00"),
         isRollover: row.isRollover,
         parentAccountId,
         adminFeePercentage: row.adminFeePercentage,
@@ -274,8 +274,8 @@ export async function bulkImportAccounts(
         accountNumber: row.accountNumber,
         capital: row.capital,
         adminFeePercentage: row.adminFeePercentage / 100, // Convert percentage to decimal
-        transactionDate: new Date(row.startDate),
-        endDate: new Date(row.endDate),
+        transactionDate: new Date(row.startDate + "T00:00:00"),
+        endDate: new Date(row.endDate + "T00:00:00"),
         isRollover: row.isRollover,
         parentAccountId,
         description: row.description || undefined,
@@ -383,8 +383,8 @@ export async function bulkImportAccounts(
       const adminFee = row.capital * (row.adminFeePercentage / 100);
       const monthlyCoFDecimal = row.monthlyCoF / 100;
 
-      const transactionDateObj = new Date(row.startDate);
-      const endDateObj = new Date(row.endDate);
+      const transactionDateObj = new Date(row.startDate + "T00:00:00");
+      const endDateObj = new Date(row.endDate + "T00:00:00");
       endDateObj.setHours(
         transactionDateObj.getHours(),
         transactionDateObj.getMinutes(),
