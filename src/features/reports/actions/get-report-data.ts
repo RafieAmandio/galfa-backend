@@ -90,17 +90,14 @@ export async function getReportData(
   investorEmail: string
 ): Promise<{ success: boolean; data?: InvestorReportData; error?: string }> {
   try {
-    // Fetch all investment data in parallel
-    const [flatRateData, floatingRateResult, installmentData, capitalMarketResult, vcPerformanceResult, fundAllocationsResult, statementResult] =
-      await Promise.all([
-        getInvestorSummary(investorEmail),
-        getInvestorFloatingRateInvestments(investorEmail),
-        getInvestorInstallmentInvestments(investorEmail),
-        getInvestorCapitalMarketInvestments(investorEmail),
-        getAllVCPerformance(),
-        getFundAllocations(),
-        getStatementOfAccountData(investorEmail),
-      ]);
+    // Fetch investment data sequentially to avoid exhausting connection pool
+    const flatRateData = await getInvestorSummary(investorEmail);
+    const floatingRateResult = await getInvestorFloatingRateInvestments(investorEmail);
+    const installmentData = await getInvestorInstallmentInvestments(investorEmail);
+    const capitalMarketResult = await getInvestorCapitalMarketInvestments(investorEmail);
+    const vcPerformanceResult = await getAllVCPerformance();
+    const fundAllocationsResult = await getFundAllocations();
+    const statementResult = await getStatementOfAccountData(investorEmail);
 
     // Process flat rate investments
     const flatRateInvestments: FlatRateInvestmentData[] = flatRateData

@@ -14,7 +14,7 @@ import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { ADMIN_FEE_PERCENTAGE } from "@/lib/utils/constants";
-import { startOfMonth, addMonths, addDays, isAfter, differenceInMonths, format } from "date-fns";
+import { startOfMonth, addMonths, addDays, isAfter, differenceInMonths, format, parse } from "date-fns";
 
 export interface StatementMonthData {
   month: string;
@@ -458,7 +458,7 @@ export async function getStatementOfAccountData(
     const yearMap = new Map<number, StatementMonthData[]>();
 
     for (const [monthKey, data] of monthlyAggregated) {
-      const date = new Date(monthKey);
+      const date = parse(monthKey, "MMMM yyyy", new Date());
       const year = date.getFullYear();
       const monthName = MONTH_NAMES[date.getMonth()];
 
