@@ -1,8 +1,14 @@
 "use server";
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
-import { accounts, authUsers } from "@/db/drizzle/schema";
-import { inArray } from "drizzle-orm";
+import {
+  accounts,
+  authUsers,
+  fixRateAccounts,
+  floatingRateAccounts,
+  installmentAccounts,
+} from "@/db/drizzle/schema";
+import { inArray, eq } from "drizzle-orm";
 
 interface ValidationCheckResult {
   newEmails: string[]; // emails not found in DB (will be created)
@@ -27,18 +33,40 @@ export async function validateImportData(
   const existingEmailSet = new Set(existingUsers.map((u) => u.email));
   const newEmails = uniqueEmails.filter((e) => !existingEmailSet.has(e));
 
-  // Check which account numbers already exist in DB
+  // Check which account numbers already exist in DB with a real type-specific entry
   const uniqueAccountNumbers = [...new Set(accountNumbers.filter(Boolean))];
-  const existingAccounts =
-    uniqueAccountNumbers.length > 0
-      ? await db
-          .select({ account_number: accounts.account_number })
-          .from(accounts)
-          .where(inArray(accounts.account_number, uniqueAccountNumbers))
-      : [];
-  const existingAccountSet = new Set(
-    existingAccounts.map((a) => a.account_number)
-  );
+  const existingAccountSet = new Set<string>();
+  const orphanedAccountIds: number[] = [];
+
+  if (uniqueAccountNumbers.length > 0) {
+    const existingAccounts = await db
+      .select({
+        id: accounts.id,
+        account_number: accounts.account_number,
+        hasFixRate: fixRateAccounts.id,
+        hasFloatingRate: floatingRateAccounts.id,
+        hasInstallment: installmentAccounts.id,
+      })
+      .from(accounts)
+      .leftJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
+      .leftJoin(floatingRateAccounts, eq(accounts.id, floatingRateAccounts.account_id))
+      .leftJoin(installmentAccounts, eq(accounts.id, installmentAccounts.account_id))
+      .where(inArray(accounts.account_number, uniqueAccountNumbers));
+
+    for (const a of existingAccounts) {
+      if (a.hasFixRate || a.hasFloatingRate || a.hasInstallment) {
+        existingAccountSet.add(a.account_number);
+      } else {
+        orphanedAccountIds.push(a.id);
+      }
+    }
+
+    if (orphanedAccountIds.length > 0) {
+      await db
+        .delete(accounts)
+        .where(inArray(accounts.id, orphanedAccountIds));
+    }
+  }
 
   // Check for duplicates within the file itself
   const seenInFile = new Map<string, number>();
