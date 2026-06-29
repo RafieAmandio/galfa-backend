@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getAllUsers, type UserWithDetails } from "../actions/get-users";
+import { deleteUser } from "../actions/delete-user";
 import {
   Table,
   TableBody,
@@ -10,9 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, Loader2 } from "lucide-react";
 
 interface UsersTableProps {
   onRefresh?: () => void;
@@ -27,6 +36,9 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteTarget, setDeleteTarget] = useState<UserWithDetails | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async (pageNum: number = page) => {
     setLoading(true);
@@ -84,6 +96,22 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
     }
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setDeleteError(null);
+
+    const result = await deleteUser(deleteTarget.id);
+    setDeleting(false);
+
+    if (result.success) {
+      setDeleteTarget(null);
+      fetchUsers(page);
+    } else {
+      setDeleteError(result.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
@@ -136,12 +164,13 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
             <TableHead>Last Sign In</TableHead>
+            <TableHead className="w-16">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {users.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 No users found
               </TableCell>
             </TableRow>
@@ -188,6 +217,19 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
                 </TableCell>
                 <TableCell className="text-sm text-gray-600">
                   {formatDate(user.lastSignInAt)}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleteTarget(user);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </TableCell>
               </TableRow>
             ))
@@ -244,6 +286,30 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
           </div>
         </div>
       )}
+      <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <span className="font-semibold">{deleteTarget?.email}</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <div className="p-3 rounded-md text-sm bg-red-50 text-red-800 border border-red-200">
+              {deleteError}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={deleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
