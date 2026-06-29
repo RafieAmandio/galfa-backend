@@ -1,19 +1,19 @@
 "use server";
 
 import { checkAdminAccess } from "@/lib/auth/admin-check";
-import { createFlatRateAccount } from "@/features/flat-rate/actions/create-flat-rate-account";
-import { createFloatingRateAccount } from "@/features/floating-rate/actions/create-floating-rate-account";
 import { createUserByAdmin } from "@/features/admin/actions/create-user";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import {
   accounts,
+  fixRateAccounts,
+  floatingRateAccounts,
   installmentAccounts,
   accountTypes,
   authUsers,
   profiles,
+  mutations,
 } from "@/db/drizzle/schema";
 import { eq, inArray } from "drizzle-orm";
-import { isAccountNumberUnique } from "@/features/investments/actions/is-account-number-unique";
 
 interface FixedRateImportRow {
   investorEmail: string;
@@ -69,26 +69,25 @@ interface BulkImportResult {
   results: RowResult[];
 }
 
-async function lookupParentAccountId(
-  parentAccountNumber: string
-): Promise<{ id: number | null; error?: string }> {
-  if (!parentAccountNumber) return { id: null };
-
-  const db = createDrizzleConnection();
-  const result = await db
-    .select({ id: accounts.id })
-    .from(accounts)
-    .where(eq(accounts.account_number, parentAccountNumber))
+async function getOrCreateAccountType(
+  db: ReturnType<typeof createDrizzleConnection>,
+  name: string,
+  description: string
+): Promise<number> {
+  const existing = await db
+    .select({ id: accountTypes.id })
+    .from(accountTypes)
+    .where(eq(accountTypes.name, name))
     .limit(1);
 
-  if (result.length === 0) {
-    return {
-      id: null,
-      error: `Parent account "${parentAccountNumber}" not found`,
-    };
-  }
+  if (existing.length > 0) return existing[0].id;
 
-  return { id: result[0].id };
+  const [created] = await db
+    .insert(accountTypes)
+    .values({ name, description, created_at: new Date(), updated_at: new Date() })
+    .returning({ id: accountTypes.id });
+
+  return created.id;
 }
 
 export async function bulkImportAccounts(
@@ -114,48 +113,57 @@ export async function bulkImportAccounts(
     };
   }
 
-  const results: RowResult[] = [];
+  const totalRows =
+    fixedRateRows.length + floatingRateRows.length + installmentRows.length;
 
-  // Auto-create investors that don't exist yet
+  const db = createDrizzleConnection();
+
+  // --- Phase 1: Auto-create investors (outside transaction, uses Supabase Admin API) ---
   const allEmails = [
     ...fixedRateRows.map((r) => r.investorEmail),
     ...floatingRateRows.map((r) => r.investorEmail),
     ...installmentRows.map((r) => r.investorEmail),
   ];
   const uniqueEmails = [...new Set(allEmails.filter(Boolean))];
-
-  const failedEmailCreations = new Map<string, string>();
+  const preValidationErrors: RowResult[] = [];
 
   if (uniqueEmails.length > 0) {
-    const db = createDrizzleConnection();
     const existingUsers = await db
       .select({ id: authUsers.id, email: authUsers.email })
       .from(authUsers)
       .where(inArray(authUsers.email, uniqueEmails));
     const existingEmailSet = new Set(existingUsers.map((u) => u.email));
 
-    // Auto-create new users that don't exist in auth.users
     for (const email of uniqueEmails) {
       if (!existingEmailSet.has(email)) {
         const tempPassword = `Import_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
         const namePart = email.split("@")[0].replace(/[._-]/g, " ");
         const fullName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
 
-        const createResult = await createUserByAdmin(
-          email,
-          tempPassword,
-          fullName,
-          "investor"
-        );
-
+        const createResult = await createUserByAdmin(email, tempPassword, fullName, "investor");
         if (!createResult.success) {
-          failedEmailCreations.set(email, createResult.message);
-          console.error(`Failed to create investor ${email}: ${createResult.message}`);
+          // Mark all rows with this email as failed
+          const addError = (type: string, rows: { investorEmail: string; accountNumber: string }[]) => {
+            rows.forEach((row, i) => {
+              if (row.investorEmail === email) {
+                preValidationErrors.push({
+                  type,
+                  rowIndex: i,
+                  accountNumber: row.accountNumber,
+                  success: false,
+                  message: `Failed to create investor ${email}: ${createResult.message}`,
+                });
+              }
+            });
+          };
+          addError("Fixed Rate", fixedRateRows);
+          addError("Floating Rate", floatingRateRows);
+          addError("Installment", installmentRows);
         }
       }
     }
 
-    // Ensure profiles exist for all auth users (some may have auth.users but no profiles row)
+    // Ensure profiles exist for all auth users
     for (const user of existingUsers) {
       if (!user.id || !user.email) continue;
       const existingProfile = await db
@@ -169,285 +177,332 @@ export async function bulkImportAccounts(
         const fullName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
         await db
           .insert(profiles)
-          .values({
-            id: user.id,
-            full_name: fullName,
-            updated_at: new Date(),
-          })
+          .values({ id: user.id, full_name: fullName, updated_at: new Date() })
           .onConflictDoNothing();
       }
     }
   }
 
-  // Process Fixed Rate rows
+  if (preValidationErrors.length > 0) {
+    return {
+      totalProcessed: preValidationErrors.length,
+      totalSuccess: 0,
+      totalFailed: preValidationErrors.length,
+      results: preValidationErrors,
+    };
+  }
+
+  // --- Phase 2: Pre-fetch all lookup data ---
+  const [fixTypeId, floatingTypeId, installmentTypeId] = await Promise.all([
+    fixedRateRows.length > 0
+      ? getOrCreateAccountType(db, "fix", "Fixed annual rate investment accounts with monthly compounding")
+      : Promise.resolve(0),
+    floatingRateRows.length > 0
+      ? getOrCreateAccountType(db, "floating", "Floating rate investment accounts with variable performance-based returns")
+      : Promise.resolve(0),
+    installmentRows.length > 0
+      ? getOrCreateAccountType(db, "installment", "Installment investment accounts")
+      : Promise.resolve(0),
+  ]);
+
+  // Build investor email -> id map
+  const investorLookup = await db
+    .select({ id: profiles.id, email: authUsers.email })
+    .from(profiles)
+    .innerJoin(authUsers, eq(profiles.id, authUsers.id))
+    .where(inArray(authUsers.email, uniqueEmails));
+  const investorMap = new Map(investorLookup.map((i) => [i.email, i.id]));
+
+  // Build parent account number -> id map
+  const allParentNumbers = [
+    ...fixedRateRows.map((r) => r.parentAccountNumber),
+    ...floatingRateRows.map((r) => r.parentAccountNumber),
+    ...installmentRows.map((r) => r.parentAccountNumber),
+  ].filter(Boolean);
+  const uniqueParentNumbers = [...new Set(allParentNumbers)];
+
+  const parentMap = new Map<string, number>();
+  if (uniqueParentNumbers.length > 0) {
+    const parentAccounts = await db
+      .select({ id: accounts.id, account_number: accounts.account_number })
+      .from(accounts)
+      .where(inArray(accounts.account_number, uniqueParentNumbers));
+    for (const p of parentAccounts) {
+      parentMap.set(p.account_number, p.id);
+    }
+  }
+
+  // --- Phase 3: Validate all rows before starting the transaction ---
+  const validationErrors: RowResult[] = [];
+
   for (let i = 0; i < fixedRateRows.length; i++) {
     const row = fixedRateRows[i];
-    if (failedEmailCreations.has(row.investorEmail)) {
-      results.push({
+    if (!investorMap.has(row.investorEmail)) {
+      validationErrors.push({
         type: "Fixed Rate",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: false,
-        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+        message: `Investor with email ${row.investorEmail} not found`,
       });
-      continue;
     }
-    try {
-      let parentAccountId: number | undefined;
-      if (row.parentAccountNumber) {
-        const lookup = await lookupParentAccountId(row.parentAccountNumber);
-        if (lookup.error) {
-          results.push({
-            type: "Fixed Rate",
-            rowIndex: i,
-            accountNumber: row.accountNumber,
-            success: false,
-            message: lookup.error,
-          });
-          continue;
-        }
-        parentAccountId = lookup.id ?? undefined;
-      }
-
-      const result = await createFlatRateAccount({
-        investorEmail: row.investorEmail,
-        accountNumber: row.accountNumber,
-        capital: row.capital,
-        annualRate: row.annualRate / 100, // Convert percentage to decimal
-        transactionDate: new Date(row.startDate + "T00:00:00"),
-        endDate: new Date(row.endDate + "T00:00:00"),
-        isRollover: row.isRollover,
-        parentAccountId,
-        adminFeePercentage: row.adminFeePercentage,
-        description: row.description || undefined,
-      });
-      results.push({
-        type: "Fixed Rate",
-        rowIndex: i,
-        accountNumber: row.accountNumber,
-        success: result.success,
-        message: result.message,
-      });
-    } catch (error) {
-      results.push({
+    if (row.parentAccountNumber && !parentMap.has(row.parentAccountNumber)) {
+      validationErrors.push({
         type: "Fixed Rate",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: `Parent account "${row.parentAccountNumber}" not found`,
       });
     }
   }
 
-  // Process Floating Rate rows
   for (let i = 0; i < floatingRateRows.length; i++) {
     const row = floatingRateRows[i];
-    if (failedEmailCreations.has(row.investorEmail)) {
-      results.push({
+    if (!investorMap.has(row.investorEmail)) {
+      validationErrors.push({
         type: "Floating Rate",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: false,
-        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+        message: `Investor with email ${row.investorEmail} not found`,
       });
-      continue;
     }
-    try {
-      let parentAccountId: number | undefined;
-      if (row.parentAccountNumber) {
-        const lookup = await lookupParentAccountId(row.parentAccountNumber);
-        if (lookup.error) {
-          results.push({
-            type: "Floating Rate",
-            rowIndex: i,
-            accountNumber: row.accountNumber,
-            success: false,
-            message: lookup.error,
-          });
-          continue;
-        }
-        parentAccountId = lookup.id ?? undefined;
-      }
-
-      const result = await createFloatingRateAccount({
-        investorEmail: row.investorEmail,
-        accountNumber: row.accountNumber,
-        capital: row.capital,
-        adminFeePercentage: row.adminFeePercentage / 100, // Convert percentage to decimal
-        transactionDate: new Date(row.startDate + "T00:00:00"),
-        endDate: new Date(row.endDate + "T00:00:00"),
-        isRollover: row.isRollover,
-        parentAccountId,
-        description: row.description || undefined,
-      });
-      results.push({
-        type: "Floating Rate",
-        rowIndex: i,
-        accountNumber: row.accountNumber,
-        success: result.success,
-        message: result.message,
-      });
-    } catch (error) {
-      results.push({
+    if (row.parentAccountNumber && !parentMap.has(row.parentAccountNumber)) {
+      validationErrors.push({
         type: "Floating Rate",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: `Parent account "${row.parentAccountNumber}" not found`,
       });
     }
   }
 
-  // Process Installment rows (inline DB logic since existing action uses FormData)
   for (let i = 0; i < installmentRows.length; i++) {
     const row = installmentRows[i];
-    if (failedEmailCreations.has(row.investorEmail)) {
-      results.push({
+    if (!investorMap.has(row.investorEmail)) {
+      validationErrors.push({
         type: "Installment",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: false,
-        message: `Failed to create investor ${row.investorEmail}: ${failedEmailCreations.get(row.investorEmail)}`,
+        message: `Investor with email ${row.investorEmail} not found`,
       });
-      continue;
     }
-    try {
-      // Validate account number uniqueness
-      const isUnique = await isAccountNumberUnique(row.accountNumber);
-      if (!isUnique) {
-        results.push({
-          type: "Installment",
-          rowIndex: i,
-          accountNumber: row.accountNumber,
-          success: false,
-          message: `Account number "${row.accountNumber}" already exists`,
-        });
-        continue;
-      }
+    if (row.parentAccountNumber && !parentMap.has(row.parentAccountNumber)) {
+      validationErrors.push({
+        type: "Installment",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: false,
+        message: `Parent account "${row.parentAccountNumber}" not found`,
+      });
+    }
+  }
 
-      let parentAccountId: number | null = null;
-      if (row.parentAccountNumber) {
-        const lookup = await lookupParentAccountId(row.parentAccountNumber);
-        if (lookup.error) {
-          results.push({
-            type: "Installment",
-            rowIndex: i,
-            accountNumber: row.accountNumber,
-            success: false,
-            message: lookup.error,
-          });
-          continue;
-        }
-        parentAccountId = lookup.id;
-      }
+  if (validationErrors.length > 0) {
+    return {
+      totalProcessed: validationErrors.length,
+      totalSuccess: 0,
+      totalFailed: validationErrors.length,
+      results: validationErrors,
+    };
+  }
 
-      const db = createDrizzleConnection();
+  // --- Phase 4: Single transaction for all inserts ---
+  try {
+    await db.transaction(async (tx) => {
+      // Fixed Rate
+      for (let i = 0; i < fixedRateRows.length; i++) {
+        const row = fixedRateRows[i];
+        const investorId = investorMap.get(row.investorEmail)!;
+        const annualRate = row.annualRate / 100;
+        const adminFeeRate =
+          row.adminFeePercentage > 0 ? row.adminFeePercentage / 100 : 0;
+        const parentAccountId = row.parentAccountNumber
+          ? parentMap.get(row.parentAccountNumber) ?? null
+          : null;
 
-      // Find investor by email
-      const investorProfile = await db
-        .select()
-        .from(authUsers)
-        .where(eq(authUsers.email, row.investorEmail))
-        .limit(1);
+        const [newAccount] = await tx
+          .insert(accounts)
+          .values({
+            user_id: investorId,
+            account_type_id: fixTypeId,
+            account_number: row.accountNumber,
+            capital: row.capital.toString(),
+            transaction_date: new Date(row.startDate + "T00:00:00"),
+            end_date: new Date(row.endDate + "T00:00:00"),
+            status: "active",
+            is_rollover: row.isRollover,
+            parent_account_id: parentAccountId,
+            admin_fee_applied: adminFeeRate > 0,
+            rollover_sequence: row.isRollover && parentAccountId ? 1 : null,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning({ id: accounts.id });
 
-      if (investorProfile.length === 0) {
-        results.push({
-          type: "Installment",
-          rowIndex: i,
-          accountNumber: row.accountNumber,
-          success: false,
-          message: `Investor with email ${row.investorEmail} not found`,
-        });
-        continue;
-      }
-
-      // Get installment account type
-      const accountType = await db
-        .select()
-        .from(accountTypes)
-        .where(eq(accountTypes.name, "installment"))
-        .limit(1);
-
-      if (accountType.length === 0) {
-        results.push({
-          type: "Installment",
-          rowIndex: i,
-          accountNumber: row.accountNumber,
-          success: false,
-          message: "Installment account type not found in database",
-        });
-        continue;
-      }
-
-      // Calculate admin fee and monthly CoF
-      const adminFee = row.capital * (row.adminFeePercentage / 100);
-      const monthlyCoFDecimal = row.monthlyCoF / 100;
-
-      const transactionDateObj = new Date(row.startDate + "T00:00:00");
-      const endDateObj = new Date(row.endDate + "T00:00:00");
-      endDateObj.setHours(
-        transactionDateObj.getHours(),
-        transactionDateObj.getMinutes(),
-        transactionDateObj.getSeconds(),
-        transactionDateObj.getMilliseconds()
-      );
-
-      // Create main account
-      const [newMainAccount] = await db
-        .insert(accounts)
-        .values({
-          account_type_id: accountType[0].id,
-          account_number: row.accountNumber,
-          capital: row.capital.toString(),
-          transaction_date: transactionDateObj,
-          end_date: endDateObj,
-          status: "active",
+        await tx.insert(fixRateAccounts).values({
+          account_id: newAccount.id,
+          annual_rate: annualRate.toString(),
+          admin_fee: adminFeeRate.toString(),
           created_at: new Date(),
           updated_at: new Date(),
-          is_rollover: row.isRollover,
-          parent_account_id: parentAccountId,
-          admin_fee_applied: true,
-          rollover_sequence:
-            row.isRollover && parentAccountId ? 1 : null,
-          user_id: investorProfile[0].id,
-        })
-        .returning();
+        });
 
-      // Create installment account
-      await db.insert(installmentAccounts).values({
-        account_id: newMainAccount.id,
-        monthly_cof: monthlyCoFDecimal.toString(),
-        admin_fee: adminFee.toString(),
-        investment_type: row.investmentType,
-        created_at: new Date(),
-        updated_at: new Date(),
-      });
+        const mutationDesc = row.isRollover
+          ? `Rollover investment from account ${parentAccountId || "N/A"}${row.description ? ` - ${row.description}` : ""}`
+          : `Initial investment${row.description ? ` - ${row.description}` : ""}`;
 
-      results.push({
+        await tx.insert(mutations).values({
+          account_id: newAccount.id,
+          type: "inbound",
+          amount: row.capital.toString(),
+          description: mutationDesc,
+          status: "completed",
+          transaction_date: new Date(row.startDate + "T00:00:00"),
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      // Floating Rate
+      for (let i = 0; i < floatingRateRows.length; i++) {
+        const row = floatingRateRows[i];
+        const investorId = investorMap.get(row.investorEmail)!;
+        const adminFeeDecimal = row.adminFeePercentage / 100;
+        const adminFee = row.capital * adminFeeDecimal;
+        const parentAccountId = row.parentAccountNumber
+          ? parentMap.get(row.parentAccountNumber) ?? null
+          : null;
+
+        const [newAccount] = await tx
+          .insert(accounts)
+          .values({
+            user_id: investorId,
+            account_type_id: floatingTypeId,
+            account_number: row.accountNumber,
+            capital: row.capital.toString(),
+            transaction_date: new Date(row.startDate + "T00:00:00"),
+            end_date: new Date(row.endDate + "T00:00:00"),
+            status: "active",
+            is_rollover: row.isRollover,
+            parent_account_id: parentAccountId,
+            admin_fee_applied: true,
+            rollover_sequence: row.isRollover && parentAccountId ? 1 : null,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning({ id: accounts.id });
+
+        await tx.insert(floatingRateAccounts).values({
+          account_id: newAccount.id,
+          admin_fee: adminFee.toString(),
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+
+        const mutationDesc = `Initial floating rate investment${row.description ? ` - ${row.description}` : ""}`;
+
+        await tx.insert(mutations).values({
+          account_id: newAccount.id,
+          type: "inbound",
+          amount: row.capital.toString(),
+          description: mutationDesc,
+          status: "completed",
+          transaction_date: new Date(row.startDate + "T00:00:00"),
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      // Installment
+      for (let i = 0; i < installmentRows.length; i++) {
+        const row = installmentRows[i];
+        const investorId = investorMap.get(row.investorEmail)!;
+        const adminFee = row.capital * (row.adminFeePercentage / 100);
+        const monthlyCoFDecimal = row.monthlyCoF / 100;
+        const parentAccountId = row.parentAccountNumber
+          ? parentMap.get(row.parentAccountNumber) ?? null
+          : null;
+
+        const [newAccount] = await tx
+          .insert(accounts)
+          .values({
+            account_type_id: installmentTypeId,
+            account_number: row.accountNumber,
+            capital: row.capital.toString(),
+            transaction_date: new Date(row.startDate + "T00:00:00"),
+            end_date: new Date(row.endDate + "T00:00:00"),
+            status: "active",
+            is_rollover: row.isRollover,
+            parent_account_id: parentAccountId,
+            admin_fee_applied: true,
+            rollover_sequence: row.isRollover && parentAccountId ? 1 : null,
+            user_id: investorId,
+            created_at: new Date(),
+            updated_at: new Date(),
+          })
+          .returning({ id: accounts.id });
+
+        await tx.insert(installmentAccounts).values({
+          account_id: newAccount.id,
+          monthly_cof: monthlyCoFDecimal.toString(),
+          admin_fee: adminFee.toString(),
+          investment_type: row.investmentType,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+    });
+
+    // Transaction succeeded — build success results
+    const results: RowResult[] = [
+      ...fixedRateRows.map((row, i) => ({
+        type: "Fixed Rate",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: true,
+        message: `Fixed rate account ${row.accountNumber} created successfully`,
+      })),
+      ...floatingRateRows.map((row, i) => ({
+        type: "Floating Rate",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: true,
+        message: `Floating rate account ${row.accountNumber} created successfully`,
+      })),
+      ...installmentRows.map((row, i) => ({
         type: "Installment",
         rowIndex: i,
         accountNumber: row.accountNumber,
         success: true,
         message: `Installment account ${row.accountNumber} created successfully`,
-      });
-    } catch (error) {
-      results.push({
-        type: "Installment",
-        rowIndex: i,
-        accountNumber: row.accountNumber,
-        success: false,
-        message: error instanceof Error ? error.message : "Unknown error",
-      });
-    }
+      })),
+    ];
+
+    return {
+      totalProcessed: totalRows,
+      totalSuccess: totalRows,
+      totalFailed: 0,
+      results,
+    };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    return {
+      totalProcessed: totalRows,
+      totalSuccess: 0,
+      totalFailed: totalRows,
+      results: [
+        {
+          type: "import",
+          rowIndex: -1,
+          accountNumber: "",
+          success: false,
+          message: `Import failed, all changes have been rolled back: ${errorMsg}`,
+        },
+      ],
+    };
   }
-
-  const totalSuccess = results.filter((r) => r.success).length;
-  const totalFailed = results.filter((r) => !r.success).length;
-
-  return {
-    totalProcessed: results.length,
-    totalSuccess,
-    totalFailed,
-    results,
-  };
 }
