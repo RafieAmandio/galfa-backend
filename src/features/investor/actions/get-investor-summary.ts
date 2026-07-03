@@ -119,12 +119,14 @@ export async function getInvestorSummary(
       const netCapital = grossCapital - adminFee;
 
       // Calculate Net Present Value using redemption-aware utility
+      const now = new Date();
+      const calcEnd = result.endDate && result.endDate < now ? result.endDate : now;
       const npvResult = await calculateNetPresentValueWithRedemptions(
         result.id,
         grossCapital,
         annualRate,
         result.startDate,
-        new Date(),
+        calcEnd,
         isRollover,
         adminFeeApplied,
         redemptionMap.get(result.id),

@@ -141,12 +141,14 @@ export async function getFlatRateInvestments(
       const netCapital = grossCapital - adminFee;
 
       // Calculate NPV with pre-fetched redemptions
+      const now = new Date();
+      const calcEnd = result.endDate && result.endDate < now ? result.endDate : now;
       const npvWithRedemptions = await calculateNetPresentValueWithRedemptions(
         result.id,
         grossCapital,
         annualRate,
         result.transDate,
-        new Date(),
+        calcEnd,
         isRollover,
         adminFeeApplied,
         redemptionMap.get(result.id),

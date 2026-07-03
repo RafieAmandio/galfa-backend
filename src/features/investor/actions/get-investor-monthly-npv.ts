@@ -86,12 +86,14 @@ export async function getInvestorMonthlyNPV(
     const adminFeeApplied = result.adminFeeApplied !== false;
     const adminFeeRate = Number(result.adminFeeRate || 0);
 
+    const now = new Date();
+    const calcEnd = result.endDate && result.endDate < now ? result.endDate : now;
     const npvResult = await calculateNetPresentValueWithRedemptions(
       result.id,
       grossCapital,
       annualRate,
       result.startDate,
-      new Date(),
+      calcEnd,
       isRollover,
       adminFeeApplied,
       redemptionMap.get(result.id),
