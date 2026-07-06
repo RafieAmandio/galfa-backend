@@ -263,10 +263,12 @@ export async function getStatementOfAccountData(
         const isStartMonth = isFirst;
         const isEndMonth = monthCur.getTime() === endMon.getTime();
 
+        // getLocalDate normalizes both storage conventions (WIB-midnight 17:00Z
+        // and UTC-midnight 00:00Z) to the intended WIB calendar day
         if (isStartMonth && isEndMonth) {
-          daysActive = Math.max(0, calcEndDate.getUTCDate() - result.transactionDate.getUTCDate() - 1);
+          daysActive = Math.max(0, getLocalDate(calcEndDate) - getLocalDate(result.transactionDate) - 1);
         } else if (isStartMonth) {
-          daysActive = Math.max(0, totalDaysInMonth - result.transactionDate.getUTCDate() - 1);
+          daysActive = Math.max(0, totalDaysInMonth - getLocalDate(result.transactionDate));
         } else if (isEndMonth) {
           daysActive = getLocalDate(calcEndDate);
           if (calcEndDate < monthEnd) {

@@ -5,6 +5,12 @@ import { format, startOfMonth, addMonths, isAfter } from "date-fns";
 import { getFloatingRateGrowthPercentage } from "@/features/floating-rate/actions/get-floating-rate-growth-percentage";
 import type { Redemption as BatchRedemption } from "./batch-redemptions";
 
+// Normalizes both date storage conventions (WIB-midnight 17:00Z and UTC-midnight
+// 00:00Z) to the intended WIB calendar day
+function getLocalDate(d: Date): number {
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+}
+
 export interface Redemption {
   amount: number;
   transactionDate: Date;
@@ -181,7 +187,7 @@ export async function calculateFloatingRateValueWithRedemptions(
         calculationDate.getTime() === startOfMonth(transactionDate).getTime()
       ) {
         const totalDaysInMonth = monthEnd.getDate();
-        const daysPassed = totalDaysInMonth - transactionDate.getUTCDate() - 1;
+        const daysPassed = totalDaysInMonth - getLocalDate(transactionDate);
         const daysFraction = Math.max(0, daysPassed) / totalDaysInMonth;
 
         gainedFund =

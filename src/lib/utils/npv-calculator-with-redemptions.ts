@@ -126,11 +126,14 @@ export async function calculateNetPresentValueWithRedemptions(
       0
     ).getDate();
 
+    // getLocalDate normalizes both storage conventions (WIB-midnight 17:00Z and
+    // UTC-midnight 00:00Z) to the intended WIB calendar day. Interest accrues
+    // from the day AFTER deposit through the day BEFORE maturity.
     let daysInPeriod: number;
     if (isStartMonth && isEndMonth) {
-      daysInPeriod = actualEndDate.getUTCDate() - calculationDate.getUTCDate() - 1;
+      daysInPeriod = getLocalDate(actualEndDate) - getLocalDate(calculationDate) - 1;
     } else if (isStartMonth) {
-      daysInPeriod = totalDaysInMonth - calculationDate.getUTCDate() - 1;
+      daysInPeriod = totalDaysInMonth - getLocalDate(calculationDate);
     } else if (isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate);
       if (actualEndDate < monthEnd) {
