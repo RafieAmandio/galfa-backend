@@ -133,6 +133,9 @@ export async function calculateNetPresentValueWithRedemptions(
       daysInPeriod = totalDaysInMonth - calculationDate.getUTCDate() - 1;
     } else if (isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate);
+      if (actualEndDate < monthEnd) {
+        daysInPeriod -= 1;
+      }
     } else {
       daysInPeriod = totalDaysInMonth;
     }

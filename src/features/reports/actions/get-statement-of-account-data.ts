@@ -216,7 +216,10 @@ export async function getStatementOfAccountData(
       });
     }
 
-    // Process fix rate accounts
+    // Map to store each account's maturity ending balance (for rollover child capital)
+    const accountMaturityValue = new Map<number, number>();
+
+    // Process fix rate accounts (ordered by transaction_date, so parents come before children)
     // Interest is always calculated on the ORIGINAL principal (not reduced by redemptions)
     // This matches the business logic: investors earn fixed interest on locked-in capital
     for (const result of fixResults) {
@@ -225,7 +228,14 @@ export async function getStatementOfAccountData(
       const isRollover = result.isRollover || false;
       const adminFeeApplied = result.adminFeeApplied !== false;
       const adminFeeRate = !isRollover && adminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
-      const netInvestorFund = grossCapital * (1 - adminFeeRate);
+
+      // For rollover accounts, use parent's calculated maturity value instead of DB capital
+      let netInvestorFund: number;
+      if (isRollover && result.parentAccountId && accountMaturityValue.has(result.parentAccountId)) {
+        netInvestorFund = accountMaturityValue.get(result.parentAccountId)!;
+      } else {
+        netInvestorFund = grossCapital * (1 - adminFeeRate);
+      }
       const monthlyRate = annualRate / 12;
 
       const calcEndDate = result.endDate && result.endDate < currentDate
@@ -259,6 +269,9 @@ export async function getStatementOfAccountData(
           daysActive = Math.max(0, totalDaysInMonth - result.transactionDate.getUTCDate() - 1);
         } else if (isEndMonth) {
           daysActive = getLocalDate(calcEndDate);
+          if (calcEndDate < monthEnd) {
+            daysActive -= 1;
+          }
         } else {
           daysActive = totalDaysInMonth;
         }
@@ -289,30 +302,10 @@ export async function getStatementOfAccountData(
         isFirst = false;
       }
 
-      if (result.endDate && entries.length > 0) {
-        const child = fixResults.find(r => r.parentAccountId === result.id);
-        if (child) {
-          const childGross = parseFloat(child.grossCapital);
-          const childIsRollover = child.isRollover || false;
-          const childAdminFeeApplied = child.adminFeeApplied !== false;
-          const childAdminFeeRate = !childIsRollover && childAdminFeeApplied ? ADMIN_FEE_PERCENTAGE : 0;
-          const childNIF = childGross * (1 - childAdminFeeRate);
-          const lastEndMon = startOfMonth(calcEndDate);
-          const lastMonthEnd = new Date(lastEndMon.getFullYear(), lastEndMon.getMonth() + 1, 0);
-          const isFullEndMonth = getLocalDate(calcEndDate) >= lastMonthEnd.getDate();
-          const parentEndBalance = netInvestorFund + cumulativeGain;
-          const remainder = childNIF - parentEndBalance;
-          if (isFullEndMonth && Math.abs(remainder) > 0.01) {
-            cumulativeGain += remainder;
-            const adjustedPV = netInvestorFund + cumulativeGain - cumulativeRedemptions;
-            entries.push({
-              monthYear: format(addMonths(lastEndMon, 1), "MMMM yyyy"),
-              endingBalance: adjustedPV,
-              redemptions: 0,
-              hasData: true,
-            });
-          }
-        }
+      // Store maturity value for rollover children to use as their capital
+      if (entries.length > 0) {
+        const lastEntry = entries[entries.length - 1];
+        accountMaturityValue.set(result.id, lastEntry.endingBalance);
       }
 
       let reportedInvested = netInvestorFund;
