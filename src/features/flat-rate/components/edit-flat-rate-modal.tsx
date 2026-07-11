@@ -225,7 +225,7 @@ export function EditFlatRateModal({
             <Input
               id="adminFeePercentage"
               type="number"
-              step="0.1"
+              step="0.01"
               min="0"
               max="100"
               placeholder="Enter admin fee percentage..."

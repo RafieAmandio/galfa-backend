@@ -338,7 +338,7 @@ export function CreateInstallmentAccountModal({
               required
               min="0"
               max="100"
-              step="0.1"
+              step="0.01"
             />
             <p className="text-sm text-muted-foreground">
               Admin fee as percentage (e.g., 5 for 5%)

@@ -222,7 +222,7 @@ function calculateMonthlyData(params: {
     const isStartMonth = currentDate.getTime() === startDate.getTime();
     const isEndMonth = actualEndDate.getTime() === endDate.getTime();
 
-    if (!isStartMonth && !isEndMonth) {
+    if (!isStartMonth) {
       daysInPeriod += 1;
     }
 

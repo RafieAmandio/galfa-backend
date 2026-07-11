@@ -640,7 +640,7 @@ export function CreateFlatRateModal({
                   placeholder="Enter admin fee percentage (e.g., 5 for 5%)"
                   min="0"
                   max="100"
-                  step="0.1"
+                  step="0.01"
                 />
                 <p className="mt-1 text-sm text-muted-foreground">
                   Leave at 0 for no admin fee. Enter as percentage (e.g., 5 for 5%).
