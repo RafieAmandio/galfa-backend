@@ -8,6 +8,10 @@ import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calcula
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { format } from "date-fns";
 
+function getLocalDate(d: Date): number {
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+}
+
 interface MonthlyData {
   monthYear: string;
   daysInPeriod: number;
@@ -211,20 +215,23 @@ function calculateMonthlyData(params: {
       currentDate.getMonth() + 1,
       0
     ); // Last day of current month
+    const totalDaysInMonth = monthEnd.getDate();
     const actualEndDate = monthEnd > endDate ? endDate : monthEnd;
 
-    // Calculate days in this period
-    let daysInPeriod = Math.ceil(
-      (actualEndDate.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    // Add 1 day only for full months (not for partial start/end months)
-    const isStartMonth = currentDate.getTime() === startDate.getTime();
+    const isStartMonth = monthCounter === 1;
     const isEndMonth = actualEndDate.getTime() === endDate.getTime();
 
-    if (!isStartMonth) {
-      daysInPeriod += 1;
+    let daysInPeriod: number;
+    if (isStartMonth && isEndMonth) {
+      daysInPeriod = getLocalDate(actualEndDate) - getLocalDate(startDate);
+    } else if (isStartMonth) {
+      daysInPeriod = totalDaysInMonth - getLocalDate(startDate);
+    } else if (isEndMonth) {
+      daysInPeriod = getLocalDate(actualEndDate);
+    } else {
+      daysInPeriod = totalDaysInMonth;
     }
+    if (daysInPeriod < 0) daysInPeriod = 0;
 
     const beginningBalance = currentBalance;
 
@@ -233,12 +240,7 @@ function calculateMonthlyData(params: {
     let periodInterest: number;
 
     if (isStartMonth || isEndMonth) {
-      const actualMonthDays = new Date(
-        currentDate.getFullYear(),
-        currentDate.getMonth() + 1,
-        0
-      ).getDate();
-      effectiveRate = (daysInPeriod / actualMonthDays) * monthlyRate;
+      effectiveRate = (daysInPeriod / totalDaysInMonth) * monthlyRate;
       periodInterest = beginningBalance * effectiveRate;
     } else {
       // Full month: always use the full monthly rate regardless of calendar days
