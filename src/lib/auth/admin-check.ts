@@ -20,19 +20,19 @@ export interface AdminCheckResult {
 export const checkAdminAccess = cache(async (): Promise<AdminCheckResult> => {
   try {
     const adminDisabled = process.env.DISABLE_ADMIN_CHECK === "true";
+    if (adminDisabled) {
+      return {
+        isAdmin: true,
+        user: { id: "disabled-admin", email: "disabled@local" },
+      };
+    }
+
     // Get current user from Supabase
     const supabase = await createServerClient();
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
-
-    if (adminDisabled) {
-      return {
-        isAdmin: true,
-        user: user || { id: "disabled-admin", email: "disabled@local" },
-      };
-    }
 
     if (authError || !user) {
       // Only log in development and not during build

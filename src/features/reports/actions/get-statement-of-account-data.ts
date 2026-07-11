@@ -48,15 +48,66 @@ const MONTH_NAMES = [
 // Common monthly breakdown shape used for aggregation
 interface MonthlyEntry {
   monthYear: string;
+  gain: number;
   endingBalance: number;
   redemptions: number;
   hasData: boolean;
+}
+
+interface AccountDetail {
+  id: number;
+  accountNumber: string;
+  netInvestorFund: number;
+  reportedInvested: number;
+  parentAccountId: number | null;
+  transactionDate: Date;
+  endDate: Date | null;
+  monthlyEntries: MonthlyEntry[];
 }
 
 export async function getStatementOfAccountData(
   investorEmail: string
 ): Promise<{ success: boolean; data?: StatementOfAccountData; error?: string }> {
   try {
+    const { investorName, years } = await computeStatement(investorEmail);
+    return {
+      success: true,
+      data: { investorName, years },
+    };
+  } catch (error) {
+    console.error("Error fetching statement of account data:", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch statement of account data",
+    };
+  }
+}
+
+// Per-account monthly detail alongside the aggregated statement. Consumed by
+// the Excel validation checker (scripts/excel-validation) to compare every
+// fund's monthly gain against the finance team's reference workbooks.
+export async function getStatementValidationData(investorEmail: string) {
+  const { investorName, years, accounts } = await computeStatement(investorEmail);
+  return {
+    investorName,
+    years,
+    accounts: accounts.map((a) => ({
+      id: a.id,
+      accountNumber: a.accountNumber,
+      netInvestorFund: a.netInvestorFund,
+      transactionDate: a.transactionDate,
+      endDate: a.endDate,
+      parentAccountId: a.parentAccountId,
+      monthly: a.monthlyEntries,
+    })),
+  };
+}
+
+// Shared computation used by both exports above
+async function computeStatement(investorEmail: string) {
     const db = createDrizzleConnection();
 
     // Get floating rate accounts
@@ -70,6 +121,7 @@ export async function getStatementOfAccountData(
         adminFee: floatingRateAccounts.admin_fee,
         isRollover: accounts.is_rollover,
         parentAccountId: accounts.parent_account_id,
+        accountNumber: accounts.account_number,
         fullName: profiles.full_name,
       })
       .from(accounts)
@@ -92,6 +144,7 @@ export async function getStatementOfAccountData(
         isRollover: accounts.is_rollover,
         adminFeeApplied: accounts.admin_fee_applied,
         parentAccountId: accounts.parent_account_id,
+        accountNumber: accounts.account_number,
         fullName: profiles.full_name,
       })
       .from(accounts)
@@ -102,10 +155,7 @@ export async function getStatementOfAccountData(
       .orderBy(accounts.transaction_date);
 
     if (floatingResults.length === 0 && fixResults.length === 0) {
-      return {
-        success: true,
-        data: { investorName: "", years: [] },
-      };
+      return { investorName: "", years: [] as StatementYearData[], accounts: [] as AccountDetail[] };
     }
 
     const investorName =
@@ -165,15 +215,7 @@ export async function getStatementOfAccountData(
 
     // Calculate monthly breakdowns for each account
     // reportedInvested = original parent capital for rollovers, own capital otherwise
-    const accountData: Array<{
-      id: number;
-      netInvestorFund: number;
-      reportedInvested: number;
-      parentAccountId: number | null;
-      transactionDate: Date;
-      endDate: Date | null;
-      monthlyEntries: MonthlyEntry[];
-    }> = [];
+    const accountData: AccountDetail[] = [];
 
     // Process floating rate accounts
     for (const result of floatingResults) {
@@ -200,6 +242,7 @@ export async function getStatementOfAccountData(
 
       let entries = valueWithRedemptions.monthlyBreakdown.map((m) => ({
         monthYear: m.monthYear,
+        gain: m.gainedFund,
         endingBalance: m.endingBalance,
         redemptions: m.redemptions,
         hasData: m.hasData,
@@ -207,7 +250,8 @@ export async function getStatementOfAccountData(
 
       accountData.push({
         id: result.id,
-          netInvestorFund,
+        accountNumber: result.accountNumber,
+        netInvestorFund,
         reportedInvested,
         parentAccountId: result.parentAccountId,
         transactionDate: result.transactionDate,
@@ -264,16 +308,15 @@ export async function getStatementOfAccountData(
         const isEndMonth = monthCur.getTime() === endMon.getTime();
 
         // getLocalDate normalizes both storage conventions (WIB-midnight 17:00Z
-        // and UTC-midnight 00:00Z) to the intended WIB calendar day
+        // and UTC-midnight 00:00Z) to the intended WIB calendar day. Finance
+        // convention (master Excel formula): interest accrues from the day
+        // AFTER the deposit date through the maturity date INCLUSIVE.
         if (isStartMonth && isEndMonth) {
-          daysActive = Math.max(0, getLocalDate(calcEndDate) - getLocalDate(result.transactionDate) - 1);
+          daysActive = Math.max(0, getLocalDate(calcEndDate) - getLocalDate(result.transactionDate));
         } else if (isStartMonth) {
           daysActive = Math.max(0, totalDaysInMonth - getLocalDate(result.transactionDate));
         } else if (isEndMonth) {
           daysActive = getLocalDate(calcEndDate);
-          if (calcEndDate < monthEnd) {
-            daysActive -= 1;
-          }
         } else {
           daysActive = totalDaysInMonth;
         }
@@ -295,6 +338,7 @@ export async function getStatementOfAccountData(
 
         entries.push({
           monthYear: format(monthCur, "MMMM yyyy"),
+          gain: monthlyGain,
           endingBalance: presentValue,
           redemptions: redemptionAmount,
           hasData: true,
@@ -318,7 +362,8 @@ export async function getStatementOfAccountData(
 
       accountData.push({
         id: result.id,
-          netInvestorFund,
+        accountNumber: result.accountNumber,
+        netInvestorFund,
         reportedInvested,
         parentAccountId: result.parentAccountId ?? null,
         transactionDate: result.transactionDate,
@@ -356,6 +401,7 @@ export async function getStatementOfAccountData(
       if (!parent.monthlyEntries.some((e) => e.monthYear === childMonthKey)) {
         parent.monthlyEntries.push({
           monthYear: childMonthKey,
+          gain: 0,
           endingBalance: lastEntry.endingBalance,
           redemptions: 0,
           hasData: true,
@@ -483,20 +529,7 @@ export async function getStatementOfAccountData(
       .sort(([a], [b]) => a - b)
       .map(([year, months]) => ({ year, months }));
 
-    return {
-      success: true,
-      data: { investorName, years },
-    };
-  } catch (error) {
-    console.error("Error fetching statement of account data:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Failed to fetch statement of account data",
-    };
-  }
+    return { investorName, years, accounts: accountData };
 }
 
 export async function getStatementOfAccountDataDebug(investorEmail: string) {

@@ -178,23 +178,28 @@ export async function calculateFloatingRateValueWithRedemptions(
     const isFullyRedeemed =
       balanceAfterRedemptions < 1000 && redemptionsThisMonth > 0;
 
-    // Calculate growth using simple interest on original net investor fund
+    // Calculate growth using simple interest on original net investor fund.
+    // Finance convention (master Excel formula): growth accrues from the day
+    // AFTER the deposit date through the maturity date INCLUSIVE.
+    //   start month: totalDays - day(start)
+    //   end month:   day(end)
     let gainedFund = 0;
 
     if (growthData.hasData && growthData.growthPercentage > 0) {
-      if (
+      const totalDaysInMonth = monthEnd.getDate();
+      const isStartMonth =
         isFirstMonth &&
-        calculationDate.getTime() === startOfMonth(transactionDate).getTime()
-      ) {
-        const totalDaysInMonth = monthEnd.getDate();
-        const daysPassed = totalDaysInMonth - getLocalDate(transactionDate);
-        const daysFraction = Math.max(0, daysPassed) / totalDaysInMonth;
+        calculationDate.getTime() === startOfMonth(transactionDate).getTime();
+      const isEndMonth =
+        investmentEndDate != null &&
+        calculationDate.getTime() === startOfMonth(investmentEndDate).getTime();
 
-        gainedFund =
-          netInvestorFund * (growthData.growthPercentage / 100) * daysFraction;
-      } else {
-        gainedFund = netInvestorFund * (growthData.growthPercentage / 100);
-      }
+      const startCut = isStartMonth ? getLocalDate(transactionDate) : 0;
+      const endDay = isEndMonth ? getLocalDate(investmentEndDate!) : totalDaysInMonth;
+      const daysFraction = Math.max(0, endDay - startCut) / totalDaysInMonth;
+
+      gainedFund =
+        netInvestorFund * (growthData.growthPercentage / 100) * daysFraction;
     }
 
     currentValue = balanceAfterRedemptions + gainedFund;
