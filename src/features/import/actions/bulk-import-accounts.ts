@@ -54,6 +54,13 @@ interface InstallmentImportRow {
   description: string;
 }
 
+interface RedemptionImportRow {
+  accountNumber: string;
+  redemptionAmount: number;
+  redemptionDate: string;
+  description: string;
+}
+
 interface RowResult {
   type: string;
   rowIndex: number;
@@ -93,7 +100,8 @@ async function getOrCreateAccountType(
 export async function bulkImportAccounts(
   fixedRateRows: FixedRateImportRow[],
   floatingRateRows: FloatingRateImportRow[],
-  installmentRows: InstallmentImportRow[]
+  installmentRows: InstallmentImportRow[],
+  redemptionRows: RedemptionImportRow[] = []
 ): Promise<BulkImportResult> {
   const adminCheck = await checkAdminAccess();
   if (!adminCheck.isAdmin) {
@@ -114,7 +122,7 @@ export async function bulkImportAccounts(
   }
 
   const totalRows =
-    fixedRateRows.length + floatingRateRows.length + installmentRows.length;
+    fixedRateRows.length + floatingRateRows.length + installmentRows.length + redemptionRows.length;
 
   const db = createDrizzleConnection();
 
@@ -455,6 +463,34 @@ export async function bulkImportAccounts(
           updated_at: new Date(),
         });
       }
+
+      // Redemptions
+      if (redemptionRows.length > 0) {
+        const redemptionAccountNumbers = [...new Set(redemptionRows.map((r) => r.accountNumber))];
+        const redemptionAccounts = await tx
+          .select({ id: accounts.id, account_number: accounts.account_number })
+          .from(accounts)
+          .where(inArray(accounts.account_number, redemptionAccountNumbers));
+        const redemptionAccountMap = new Map(
+          redemptionAccounts.map((a) => [a.account_number, a.id])
+        );
+
+        for (const row of redemptionRows) {
+          const accountId = redemptionAccountMap.get(row.accountNumber);
+          if (!accountId) continue;
+
+          await tx.insert(mutations).values({
+            account_id: accountId,
+            type: "redemption",
+            amount: row.redemptionAmount.toString(),
+            description: row.description || "Bulk import redemption",
+            status: "completed",
+            transaction_date: new Date(row.redemptionDate + "T00:00:00"),
+            created_at: new Date(),
+            updated_at: new Date(),
+          });
+        }
+      }
     });
 
     // Transaction succeeded — build success results
@@ -479,6 +515,13 @@ export async function bulkImportAccounts(
         accountNumber: row.accountNumber,
         success: true,
         message: `Installment account ${row.accountNumber} created successfully`,
+      })),
+      ...redemptionRows.map((row, i) => ({
+        type: "Redemption",
+        rowIndex: i,
+        accountNumber: row.accountNumber,
+        success: true,
+        message: `Redemption of ${row.redemptionAmount.toLocaleString("id-ID")} from ${row.accountNumber} imported`,
       })),
     ];
 

@@ -17,12 +17,14 @@ import type {
   FixedRateRow,
   FloatingRateRow,
   InstallmentRow,
+  RedemptionRow,
 } from "../lib/excel-parser";
 
 interface ImportPreviewTableProps {
   fixedRateResults: ValidationResult<FixedRateRow>[];
   floatingRateResults: ValidationResult<FloatingRateRow>[];
   installmentResults: ValidationResult<InstallmentRow>[];
+  redemptionResults: ValidationResult<RedemptionRow>[];
 }
 
 function StatusCell({ result }: { result: ValidationResult<unknown> }) {
@@ -97,6 +99,7 @@ export function ImportPreviewTable({
   fixedRateResults,
   floatingRateResults,
   installmentResults,
+  redemptionResults,
 }: ImportPreviewTableProps) {
   const tabs: { value: string; label: string; count: number; errors: number }[] = [];
   if (fixedRateResults.length > 0)
@@ -120,14 +123,21 @@ export function ImportPreviewTable({
       count: installmentResults.length,
       errors: installmentResults.filter((r) => !r.isValid).length,
     });
+  if (redemptionResults.length > 0)
+    tabs.push({
+      value: "redemptions",
+      label: "Redemptions",
+      count: redemptionResults.length,
+      errors: redemptionResults.filter((r) => !r.isValid).length,
+    });
 
   if (tabs.length === 0) {
     return (
       <div className="bg-white border border-border rounded-xl p-8 text-center">
         <p className="text-sm text-muted-foreground">
           No data found in the uploaded file. Make sure the sheet names are
-          &quot;Fixed Rate&quot;, &quot;Floating Rate&quot;, and/or
-          &quot;Installment&quot;.
+          &quot;Fixed Rate&quot;, &quot;Floating Rate&quot;, &quot;Installment&quot;,
+          and/or &quot;Redemptions&quot;.
         </p>
       </div>
     );
@@ -312,6 +322,49 @@ export function ImportPreviewTable({
                         {r.data.isRollover ? "Yes" : "No"}
                       </TableCell>
                       <TableCell className="text-sm">{r.data.parentAccountNumber || "-"}</TableCell>
+                      <TableCell>
+                        <StatusCell result={r} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </TabsContent>
+        )}
+        {redemptionResults.length > 0 && (
+          <TabsContent value="redemptions" className="p-4 mt-0">
+            <SummaryBadges results={redemptionResults} />
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">Row</TableHead>
+                    <TableHead>Account No.</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {redemptionResults.map((r) => (
+                    <TableRow
+                      key={r.rowIndex}
+                      className={cn(
+                      !r.isValid && "bg-red-50/50",
+                      r.isValid && r.warnings.length > 0 && "bg-amber-50/50"
+                    )}
+                    >
+                      <TableCell className="text-xs text-muted-foreground">
+                        {r.rowIndex + 2}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">{r.data.accountNumber}</TableCell>
+                      <TableCell className="text-sm text-right">
+                        {r.data.redemptionAmount.toLocaleString("id-ID")}
+                      </TableCell>
+                      <TableCell className="text-sm">{r.data.redemptionDate}</TableCell>
+                      <TableCell className="text-sm">{r.data.description || "-"}</TableCell>
                       <TableCell>
                         <StatusCell result={r} />
                       </TableCell>

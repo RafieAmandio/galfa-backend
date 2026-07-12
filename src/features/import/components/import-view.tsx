@@ -10,11 +10,13 @@ import type {
   FixedRateRow,
   FloatingRateRow,
   InstallmentRow,
+  RedemptionRow,
 } from "../lib/excel-parser";
 import {
   validateFixedRateRows,
   validateFloatingRateRows,
   validateInstallmentRows,
+  validateRedemptionRows,
   type ValidationResult,
 } from "../lib/import-validators";
 import { bulkImportAccounts } from "../actions/bulk-import-accounts";
@@ -49,6 +51,9 @@ export function ImportView() {
   const [installmentResults, setInstallmentResults] = useState<
     ValidationResult<InstallmentRow>[]
   >([]);
+  const [redemptionResults, setRedemptionResults] = useState<
+    ValidationResult<RedemptionRow>[]
+  >([]);
 
   // Import result
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -60,8 +65,11 @@ export function ImportView() {
   const validInstallmentCount = installmentResults.filter(
     (r) => r.isValid
   ).length;
+  const validRedemptionCount = redemptionResults.filter(
+    (r) => r.isValid
+  ).length;
   const totalValid =
-    validFixedCount + validFloatingCount + validInstallmentCount;
+    validFixedCount + validFloatingCount + validInstallmentCount + validRedemptionCount;
 
   const handleFileSelected = useCallback(async (file: File) => {
     try {
@@ -75,6 +83,7 @@ export function ImportView() {
       let fixedResults = validateFixedRateRows(parsed.fixedRate);
       let floatingResults = validateFloatingRateRows(parsed.floatingRate);
       let installmentResultsLocal = validateInstallmentRows(parsed.installment);
+      const redemptionResultsLocal = validateRedemptionRows(parsed.redemptions);
 
       // Step 3: Server-side DB validation (emails exist, account numbers unique)
       const allEmails = [
@@ -129,6 +138,7 @@ export function ImportView() {
       setFixedRateResults(fixedResults);
       setFloatingRateResults(floatingResults);
       setInstallmentResults(installmentResultsLocal);
+      setRedemptionResults(redemptionResultsLocal);
       setState("preview");
     } catch (error) {
       setState("idle");
@@ -151,11 +161,15 @@ export function ImportView() {
       const validInstallment = installmentResults
         .filter((r) => r.isValid)
         .map((r) => r.data);
+      const validRedemptions = redemptionResults
+        .filter((r) => r.isValid)
+        .map((r) => r.data);
 
       const result = await bulkImportAccounts(
         validFixed,
         validFloating,
-        validInstallment
+        validInstallment,
+        validRedemptions
       );
       setImportResult(result);
       setState("result");
@@ -172,6 +186,7 @@ export function ImportView() {
     setFixedRateResults([]);
     setFloatingRateResults([]);
     setInstallmentResults([]);
+    setRedemptionResults([]);
     setImportResult(null);
   }, []);
 
@@ -218,6 +233,7 @@ export function ImportView() {
             fixedRateResults={fixedRateResults}
             floatingRateResults={floatingRateResults}
             installmentResults={installmentResults}
+            redemptionResults={redemptionResults}
           />
 
           <div className="flex items-center gap-4">

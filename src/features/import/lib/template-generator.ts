@@ -78,6 +78,20 @@ const INSTALLMENT_EXAMPLE = [
   "Monthly installment investment",
 ];
 
+const REDEMPTION_HEADERS = [
+  "Account Number",
+  "Redemption Amount",
+  "Redemption Date",
+  "Description",
+];
+
+const REDEMPTION_EXAMPLE = [
+  "FR-001",
+  5000000,
+  "2025-06-15",
+  "Partial redemption",
+];
+
 export function generateTemplateWorkbook(): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
 
@@ -98,6 +112,12 @@ export function generateTemplateWorkbook(): XLSX.WorkBook {
   const installmentWs = XLSX.utils.aoa_to_sheet(installmentData);
   installmentWs["!cols"] = INSTALLMENT_HEADERS.map(() => ({ wch: 20 }));
   XLSX.utils.book_append_sheet(wb, installmentWs, "Installment");
+
+  // Redemptions sheet
+  const redemptionData = [REDEMPTION_HEADERS, REDEMPTION_EXAMPLE];
+  const redemptionWs = XLSX.utils.aoa_to_sheet(redemptionData);
+  redemptionWs["!cols"] = REDEMPTION_HEADERS.map(() => ({ wch: 20 }));
+  XLSX.utils.book_append_sheet(wb, redemptionWs, "Redemptions");
 
   return wb;
 }

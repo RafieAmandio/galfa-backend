@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
-import { eq, and, not, exists, gt } from "drizzle-orm";
+import { eq, and, not, exists } from "drizzle-orm";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
@@ -51,9 +51,6 @@ export async function getAccountsForRedemptionWithBalance(
     .where(
       and(
         eq(accounts.status, "active"),
-        // Only include accounts where redemption date is before or on end date
-        gt(accounts.end_date, redemptionDate),
-        // Exclude parent accounts that have rollover children
         not(
           exists(
             db

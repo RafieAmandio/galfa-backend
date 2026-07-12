@@ -22,8 +22,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EditRedemptionInline } from "@/features/mutations/components/edit-redemption-inline";
 
@@ -54,6 +62,7 @@ export function RedeemFlatRateModal({
   trigger,
 }: RedemptionModalProps) {
   const [open, setOpen] = useState(false);
+  const [accountSearchOpen, setAccountSearchOpen] = useState(false);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<number | null>(
     null
@@ -382,24 +391,59 @@ export function RedeemFlatRateModal({
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Select Account *
                 </label>
-                <select
-                  value={selectedAccountId || ""}
-                  onChange={(e) =>
-                    setSelectedAccountId(Number(e.target.value) || null)
-                  }
-                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
-                >
-                  <option value="">Select an account...</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {`${account.name} - Value on ${format(
-                        redemptionDate,
-                        "d MMMM yyyy"
-                      )}: ${formatCurrency(account.currentValue)}`}
-                    </option>
-                  ))}
-                </select>
+                <Popover open={accountSearchOpen} onOpenChange={setAccountSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={accountSearchOpen}
+                      className="w-full justify-between h-auto min-h-[44px] px-3 py-2 text-left font-normal"
+                    >
+                      {selectedAccountId
+                        ? (() => {
+                            const acc = accounts.find((a) => a.id === selectedAccountId);
+                            return acc
+                              ? `${acc.name} - ${formatCurrency(acc.currentValue)}`
+                              : "Select an account...";
+                          })()
+                        : "Search accounts..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search by name or account number..." />
+                      <CommandList>
+                        <CommandEmpty>No accounts found.</CommandEmpty>
+                        <CommandGroup>
+                          {accounts.map((account) => (
+                            <CommandItem
+                              key={account.id}
+                              value={`${account.name} ${account.accountNumber}`}
+                              onSelect={() => {
+                                setSelectedAccountId(account.id);
+                                setAccountSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedAccountId === account.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{account.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  Value: {formatCurrency(account.currentValue)}
+                                </span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Account Details */}

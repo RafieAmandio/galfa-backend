@@ -39,10 +39,18 @@ export interface InstallmentRow {
   description: string;
 }
 
+export interface RedemptionRow {
+  accountNumber: string;
+  redemptionAmount: number;
+  redemptionDate: string;
+  description: string;
+}
+
 export interface ParseResult {
   fixedRate: FixedRateRow[];
   floatingRate: FloatingRateRow[];
   installment: InstallmentRow[];
+  redemptions: RedemptionRow[];
 }
 
 function parseDateCell(cell: unknown): string {
@@ -85,6 +93,7 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
     fixedRate: [],
     floatingRate: [],
     installment: [],
+    redemptions: [],
   };
 
   // Parse Fixed Rate sheet
@@ -158,6 +167,25 @@ export function parseImportFile(arrayBuffer: ArrayBuffer): ParseResult {
         isRollover: parseBoolean(row[8]),
         parentAccountNumber: String(row[9] ?? "").trim(),
         description: String(row[10] ?? "").trim(),
+      });
+    }
+  }
+
+  // Parse Redemptions sheet
+  // Columns: Account Number, Redemption Amount, Redemption Date, Description
+  const redemptionSheet = wb.Sheets["Redemptions"];
+  if (redemptionSheet) {
+    const rows = XLSX.utils.sheet_to_json<unknown[]>(redemptionSheet, {
+      header: 1,
+    });
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || !row[0]) continue;
+      result.redemptions.push({
+        accountNumber: String(row[0] ?? "").trim(),
+        redemptionAmount: Number(row[1]) || 0,
+        redemptionDate: parseDateCell(row[2]),
+        description: String(row[3] ?? "").trim(),
       });
     }
   }

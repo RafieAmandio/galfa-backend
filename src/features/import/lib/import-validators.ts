@@ -3,6 +3,7 @@ import type {
   FixedRateRow,
   FloatingRateRow,
   InstallmentRow,
+  RedemptionRow,
 } from "./excel-parser";
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -101,6 +102,13 @@ const installmentSchema = z
     }
   );
 
+const redemptionSchema = z.object({
+  accountNumber: z.string().min(1, "Account number is required"),
+  redemptionAmount: z.number().positive("Redemption amount must be positive"),
+  redemptionDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
+  description: z.string(),
+});
+
 export interface ValidationResult<T> {
   rowIndex: number;
   data: T;
@@ -148,6 +156,23 @@ export function validateInstallmentRows(
 ): ValidationResult<InstallmentRow>[] {
   return rows.map((row, index) => {
     const result = installmentSchema.safeParse(row);
+    return {
+      rowIndex: index,
+      data: row,
+      errors: result.success
+        ? []
+        : result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+      warnings: [],
+      isValid: result.success,
+    };
+  });
+}
+
+export function validateRedemptionRows(
+  rows: RedemptionRow[]
+): ValidationResult<RedemptionRow>[] {
+  return rows.map((row, index) => {
+    const result = redemptionSchema.safeParse(row);
     return {
       rowIndex: index,
       data: row,
