@@ -140,9 +140,7 @@ export function CreateFloatingRateModal({
         setSelectedInvestorEmail(selected.investorEmail || "");
         setCapital(selected.maturedValue.toString());
         if (selected.endDate) {
-          const nextDay = new Date(selected.endDate);
-          nextDay.setDate(nextDay.getDate() + 1);
-          setTransactionDate(nextDay);
+          setTransactionDate(new Date(selected.endDate));
         }
       }
     }

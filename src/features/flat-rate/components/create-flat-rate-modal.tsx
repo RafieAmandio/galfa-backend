@@ -166,9 +166,7 @@ export function CreateFlatRateModal({
         }
 
         if (selectedAccount.endDate) {
-          const nextDay = new Date(selectedAccount.endDate);
-          nextDay.setDate(nextDay.getDate() + 1);
-          setTransactionDate(nextDay);
+          setTransactionDate(new Date(selectedAccount.endDate));
         }
       }
     }
