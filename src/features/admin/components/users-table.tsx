@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, Loader2, Search } from "lucide-react";
 
 interface UsersTableProps {
   onRefresh?: () => void;
@@ -36,16 +37,26 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<UserWithDetails | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const fetchUsers = useCallback(async (pageNum: number = page) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await getAllUsers({ page: pageNum, pageSize: PAGE_SIZE });
+      const result = await getAllUsers({ page: pageNum, pageSize: PAGE_SIZE, search: search || undefined });
 
       if (result.success && result.users) {
         setUsers(result.users);
@@ -60,11 +71,11 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
     }
 
     setLoading(false);
-  }, [page]);
+  }, [page, search]);
 
   useEffect(() => {
     fetchUsers(1);
-  }, []);
+  }, [search]);
 
   // Allow parent component to trigger refresh
   useEffect(() => {
@@ -140,7 +151,7 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
 
   return (
     <div className="bg-white rounded-lg shadow-md overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200">
+      <div className="px-6 py-4 border-b border-gray-200 space-y-3">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold text-gray-900">All Users</h2>
           <button
@@ -150,7 +161,16 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
             Refresh
           </button>
         </div>
-        <p className="text-sm text-gray-600 mt-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by email or name..."
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <p className="text-sm text-gray-600">
           Showing {startItem}-{endItem} of {totalCount} user{totalCount !== 1 ? "s" : ""}
         </p>
       </div>

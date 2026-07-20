@@ -3,7 +3,7 @@
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { authUsers, profiles, roleAssignments } from "@/db/drizzle/schema";
-import { eq, sql, desc, count } from "drizzle-orm";
+import { eq, sql, desc, count, or, ilike } from "drizzle-orm";
 
 export interface UserWithDetails {
   id: string;
@@ -28,12 +28,13 @@ export interface GetUsersResult {
 export interface GetUsersPaginatedParams {
   page?: number;
   pageSize?: number;
+  search?: string;
 }
 
 export async function getAllUsers(
   params: GetUsersPaginatedParams = {}
 ): Promise<GetUsersResult> {
-  const { page = 1, pageSize = 20 } = params;
+  const { page = 1, pageSize = 20, search } = params;
 
   try {
     // Check if current user is admin
@@ -47,10 +48,19 @@ export async function getAllUsers(
 
     const db = createDrizzleConnection();
 
+    const searchFilter = search
+      ? or(
+          ilike(authUsers.email, `%${search}%`),
+          ilike(profiles.full_name, `%${search}%`)
+        )
+      : undefined;
+
     // Get total count
     const totalResult = await db
       .select({ count: count() })
-      .from(authUsers);
+      .from(authUsers)
+      .leftJoin(profiles, eq(authUsers.id, profiles.id))
+      .where(searchFilter);
     const totalCount = totalResult[0]?.count || 0;
     const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -68,6 +78,7 @@ export async function getAllUsers(
       })
       .from(authUsers)
       .leftJoin(profiles, eq(authUsers.id, profiles.id))
+      .where(searchFilter)
       .orderBy(desc(authUsers.created_at))
       .limit(pageSize)
       .offset(offset);

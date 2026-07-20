@@ -7,7 +7,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, not, exists, gt } from "drizzle-orm";
+import { eq, and, not, exists } from "drizzle-orm";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
@@ -55,9 +55,6 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
     .where(
       and(
         eq(accounts.status, "active"),
-        // Only include accounts where redemption date is before or on end date (if end date exists)
-        accounts.end_date ? gt(accounts.end_date, redemptionDate) : undefined,
-        // Exclude parent accounts that have rollover children (floating rate doesn't have rollovers, but keeping for consistency)
         not(
           exists(
             db

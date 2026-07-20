@@ -113,12 +113,8 @@ export async function getInstallmentAccountsForRedemption(
     })
   );
 
-  // Filter out accounts with very low balances (less than Rp 1,000)
-  // and accounts that are past their end date
   const eligibleAccounts = accountsWithValues.filter(
-    (account) =>
-      account.currentValue >= 1000 && // Must have meaningful balance
-      account.endDate >= redemptionDate // Must not be past end date
+    (account) => account.currentValue >= 1000
   );
 
   return eligibleAccounts;
