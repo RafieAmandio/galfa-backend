@@ -316,15 +316,12 @@ async function computeStatement(investorEmail: string) {
         // and UTC-midnight 00:00Z) to the intended WIB calendar day. Finance
         // convention (master Excel formula): interest accrues from the day
         // AFTER the deposit date through the maturity date INCLUSIVE.
-        const bothOnFirst = getLocalDate(result.transactionDate) === 1 && getLocalDate(calcEndDate) === 1;
         if (isStartMonth && isEndMonth) {
           daysActive = Math.max(0, getLocalDate(calcEndDate) - getLocalDate(result.transactionDate));
-          if (bothOnFirst) daysActive += 1;
         } else if (isStartMonth) {
           daysActive = Math.max(0, totalDaysInMonth - getLocalDate(result.transactionDate));
         } else if (isEndMonth) {
           daysActive = getLocalDate(calcEndDate);
-          if (bothOnFirst) daysActive += 1;
         } else {
           daysActive = totalDaysInMonth;
         }

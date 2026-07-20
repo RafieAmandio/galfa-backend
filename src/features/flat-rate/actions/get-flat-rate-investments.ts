@@ -226,16 +226,13 @@ function calculateMonthlyData(params: {
     const isStartMonth = monthCounter === 1;
     const isEndMonth = actualEndDate.getTime() === endDate.getTime();
 
-    const bothOnFirst = getLocalDate(startDate) === 1 && getLocalDate(endDate) === 1;
     let daysInPeriod: number;
     if (isStartMonth && isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate) - getLocalDate(startDate);
-      if (bothOnFirst) daysInPeriod += 1;
     } else if (isStartMonth) {
       daysInPeriod = totalDaysInMonth - getLocalDate(startDate);
     } else if (isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate);
-      if (bothOnFirst) daysInPeriod += 1;
     } else {
       daysInPeriod = totalDaysInMonth;
     }
