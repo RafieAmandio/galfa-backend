@@ -4,8 +4,13 @@ import { mutations } from "@/db/drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import { format, differenceInMonths, addDays } from "date-fns";
 
+const WIB_OFFSET = 7 * 60 * 60 * 1000;
 function getLocalDate(d: Date): number {
-  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+  return new Date(d.getTime() + WIB_OFFSET).getUTCDate();
+}
+function getWIBYearMonth(d: Date): number {
+  const wib = new Date(d.getTime() + WIB_OFFSET);
+  return wib.getUTCFullYear() * 100 + wib.getUTCMonth();
 }
 import { ADMIN_FEE_PERCENTAGE } from "./constants";
 import type { Redemption as BatchRedemption } from "./batch-redemptions";
@@ -91,12 +96,17 @@ export async function calculateNetPresentValueWithRedemptions(
   let cumulativeInterestEarned = 0;
   let calculationDate = new Date(startDate);
   const now = new Date();
-  const inCurrentMonth = currentDate.getFullYear() === now.getFullYear() &&
-    currentDate.getMonth() === now.getMonth();
+  const currentDateWIB = new Date(currentDate.getTime() + 7 * 60 * 60 * 1000);
+  const nowWIB = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+  const inCurrentMonth = currentDateWIB.getUTCFullYear() === nowWIB.getUTCFullYear() &&
+    currentDateWIB.getUTCMonth() === nowWIB.getUTCMonth();
   const lastCompletedMonthEnd = new Date(
-    currentDate.getFullYear(),
-    currentDate.getMonth() + (inCurrentMonth ? 0 : 1),
-    0
+    Date.UTC(
+      currentDateWIB.getUTCFullYear(),
+      currentDateWIB.getUTCMonth() + (inCurrentMonth ? 0 : 1),
+      0,
+      -7
+    )
   );
   const endDate =
     lastCompletedMonthEnd < currentDate ? lastCompletedMonthEnd : currentDate;
@@ -107,7 +117,7 @@ export async function calculateNetPresentValueWithRedemptions(
     (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  while (calculationDate <= endDate) {
+  while (getWIBYearMonth(calculationDate) <= getWIBYearMonth(endDate)) {
     const monthStart = new Date(calculationDate);
     const monthEnd = new Date(
       calculationDate.getFullYear(),

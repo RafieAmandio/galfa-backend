@@ -8,8 +8,13 @@ import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calcula
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { format } from "date-fns";
 
+const WIB_OFFSET = 7 * 60 * 60 * 1000;
 function getLocalDate(d: Date): number {
-  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+  return new Date(d.getTime() + WIB_OFFSET).getUTCDate();
+}
+function getWIBYearMonth(d: Date): number {
+  const wib = new Date(d.getTime() + WIB_OFFSET);
+  return wib.getUTCFullYear() * 100 + wib.getUTCMonth();
 }
 
 interface MonthlyData {
@@ -207,7 +212,7 @@ function calculateMonthlyData(params: {
   let currentDate = new Date(startDate);
   let monthCounter = 0;
 
-  while (currentDate <= endDate) {
+  while (getWIBYearMonth(currentDate) <= getWIBYearMonth(endDate)) {
     monthCounter++;
     const monthStart = new Date(currentDate);
     const monthEnd = new Date(

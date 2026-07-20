@@ -36,8 +36,13 @@ export interface StatementOfAccountData {
   years: StatementYearData[];
 }
 
+const WIB_OFFSET = 7 * 60 * 60 * 1000;
 function getLocalDate(d: Date): number {
-  return new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
+  return new Date(d.getTime() + WIB_OFFSET).getUTCDate();
+}
+function getWIBYearMonth(d: Date): number {
+  const wib = new Date(d.getTime() + WIB_OFFSET);
+  return wib.getUTCFullYear() * 100 + wib.getUTCMonth();
 }
 
 const MONTH_NAMES = [
@@ -297,7 +302,7 @@ async function computeStatement(investorEmail: string) {
       let cumulativeRedemptions = 0;
       let isFirst = true;
 
-      while (!isAfter(monthCur, endMon)) {
+      while (getWIBYearMonth(monthCur) <= getWIBYearMonth(calcEndDate)) {
         const monthStart = monthCur;
         const monthEnd = new Date(monthCur.getFullYear(), monthCur.getMonth() + 1, 0);
         const totalDaysInMonth = monthEnd.getDate();
@@ -305,7 +310,7 @@ async function computeStatement(investorEmail: string) {
         // Calculate days active
         let daysActive: number;
         const isStartMonth = isFirst;
-        const isEndMonth = monthCur.getTime() === endMon.getTime();
+        const isEndMonth = getWIBYearMonth(monthCur) === getWIBYearMonth(calcEndDate);
 
         // getLocalDate normalizes both storage conventions (WIB-midnight 17:00Z
         // and UTC-midnight 00:00Z) to the intended WIB calendar day. Finance
