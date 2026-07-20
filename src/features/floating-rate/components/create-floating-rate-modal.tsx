@@ -83,7 +83,11 @@ export function CreateFloatingRateModal({
   const [capital, setCapital] = useState("");
   const [adminFeePercentage, setAdminFeePercentage] = useState("5");
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
+  });
   const [isRollover, setIsRollover] = useState(false);
   const [selectedRolloverAccountId, setSelectedRolloverAccountId] = useState("");
   const [description, setDescription] = useState("");
@@ -145,6 +149,12 @@ export function CreateFloatingRateModal({
       }
     }
   }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
+
+  useEffect(() => {
+    const d = new Date(transactionDate);
+    d.setFullYear(d.getFullYear() + 1);
+    setEndDate(d);
+  }, [transactionDate]);
 
   // Calculate admin fee and net capital
   const calculateFinancials = () => {

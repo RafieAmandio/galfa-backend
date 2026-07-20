@@ -68,10 +68,20 @@ export function CreateInstallmentAccountModal({
   const [capital, setCapital] = useState<string>("");
   const [monthlyCoF, setMonthlyCoF] = useState<string>("");
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
+  });
   const [investmentType, setInvestmentType] = useState<string | null>(null);
   const [adminFeePercentage, setAdminFeePercentage] = useState<string>("");
   const [description, setDescription] = useState("");
+
+  useEffect(() => {
+    const d = new Date(transactionDate);
+    d.setFullYear(d.getFullYear() + 1);
+    setEndDate(d);
+  }, [transactionDate]);
 
   // Reset form when modal opens/closes
   const handleOpenChange = (open: boolean) => {

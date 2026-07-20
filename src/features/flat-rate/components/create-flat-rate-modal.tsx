@@ -86,7 +86,11 @@ export function CreateFlatRateModal({
   const [capital, setCapital] = useState("");
   const [annualRate, setAnnualRate] = useState("");
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
-  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d;
+  });
   const [isRollover, setIsRollover] = useState(false);
   const [selectedRolloverAccountId, setSelectedRolloverAccountId] =
     useState<string>("");
@@ -171,6 +175,12 @@ export function CreateFlatRateModal({
       }
     }
   }, [isRollover, selectedRolloverAccountId, rolloverAccounts]);
+
+  useEffect(() => {
+    const d = new Date(transactionDate);
+    d.setFullYear(d.getFullYear() + 1);
+    setEndDate(d);
+  }, [transactionDate]);
 
   const calculateFinancials = () => {
     const capitalAmount = parseFloat(capital || "0");
