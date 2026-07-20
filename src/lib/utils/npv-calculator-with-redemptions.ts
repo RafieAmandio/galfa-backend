@@ -132,13 +132,16 @@ export async function calculateNetPresentValueWithRedemptions(
     // date through the maturity date INCLUSIVE.
     //   start month: totalDays - day(start)
     //   end month:   day(end)
+    const bothOnFirst = getLocalDate(startDate) === 1 && getLocalDate(endDate) === 1;
     let daysInPeriod: number;
     if (isStartMonth && isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate) - getLocalDate(calculationDate);
+      if (bothOnFirst) daysInPeriod += 1;
     } else if (isStartMonth) {
       daysInPeriod = totalDaysInMonth - getLocalDate(calculationDate);
     } else if (isEndMonth) {
       daysInPeriod = getLocalDate(actualEndDate);
+      if (bothOnFirst) daysInPeriod += 1;
     } else {
       daysInPeriod = totalDaysInMonth;
     }
