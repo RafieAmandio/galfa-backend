@@ -16,6 +16,7 @@ import { cache } from "react";
 interface FloatingRateAccountForRedemption {
   id: number;
   accountNumber: string;
+  investorName: string;
   investorEmail: string;
   grossCapital: number;
   adminFee: number;
@@ -38,6 +39,7 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
     .select({
       id: accounts.id,
       accountNumber: accounts.account_number,
+      investorName: profiles.full_name,
       investorEmail: authUsers.email,
       grossCapital: accounts.capital,
       transactionDate: accounts.transaction_date,
@@ -95,14 +97,10 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
           account.endDate
         );
 
-        // Only return accounts with positive balance
-        if (valueResult.currentValue <= 1000) {
-          return null; // Filter out accounts with minimal balance
-        }
-
         return {
           id: account.id,
           accountNumber: account.accountNumber,
+          investorName: account.investorName || "",
           investorEmail: account.investorEmail || "N/A",
           grossCapital,
           adminFee,

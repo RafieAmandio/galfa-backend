@@ -224,7 +224,7 @@ export function RedeemFloatingRateModal({
   const convertToAccountOptions = (redemptionAccounts: any[]) => {
     return redemptionAccounts.map((account) => ({
       id: account.id,
-      name: account.accountNumber,
+      name: `${account.investorName || ""} - ${account.accountNumber}`.replace(/^\s*-\s*/, ""),
       grossCapital: account.grossCapital,
       netCapital: account.netInvestorFund,
       currentValue: account.currentValue,
