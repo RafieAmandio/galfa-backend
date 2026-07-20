@@ -1,8 +1,8 @@
 "use server";
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
-import { accounts, fixRateAccounts } from "@/db/drizzle/schema";
-import { eq, and, not, exists } from "drizzle-orm";
+import { accounts, fixRateAccounts, profiles, authUsers } from "@/db/drizzle/schema";
+import { eq, and } from "drizzle-orm";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
@@ -10,6 +10,7 @@ import { checkAdminAccess } from "@/lib/auth/admin-check";
 interface AccountForRedemption {
   id: number;
   accountNumber: string;
+  investorName: string;
   grossCapital: number;
   netCapital: number;
   annualRate: number;
@@ -33,7 +34,7 @@ export async function getAccountsForRedemptionWithBalance(
 
   const db = createDrizzleConnection();
 
-  // Get all accounts that are eligible for redemption
+  // Get all active flat-rate accounts
   const results = await db
     .select({
       id: accounts.id,
@@ -45,22 +46,12 @@ export async function getAccountsForRedemptionWithBalance(
       endDate: accounts.end_date,
       isRollover: accounts.is_rollover,
       adminFeeApplied: accounts.admin_fee_applied,
+      investorName: profiles.full_name,
     })
     .from(accounts)
     .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
-    .where(
-      and(
-        eq(accounts.status, "active"),
-        not(
-          exists(
-            db
-              .select()
-              .from(accounts)
-              .where(eq(accounts.parent_account_id, accounts.id))
-          )
-        )
-      )
-    );
+    .leftJoin(profiles, eq(accounts.user_id, profiles.id))
+    .where(eq(accounts.status, "active"));
 
   // Batch-fetch all redemptions in a single query
   const accountIds = results.map((r) => r.id);
@@ -88,14 +79,10 @@ export async function getAccountsForRedemptionWithBalance(
         adminFeeRate
       );
 
-      // Only return accounts with positive balance
-      if (npvResult.currentValue <= 1000) {
-        return null; // Filter out accounts with minimal balance
-      }
-
       return {
         id: account.id,
         accountNumber: account.accountNumber,
+        investorName: account.investorName || "",
         grossCapital,
         netCapital: npvResult.remainingPrincipal,
         annualRate,
@@ -110,8 +97,5 @@ export async function getAccountsForRedemptionWithBalance(
     })
   );
 
-  // Filter out null values and return
-  return accountsWithBalances.filter(
-    (account): account is AccountForRedemption => account !== null
-  );
+  return accountsWithBalances;
 }

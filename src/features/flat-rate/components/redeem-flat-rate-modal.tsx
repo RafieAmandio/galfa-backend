@@ -43,6 +43,7 @@ interface RedemptionModalProps {
 interface AccountOption {
   id: number;
   name: string;
+  accountNumber: string;
   grossCapital: number;
   netCapital: number;
   currentValue: number;
@@ -92,7 +93,8 @@ export function RedeemFlatRateModal({
           );
           const accountOptions = filteredAccounts.map((account) => ({
             id: account.id,
-            name: account.accountNumber,
+            name: `${account.investorName} - ${account.accountNumber}`,
+            accountNumber: account.accountNumber,
             grossCapital: account.grossCapital,
             netCapital: account.netCapital,
             currentValue: account.currentValue,
