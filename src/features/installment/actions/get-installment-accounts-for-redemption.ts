@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, installmentAccounts, authUsers } from "@/db/drizzle/schema";
-import { eq, and, gte, lte } from "drizzle-orm";
+import { eq, or, and, gte, lte } from "drizzle-orm";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
 import { calculateInstallmentValueWithRedemptions } from "@/lib/utils/installment-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
@@ -62,7 +62,7 @@ export async function getInstallmentAccountsForRedemption(
     .innerJoin(authUsers, eq(accounts.user_id, authUsers.id))
     .where(
       and(
-        eq(accounts.status, "active"),
+        or(eq(accounts.status, "active"), eq(accounts.status, "mature")),
         lte(accounts.transaction_date, redemptionDate) // Account must have started before redemption date
       )
     )

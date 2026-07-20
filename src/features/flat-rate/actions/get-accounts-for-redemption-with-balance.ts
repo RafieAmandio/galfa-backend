@@ -2,7 +2,7 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { accounts, fixRateAccounts, profiles, authUsers } from "@/db/drizzle/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { calculateNetPresentValueWithRedemptions } from "@/lib/utils/npv-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { checkAdminAccess } from "@/lib/auth/admin-check";
@@ -51,7 +51,7 @@ export async function getAccountsForRedemptionWithBalance(
     .from(accounts)
     .innerJoin(fixRateAccounts, eq(accounts.id, fixRateAccounts.account_id))
     .leftJoin(profiles, eq(accounts.user_id, profiles.id))
-    .where(eq(accounts.status, "active"));
+    .where(or(eq(accounts.status, "active"), eq(accounts.status, "mature")));
 
   // Batch-fetch all redemptions in a single query
   const accountIds = results.map((r) => r.id);

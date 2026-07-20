@@ -7,7 +7,7 @@ import {
   profiles,
   authUsers,
 } from "@/db/drizzle/schema";
-import { eq, and, not, exists } from "drizzle-orm";
+import { eq, or, and, not, exists } from "drizzle-orm";
 import { calculateFloatingRateValueWithRedemptions } from "@/lib/utils/floating-rate-calculator-with-redemptions";
 import { getBatchRedemptions } from "@/lib/utils/batch-redemptions";
 import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
@@ -54,7 +54,7 @@ export const getFloatingRateAccountsForRedemption = cache(async function (
     .innerJoin(authUsers, eq(profiles.id, authUsers.id))
     .where(
       and(
-        eq(accounts.status, "active"),
+        or(eq(accounts.status, "active"), eq(accounts.status, "mature")),
         not(
           exists(
             db
