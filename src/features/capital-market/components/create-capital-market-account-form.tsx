@@ -12,15 +12,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { SubmitButton } from "@/components/buttons/submit-button";
 import { cn } from "@/lib/utils";
-import { PlusIcon } from "lucide-react";
+import { PlusIcon, Check, ChevronsUpDown } from "lucide-react";
 
 // Error display component
 function FieldError({ error }: { error?: string }) {
@@ -57,6 +63,7 @@ export function CreateCapitalMarketAccountForm({
   // Users list state
   const [users, setUsers] = useState<UserOption[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
 
   // Load users when modal opens
   useEffect(() => {
@@ -208,32 +215,60 @@ export function CreateCapitalMarketAccountForm({
                   Select User *
                 </Label>
 
-                <Select
-                  value={formData.userId}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, userId: value }))
-                  }
-                  disabled={loadingUsers}
-                  required
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a user..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        <div className="flex flex-col text-left">
-                          <span className="font-medium">{user.email}</span>
-                          {user.fullName && (
-                            <span className="text-sm text-muted-foreground">
-                              {user.fullName}
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={userSearchOpen} onOpenChange={setUserSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={userSearchOpen}
+                      disabled={loadingUsers}
+                      className="w-full justify-between font-normal"
+                    >
+                      {formData.userId
+                        ? (() => {
+                            const u = users.find((u) => u.id === formData.userId);
+                            return u ? `${u.fullName || u.email}` : "Select a user...";
+                          })()
+                        : "Search user..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search by name or email..." />
+                      <CommandList>
+                        <CommandEmpty>No user found.</CommandEmpty>
+                        <CommandGroup>
+                          {users.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={`${user.email} ${user.fullName || ""}`}
+                              onSelect={() => {
+                                setFormData((prev) => ({ ...prev, userId: user.id }));
+                                setUserSearchOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  formData.userId === user.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.email}</span>
+                                {user.fullName && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {user.fullName}
+                                  </span>
+                                )}
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
                 {loadingUsers && (
                   <p className="text-sm text-muted-foreground">
                     Loading users...

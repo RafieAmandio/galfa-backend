@@ -18,6 +18,7 @@ import {
   Activity,
   Building2,
   Upload,
+  ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,6 +107,11 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
       label: "Mutations",
       href: "/admin/mutations",
       icon: Activity,
+    },
+    {
+      label: "Redemptions",
+      href: "/admin/redemptions",
+      icon: ArrowDownToLine,
     },
     {
       label: "Reports",

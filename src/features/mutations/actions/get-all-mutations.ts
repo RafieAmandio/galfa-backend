@@ -2,24 +2,26 @@
 
 import { createDrizzleConnection } from "@/db/drizzle/connection";
 import { mutations, accounts } from "@/db/drizzle/schema";
-import { sql, desc, ilike, or, eq } from "drizzle-orm";
+import { sql, desc, ilike, or, eq, and } from "drizzle-orm";
 
 export type Mutation = typeof mutations.$inferSelect & {
   accountNumber: string | null;
 };
 
 export async function getAllMutations(
-  { page = 1, pageSize = 10, search }: { page?: number; pageSize?: number; search?: string } = {}
+  { page = 1, pageSize = 10, search, typeFilter }: { page?: number; pageSize?: number; search?: string; typeFilter?: string } = {}
 ) {
   const db = createDrizzleConnection();
 
-  const searchFilter = search
+  const searchCondition = search
     ? or(
         ilike(mutations.description, `%${search}%`),
         ilike(mutations.type, `%${search}%`),
         ilike(accounts.account_number, `%${search}%`)
       )
     : undefined;
+  const typeCondition = typeFilter ? eq(mutations.type, typeFilter) : undefined;
+  const searchFilter = and(searchCondition, typeCondition);
 
   const [countResult] = await db
     .select({ count: sql<number>`count(*)` })

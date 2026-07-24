@@ -327,9 +327,9 @@ export function CreateInstallmentAccountModal({
               onChange={(e) => setMonthlyCoF(e.target.value)}
               placeholder="Enter monthly CoF (Percentage)"
               required
-              min="1"
+              min="0"
               max="100"
-              step="1"
+              step="0.01"
             />
             <FieldError error={getFieldError("monthlyCoF")} />
           </div>

@@ -58,7 +58,7 @@ import { format } from "date-fns";
 import { Mutation, getAllMutations } from "../actions/get-all-mutations";
 import { EditMutationModal } from "./edit-mutation-modal";
 
-export function MutationsAdminTable() {
+export function MutationsAdminTable({ typeFilter }: { typeFilter?: string } = {}) {
   const [data, setData] = useState<Mutation[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +82,7 @@ export function MutationsAdminTable() {
         page: pagination.pageIndex + 1,
         pageSize: pagination.pageSize,
         search: debouncedGlobalFilter || undefined,
+        typeFilter,
       });
       setData(result.data);
       setTotalCount(result.totalCount);
@@ -90,7 +91,7 @@ export function MutationsAdminTable() {
     } finally {
       setIsLoading(false);
     }
-  }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter]);
+  }, [pagination.pageIndex, pagination.pageSize, debouncedGlobalFilter, typeFilter]);
 
   useEffect(() => {
     fetchData();
