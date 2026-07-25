@@ -660,8 +660,9 @@ export default function FloatingRateInvestmentsMonthlyTable({
       expanded,
     },
     onExpandedChange: setExpanded,
-    // Server-side pagination - disable client-side pagination
+    // Server-side pagination and filtering
     manualPagination: true,
+    manualFiltering: true,
     pageCount: data?.pagination.totalPages || 0,
   });
 
