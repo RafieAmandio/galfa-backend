@@ -24,8 +24,8 @@ export function getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimiz
       getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized(
         params
       ),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
-    placeholderData: keepPreviousData, // Keep showing previous data while fetching new results
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    placeholderData: keepPreviousData,
   };
 }

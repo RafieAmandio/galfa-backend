@@ -615,14 +615,10 @@ export default function FloatingRateInvestmentsMonthlyTable({
 
     setColumnFilters(newFilters);
 
-    // Extract filter values and update pagination params
-    const searchFilter =
-      newFilters.find((f: any) => f.id === "global")?.value || "";
     const statusFilter =
       newFilters.find((f: any) => f.id === "status")?.value || "";
 
     onPaginationChange({
-      search: searchFilter,
       status: statusFilter,
     });
   };
@@ -648,7 +644,6 @@ export default function FloatingRateInvestmentsMonthlyTable({
     getSortedRowModel: getSortedRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
-    onGlobalFilterChange: handleGlobalFilterChange,
     getExpandedRowModel: getExpandedRowModel(),
     getRowCanExpand: () => true,
     state: {
@@ -656,12 +651,12 @@ export default function FloatingRateInvestmentsMonthlyTable({
       columnFilters,
       columnVisibility,
       rowSelection,
-      globalFilter,
       expanded,
     },
     onExpandedChange: setExpanded,
-    // Server-side pagination - disable client-side pagination
+    // Server handles both pagination and search filtering
     manualPagination: true,
+    manualFiltering: true,
     pageCount: data?.pagination.totalPages || 0,
   });
 
