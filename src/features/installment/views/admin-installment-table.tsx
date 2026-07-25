@@ -350,7 +350,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className=" text-right">
+          <div className="text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -446,7 +446,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className=" text-blue-600 font-medium text-right">
+          <div className="text-blue-600 font-medium text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -510,7 +510,7 @@ export function AdminInstallmentTable() {
           );
         },
         cell: ({ getValue }) => (
-          <div className=" text-red-600 font-medium text-right">
+          <div className="text-red-600 font-medium text-right">
             {formatCurrency(getValue() as number)}
           </div>
         ),
@@ -647,21 +647,21 @@ export function AdminInstallmentTable() {
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#192473] rounded-xl p-5 text-white">
+        <div className="bg-primary rounded-xl p-5 text-primary-foreground">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-white/60 mb-1">Total Investments</p>
+              <p className="text-xs font-medium text-primary-foreground/60 mb-1">Total Investments</p>
               <p className="text-xl font-semibold">
                 {loading || !summary ? "-" : filteredData.length}
               </p>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-white/80" />
+            <div className="w-9 h-9 rounded-lg bg-primary-foreground/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-primary-foreground/80" />
             </div>
           </div>
         </div>
 
-        <div className="bg-emerald-500 rounded-xl p-5 text-white">
+        <div className="bg-chart-3 rounded-xl p-5 text-white">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-xs font-medium text-white/60 mb-1">Total Gained Funds</p>
@@ -675,16 +675,16 @@ export function AdminInstallmentTable() {
           </div>
         </div>
 
-        <div className="bg-[#FFEB7A] rounded-xl p-5">
+        <div className="bg-accent rounded-xl p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-[#192473]/60 mb-1">Total Present Value</p>
-              <p className="text-xl font-semibold text-[#192473]">
+              <p className="text-xs font-medium text-primary/60 mb-1">Total Present Value</p>
+              <p className="text-xl font-semibold text-primary">
                 {loading ? "-" : formatCurrency(totals.totalPresentValueFund)}
               </p>
             </div>
-            <div className="w-9 h-9 rounded-lg bg-[#192473]/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-[#192473]/80" />
+            <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-primary/80" />
             </div>
           </div>
         </div>
@@ -813,7 +813,7 @@ export function AdminInstallmentTable() {
           </div>
         </div>
         <div className="p-5">
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
@@ -900,22 +900,22 @@ export function AdminInstallmentTable() {
                                             <TableCell className="font-medium">
                                               {monthData.monthYear}
                                             </TableCell>
-                                            <TableCell className=" text-right">
+                                            <TableCell className="text-right">
                                               {formatCurrency(
                                                 monthData.principalPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className=" text-green-600 text-right">
+                                            <TableCell className="text-green-600 text-right">
                                               {formatCurrency(
                                                 monthData.interestPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className=" text-blue-600 font-medium text-right">
+                                            <TableCell className="text-blue-600 font-medium text-right">
                                               {formatCurrency(
                                                 monthData.totalPayment
                                               )}
                                             </TableCell>
-                                            <TableCell className=" text-right">
+                                            <TableCell className="text-right">
                                               {formatCurrency(
                                                 monthData.netPresentValue
                                               )}
@@ -935,7 +935,7 @@ export function AdminInstallmentTable() {
 
                     {/* Totals Row */}
                     {filteredData.length > 0 && (
-                      <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                      <TableRow className="bg-accent/10 border-t-2 border-accent/30 font-bold hover:bg-accent/10">
                         <TableCell></TableCell>
                         <TableCell></TableCell>
                         <TableCell className="font-bold">TOTAL</TableCell>

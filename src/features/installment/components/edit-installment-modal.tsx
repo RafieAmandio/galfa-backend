@@ -162,15 +162,15 @@ export function EditInstallmentModal({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
-            <Edit className="h-5 w-5 text-blue-600" />
+            <Edit className="h-5 w-5 text-primary" />
             <span>Edit Installment Account</span>
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Account Info */}
-          <div className="bg-gray-50 p-3 rounded-lg">
-            <p className="text-sm text-gray-600">
+          <div className="bg-muted p-3 rounded-lg">
+            <p className="text-sm text-muted-foreground">
               Account:{" "}
               <span className="font-medium">{investment.accountNumber}</span>
             </p>
@@ -186,7 +186,7 @@ export function EditInstallmentModal({
               value={capital}
               onChange={(e) => setCapital(e.target.value)}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Investment capital amount (in IDR)
             </p>
           </div>
@@ -202,7 +202,7 @@ export function EditInstallmentModal({
               value={monthlyCof}
               onChange={(e) => setMonthlyCof(e.target.value)}
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Monthly cost of fund rate (e.g., 0.01 for 1%)
             </p>
           </div>
@@ -308,8 +308,8 @@ export function EditInstallmentModal({
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 p-3 rounded-md">
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-destructive/10 border border-destructive/20 p-3 rounded-md">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
 

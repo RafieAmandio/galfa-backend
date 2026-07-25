@@ -58,7 +58,7 @@ export function InvestorInstallmentTable({
 
   if (!summary || summary.investments.length === 0) {
     return (
-      <div className="text-center text-gray-500">
+      <div className="text-center text-muted-foreground">
         No installment investments found.
       </div>
     );
@@ -89,45 +89,45 @@ export function InvestorInstallmentTable({
     <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
+        <div className="bg-card p-5 rounded-xl border border-border">
+          <p className="text-xs font-medium text-muted-foreground mb-1">
             Total Net Investor Fund
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-blue-600">
+          </p>
+          <p className="text-xl font-semibold text-blue-600">
             {new Intl.NumberFormat("id-ID", {
               style: "currency",
               currency: "IDR",
             }).format(summary.totalNetInvestorFund)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">Capital after admin fees</p>
+          <p className="text-xs text-muted-foreground mt-1">Capital after admin fees</p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
+        <div className="bg-card p-5 rounded-xl border border-border">
+          <p className="text-xs font-medium text-muted-foreground mb-1">
             Projected Amount
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-green-600">
+          </p>
+          <p className="text-xl font-semibold text-green-600">
             {new Intl.NumberFormat("id-ID", {
               style: "currency",
               currency: "IDR",
             }).format(summary.totalRedeemedAmount)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Amount received back after redemption
           </p>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-sm font-medium text-gray-500">
+        <div className="bg-card p-5 rounded-xl border border-border">
+          <p className="text-xs font-medium text-muted-foreground mb-1">
             Total Redemptions
-          </h3>
-          <p className="mt-2 text-3xl font-bold text-red-600">
+          </p>
+          <p className="text-xl font-semibold text-red-600">
             {new Intl.NumberFormat("id-ID", {
               style: "currency",
               currency: "IDR",
             }).format(summary.totalRedemptions || 0)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Early redemptions processed
           </p>
         </div>
@@ -135,29 +135,29 @@ export function InvestorInstallmentTable({
 
       {/* Monthly Net Fund Summary */}
       {uniqueMonths.length > 0 && (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Monthly Net Investor Fund
-          </h3>
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="p-4 border-b border-border">
+            <h3 className="font-medium text-sm">Monthly Net Investor Fund</h3>
+          </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Month
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     Remaining Net Fund
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-border">
                 {uniqueMonths.map((month) => (
-                  <tr key={month}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr key={month} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                       {month}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
@@ -172,57 +172,54 @@ export function InvestorInstallmentTable({
       )}
 
       {/* Individual Investments */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            Your Installment Investments
-          </h3>
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
+        <div className="p-4 border-b border-border">
+          <h3 className="font-medium text-sm">Your Installment Investments</h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Account
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Gross Capital
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Admin Fee
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Net Capital
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Duration
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Monthly Rate
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   Details
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-border">
               {summary.investments.map((investment, index) => (
                 <React.Fragment key={investment.id}>
-                  {/* Main Investment Row */}
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <tr className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
                       {investment.accountNumber}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-md ${
                           investment.investmentType === "principle"
                             ? "bg-blue-100 text-blue-800"
                             : investment.investmentType === "interest_only"
@@ -241,72 +238,71 @@ export function InvestorInstallmentTable({
                               : "Co. Menurun"}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
                       }).format(investment.grossCapital)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-red-600">
                       -
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
                       }).format(investment.adminFee)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600 font-medium">
                       {new Intl.NumberFormat("id-ID", {
                         style: "currency",
                         currency: "IDR",
                       }).format(investment.netCapital)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {investment.durationMonths} months
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       {(investment.monthlyCof * 100).toFixed(2)}%
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-md ${
                           investment.status === "active"
                             ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
+                            : "bg-muted text-muted-foreground"
                         }`}
                       >
                         {investment.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm">
                       <button
                         onClick={() => toggleExpansion(index)}
-                        className="hover:text-indigo-900"
+                        className="text-primary hover:text-primary/80 font-medium transition-colors"
                       >
                         {expandedRows.has(index) ? "Hide" : "Show"} Schedule
                       </button>
                     </td>
                   </tr>
 
-                  {/* Expanded Payment Schedule */}
                   {expandedRows.has(index) && (
                     <>
-                      <tr className="bg-blue-50">
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                      <tr className="bg-muted/30">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Payment Schedule for {investment.accountNumber}
                         </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Month
                         </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Principal Payment
                         </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Interest Payment
                         </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Total Received
                         </td>
-                        <td className="px-6 py-2 text-xs font-medium text-blue-700">
+                        <td className="px-4 py-2 text-xs font-medium text-muted-foreground">
                           Net Present Value
                         </td>
                         <td colSpan={3}></td>
@@ -314,31 +310,31 @@ export function InvestorInstallmentTable({
                       {investment.monthlyData.map((monthData: any) => (
                         <tr
                           key={monthData.monthYear}
-                          className="bg-blue-25 border-l-4 border-blue-200"
+                          className="bg-muted/20"
                         >
-                          <td className="px-6 py-1"></td>
-                          <td className="px-6 py-1 text-sm text-gray-700">
+                          <td className="px-4 py-2"></td>
+                          <td className="px-4 py-2 text-sm text-muted-foreground">
                             {monthData.monthYear}
                           </td>
-                          <td className="px-6 py-1 text-sm text-gray-900">
+                          <td className="px-4 py-2 text-sm">
                             {new Intl.NumberFormat("id-ID", {
                               style: "currency",
                               currency: "IDR",
                             }).format(monthData.principalPayment)}
                           </td>
-                          <td className="px-6 py-1 text-sm text-green-600 font-medium">
+                          <td className="px-4 py-2 text-sm text-green-600 font-medium">
                             {new Intl.NumberFormat("id-ID", {
                               style: "currency",
                               currency: "IDR",
                             }).format(monthData.interestPayment)}
                           </td>
-                          <td className="px-6 py-1 text-sm text-blue-600 font-medium">
+                          <td className="px-4 py-2 text-sm text-blue-600 font-medium">
                             {new Intl.NumberFormat("id-ID", {
                               style: "currency",
                               currency: "IDR",
                             }).format(monthData.totalPayment)}
                           </td>
-                          <td className="px-6 py-1 text-sm text-gray-900">
+                          <td className="px-4 py-2 text-sm">
                             {new Intl.NumberFormat("id-ID", {
                               style: "currency",
                               currency: "IDR",
