@@ -153,7 +153,13 @@ export function AdminInstallmentTable() {
                 <SelectItem value="all">All types</SelectItem>
                 {uniqueTypes.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type === "principle" ? "Principal" : "Interest Only"}
+                    {type === "principle"
+                      ? "Principle + Interest"
+                      : type === "interest_only"
+                        ? "Interest Only"
+                        : type === "bullet"
+                          ? "Bullet"
+                          : "Co. Menurun"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -176,16 +182,16 @@ export function AdminInstallmentTable() {
   };
 
   const getTypeBadge = (type: string) => {
+    const config: Record<string, { label: string; className: string }> = {
+      principle: { label: "Principle + Interest", className: "bg-blue-100 text-blue-800 border-blue-200" },
+      interest_only: { label: "Interest Only", className: "bg-green-100 text-green-800 border-green-200" },
+      bullet: { label: "Bullet", className: "bg-purple-100 text-purple-800 border-purple-200" },
+      declining: { label: "Co. Menurun", className: "bg-orange-100 text-orange-800 border-orange-200" },
+    };
+    const c = config[type] ?? { label: type, className: "" };
     return (
-      <Badge
-        variant={type === "principle" ? "default" : "secondary"}
-        className={
-          type === "principle"
-            ? "bg-blue-100 text-blue-800 border-blue-200"
-            : "bg-green-100 text-green-800 border-green-200"
-        }
-      >
-        {type === "principle" ? "Principal" : "Interest Only"}
+      <Badge variant="secondary" className={c.className}>
+        {c.label}
       </Badge>
     );
   };

@@ -215,8 +215,10 @@ export function EditInstallmentModal({
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="principle">Principal</SelectItem>
+                <SelectItem value="principle">Principle + Interest</SelectItem>
                 <SelectItem value="interest_only">Interest Only</SelectItem>
+                <SelectItem value="bullet">Bullet</SelectItem>
+                <SelectItem value="declining">Co. Menurun</SelectItem>
               </SelectContent>
             </Select>
           </div>

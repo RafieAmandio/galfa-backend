@@ -225,12 +225,20 @@ export function InvestorInstallmentTable({
                         className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           investment.investmentType === "principle"
                             ? "bg-blue-100 text-blue-800"
-                            : "bg-green-100 text-green-800"
+                            : investment.investmentType === "interest_only"
+                              ? "bg-green-100 text-green-800"
+                              : investment.investmentType === "bullet"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-orange-100 text-orange-800"
                         }`}
                       >
                         {investment.investmentType === "principle"
-                          ? "Principal"
-                          : "Interest Only"}
+                          ? "Principle + Interest"
+                          : investment.investmentType === "interest_only"
+                            ? "Interest Only"
+                            : investment.investmentType === "bullet"
+                              ? "Bullet"
+                              : "Co. Menurun"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

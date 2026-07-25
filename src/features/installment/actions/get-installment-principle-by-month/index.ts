@@ -29,7 +29,7 @@ interface MonthlyInstallmentPrincipleResult {
       adminFee: number;
       netCapital: number;
       monthlyCof: number;
-      investmentType: "principle" | "interest_only";
+      investmentType: "principle" | "interest_only" | "bullet" | "declining";
       transactionDate: Date;
       endDate: Date | null;
     }>;
@@ -119,7 +119,7 @@ export const getInstallmentPrincipleByMonth = cache(async function (
         adminFee: adminFeeAmount,
         netCapital: netAmount,
         monthlyCof: parseFloat(account.monthlyCof),
-        investmentType: account.investmentType as "principle" | "interest_only",
+        investmentType: account.investmentType as "principle" | "interest_only" | "bullet" | "declining",
         transactionDate: account.transactionDate,
         endDate: account.endDate,
       };

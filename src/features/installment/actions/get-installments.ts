@@ -27,7 +27,7 @@ interface InstallmentInvestment {
   netCapital: number;
   monthlyCof: number;
   durationMonths: number;
-  investmentType: "principle" | "interest_only";
+  investmentType: "principle" | "interest_only" | "bullet" | "declining";
   monthlyPrincipalPayment: number | null;
   startDate: Date;
   endDate: Date | null;
@@ -70,66 +70,71 @@ function calculateInstallmentData(
   netCapital: number,
   monthlyCof: number,
   durationMonths: number,
-  investmentType: "principle" | "interest_only",
+  investmentType: "principle" | "interest_only" | "bullet" | "declining",
   startDate: Date
 ): MonthlyInstallmentData[] {
   const monthlyData: MonthlyInstallmentData[] = [];
   let accumulatedInterest = 0;
 
-  // Calculate monthly principal payment for principle type
   const monthlyPrincipalPayment =
-    investmentType === "principle" ? netCapital / durationMonths : 0;
+    investmentType === "principle" || investmentType === "declining"
+      ? netCapital / durationMonths
+      : 0;
 
-  // Add one extra month to show completion (Net Present Value = 0)
   const totalMonthsToShow = durationMonths + 1;
 
   for (let month = 1; month <= totalMonthsToShow; month++) {
-    // Interest starts in the month AFTER the transaction date
     const currentDate = addMonths(startOfMonth(startDate), month);
     const monthYear = format(currentDate, "MMM yyyy") || `Month ${month}`;
 
     let principalPayment = 0;
     let interestPayment = 0;
     let totalPayment = 0;
-    let netPresentValue = 0; // Balance BEFORE this month's payment
+    let netPresentValue = 0;
 
     if (month <= durationMonths) {
-      // Regular payment months
       if (investmentType === "principle") {
-        // Principle type: interest always calculated on original net capital
         interestPayment = netCapital * monthlyCof;
         principalPayment = monthlyPrincipalPayment;
         totalPayment = principalPayment + interestPayment;
-
-        // Net Present Value shows balance BEFORE this month's payment
-        // For month 1: show full amount, for month 2: show after month 1 payment, etc.
         netPresentValue = netCapital - (month - 1) * monthlyPrincipalPayment;
-      } else {
-        // Interest only type: balance stays same until final month
-        const currentBalance = netCapital; // Always the full amount for interest-only
-        interestPayment = currentBalance * monthlyCof;
+      } else if (investmentType === "interest_only") {
+        interestPayment = netCapital * monthlyCof;
 
         if (month === durationMonths) {
-          // Last month: return all principal + interest
-          principalPayment = currentBalance;
+          principalPayment = netCapital;
           totalPayment = principalPayment + interestPayment;
-          netPresentValue = currentBalance; // Show full amount before final payment
+          netPresentValue = netCapital;
         } else {
-          // Regular months: only interest
           principalPayment = 0;
           totalPayment = interestPayment;
-          netPresentValue = currentBalance; // Always show full amount
+          netPresentValue = netCapital;
         }
+      } else if (investmentType === "bullet") {
+        if (month === durationMonths) {
+          interestPayment = netCapital * monthlyCof * durationMonths;
+          principalPayment = netCapital;
+          totalPayment = principalPayment + interestPayment;
+        } else {
+          interestPayment = 0;
+          principalPayment = 0;
+          totalPayment = 0;
+        }
+        netPresentValue = netCapital;
+      } else if (investmentType === "declining") {
+        const remainingPrincipal = netCapital - (month - 1) * monthlyPrincipalPayment;
+        interestPayment = remainingPrincipal * monthlyCof;
+        principalPayment = monthlyPrincipalPayment;
+        totalPayment = principalPayment + interestPayment;
+        netPresentValue = remainingPrincipal;
       }
 
       accumulatedInterest += interestPayment;
     } else {
-      // Post-completion month (shows investment is fully paid out)
       principalPayment = 0;
       interestPayment = 0;
       totalPayment = 0;
-      netPresentValue = 0; // Investment fully completed
-      // Don't add to accumulated interest
+      netPresentValue = 0;
     }
 
     monthlyData.push({
@@ -232,9 +237,13 @@ export async function getAdminInstallmentInvestments(
       );
       const investmentType = result.investmentType as
         | "principle"
-        | "interest_only";
+        | "interest_only"
+        | "bullet"
+        | "declining";
       const monthlyPrincipalPayment =
-        investmentType === "principle" ? netCapital / durationMonths : null;
+        investmentType === "principle" || investmentType === "declining"
+          ? netCapital / durationMonths
+          : null;
 
       // Calculate current value with pre-fetched redemptions
       const currentValueWithRedemptions =
@@ -403,9 +412,13 @@ export async function getInvestorInstallmentInvestments(
       );
       const investmentType = result.investmentType as
         | "principle"
-        | "interest_only";
+        | "interest_only"
+        | "bullet"
+        | "declining";
       const monthlyPrincipalPayment =
-        investmentType === "principle" ? netCapital / durationMonths : null;
+        investmentType === "principle" || investmentType === "declining"
+          ? netCapital / durationMonths
+          : null;
 
       // Calculate current value with pre-fetched redemptions
       const currentValueWithRedemptions =

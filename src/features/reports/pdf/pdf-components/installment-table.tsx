@@ -8,7 +8,7 @@ interface InstallmentInvestment {
   netCapital: number;
   monthlyCof: number;
   durationMonths: number;
-  investmentType: "principle" | "interest_only";
+  investmentType: "principle" | "interest_only" | "bullet" | "declining";
   totalRedeemedAmount: number;
 }
 
@@ -158,7 +158,13 @@ export function InstallmentTable({ investments }: InstallmentTableProps) {
                       : styles.statusBadgeTextInactive,
                   ]}
                 >
-                  {investment.investmentType === "principle" ? "PRINCIPAL" : "INT ONLY"}
+                  {investment.investmentType === "principle"
+                    ? "P+I"
+                    : investment.investmentType === "interest_only"
+                      ? "INT ONLY"
+                      : investment.investmentType === "bullet"
+                        ? "BULLET"
+                        : "MENURUN"}
                 </Text>
               </View>
             </View>

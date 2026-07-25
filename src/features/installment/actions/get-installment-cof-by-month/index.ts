@@ -33,10 +33,10 @@ interface MonthlyInstallmentCoFResult {
       investorEmail: string | null;
       netCapital: number; // Original net capital after admin fees
       monthlyCof: number;
-      investmentType: "principle" | "interest_only";
-      presentValue: number; // Current value as of the target month
-      totalGainedFunds: number; // Interest earned by admin from this account
-      returnPercentage: number; // (Present Value / Net Capital - 1) * 100
+      investmentType: "principle" | "interest_only" | "bullet" | "declining";
+      presentValue: number;
+      totalGainedFunds: number;
+      returnPercentage: number;
       transactionDate: Date;
       endDate: Date | null;
     }>;
@@ -51,7 +51,7 @@ interface MonthlyInstallmentCoFResult {
 function calculateInstallmentValue(
   netCapital: number,
   monthlyCof: number,
-  investmentType: "principle" | "interest_only",
+  investmentType: "principle" | "interest_only" | "bullet" | "declining",
   startDate: Date,
   endDate: Date | null,
   targetMonth: Date
@@ -99,39 +99,30 @@ function calculateInstallmentValue(
   }
 
   if (investmentType === "principle") {
-    // Principal type: Constant monthly payments (principal + interest)
-    // Interest is constant each month based on original capital
     const monthlyInterest = netCapital * monthlyCof;
     const monthlyPrincipalPayment = netCapital / totalDurationMonths;
-
-    // Monthly gained funds = just this month's interest payment
-    const monthlyGainedFunds = monthlyInterest;
-
-    // Present value = remaining capital after this month's principal payment
     const remainingCapital = Math.max(
       0,
       netCapital - monthlyPrincipalPayment * monthNumber
     );
-    const presentValue = remainingCapital;
-
-    return {
-      presentValue,
-      monthlyGainedFunds,
-    };
+    return { presentValue: remainingCapital, monthlyGainedFunds: monthlyInterest };
+  } else if (investmentType === "bullet") {
+    return { presentValue: netCapital, monthlyGainedFunds: 0 };
+  } else if (investmentType === "declining") {
+    const monthlyPrincipalPayment = netCapital / totalDurationMonths;
+    const remainingCapital = Math.max(
+      0,
+      netCapital - monthlyPrincipalPayment * (monthNumber - 1)
+    );
+    const monthlyInterest = remainingCapital * monthlyCof;
+    const presentValueAfter = Math.max(
+      0,
+      netCapital - monthlyPrincipalPayment * monthNumber
+    );
+    return { presentValue: presentValueAfter, monthlyGainedFunds: monthlyInterest };
   } else {
-    // Interest-only type: Only interest payments until final month
     const monthlyInterest = netCapital * monthlyCof;
-
-    // For interest-only, we receive interest payment this month
-    const monthlyGainedFunds = monthlyInterest;
-
-    // Present value = original capital (stays constant until final month)
-    const presentValue = netCapital;
-
-    return {
-      presentValue,
-      monthlyGainedFunds,
-    };
+    return { presentValue: netCapital, monthlyGainedFunds: monthlyInterest };
   }
 }
 
@@ -214,7 +205,7 @@ export const getInstallmentCoFByMonth = cache(async function (
       const calculation = calculateInstallmentValue(
         netCapital,
         monthlyCof,
-        account.investmentType as "principle" | "interest_only",
+        account.investmentType as "principle" | "interest_only" | "bullet" | "declining",
         account.transactionDate,
         account.endDate,
         cofCalculationMonth // Use the following month for CoF calculation
@@ -233,7 +224,7 @@ export const getInstallmentCoFByMonth = cache(async function (
         investorEmail: account.investorEmail,
         netCapital,
         monthlyCof,
-        investmentType: account.investmentType as "principle" | "interest_only",
+        investmentType: account.investmentType as "principle" | "interest_only" | "bullet" | "declining",
         presentValue: calculation.presentValue,
         totalGainedFunds: calculation.monthlyGainedFunds,
         returnPercentage,

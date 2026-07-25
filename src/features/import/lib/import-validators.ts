@@ -81,9 +81,9 @@ const installmentSchema = z
       .max(100, "Admin fee must be <= 100%"),
     startDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
     endDate: z.string().regex(dateRegex, "Date must be YYYY-MM-DD"),
-    investmentType: z.enum(["principle", "interest_only"], {
+    investmentType: z.enum(["principle", "interest_only", "bullet", "declining"], {
       errorMap: () => ({
-        message: "Investment type must be 'principle' or 'interest_only'",
+        message: "Investment type must be 'principle', 'interest_only', 'bullet', or 'declining'",
       }),
     }),
     isRollover: z.boolean(),

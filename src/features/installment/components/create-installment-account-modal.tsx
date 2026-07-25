@@ -370,8 +370,10 @@ export function CreateInstallmentAccountModal({
                 <SelectValue placeholder="Choose an investment type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="principle">Principle</SelectItem>
+                <SelectItem value="principle">Principle + Interest</SelectItem>
                 <SelectItem value="interest_only">Interest Only</SelectItem>
+                <SelectItem value="bullet">Bullet</SelectItem>
+                <SelectItem value="declining">Co. Menurun</SelectItem>
               </SelectContent>
             </Select>
             <FieldError error={getFieldError("investmentType")} />

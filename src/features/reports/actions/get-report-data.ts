@@ -37,7 +37,7 @@ interface InstallmentInvestmentData {
   netCapital: number;
   monthlyCof: number;
   durationMonths: number;
-  investmentType: "principle" | "interest_only";
+  investmentType: "principle" | "interest_only" | "bullet" | "declining";
   totalRedeemedAmount: number;
 }
 
