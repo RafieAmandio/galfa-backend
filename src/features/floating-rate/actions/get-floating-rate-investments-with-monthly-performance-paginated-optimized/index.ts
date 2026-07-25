@@ -10,7 +10,7 @@ import {
   mutations,
   vcPerformance,
 } from "@/db/drizzle/schema";
-import { eq, desc, asc, and, sql, gte, lt, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, sql, gte, lt, inArray, ilike } from "drizzle-orm";
 import {
   startOfMonth,
   endOfMonth,
@@ -134,9 +134,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
 
       if (search) {
         whereConditions.push(
-          sql`(${accounts.account_number} ILIKE ${`%${search}%`} OR ${
-            authUsers.email
-          } ILIKE ${`%${search}%`})`
+          ilike(accounts.account_number, `%${search}%`)
         );
       }
 
