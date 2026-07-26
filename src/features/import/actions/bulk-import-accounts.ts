@@ -465,6 +465,7 @@ export async function bulkImportAccounts(
       }
 
       // Redemptions
+      const redemptionResults: { accountNumber: string; success: boolean; message: string }[] = [];
       if (redemptionRows.length > 0) {
         const redemptionAccountNumbers = [...new Set(redemptionRows.map((r) => r.accountNumber))];
         const redemptionAccounts = await tx
@@ -477,7 +478,14 @@ export async function bulkImportAccounts(
 
         for (const row of redemptionRows) {
           const accountId = redemptionAccountMap.get(row.accountNumber);
-          if (!accountId) continue;
+          if (!accountId) {
+            redemptionResults.push({
+              accountNumber: row.accountNumber,
+              success: false,
+              message: `Account "${row.accountNumber}" not found in database`,
+            });
+            continue;
+          }
 
           await tx.insert(mutations).values({
             account_id: accountId,
@@ -489,11 +497,19 @@ export async function bulkImportAccounts(
             created_at: new Date(),
             updated_at: new Date(),
           });
+          redemptionResults.push({
+            accountNumber: row.accountNumber,
+            success: true,
+            message: `Redemption of ${row.redemptionAmount.toLocaleString("id-ID")} from ${row.accountNumber} imported`,
+          });
         }
       }
     });
 
     // Transaction succeeded — build success results
+    const redemptionSuccessCount = redemptionResults.filter((r) => r.success).length;
+    const redemptionFailCount = redemptionResults.filter((r) => !r.success).length;
+
     const results: RowResult[] = [
       ...fixedRateRows.map((row, i) => ({
         type: "Fixed Rate",
@@ -516,19 +532,19 @@ export async function bulkImportAccounts(
         success: true,
         message: `Installment account ${row.accountNumber} created successfully`,
       })),
-      ...redemptionRows.map((row, i) => ({
+      ...redemptionResults.map((r, i) => ({
         type: "Redemption",
         rowIndex: i,
-        accountNumber: row.accountNumber,
-        success: true,
-        message: `Redemption of ${row.redemptionAmount.toLocaleString("id-ID")} from ${row.accountNumber} imported`,
+        accountNumber: r.accountNumber,
+        success: r.success,
+        message: r.message,
       })),
     ];
 
     return {
       totalProcessed: totalRows,
-      totalSuccess: totalRows,
-      totalFailed: 0,
+      totalSuccess: totalRows - redemptionFailCount,
+      totalFailed: redemptionFailCount,
       results,
     };
   } catch (error) {

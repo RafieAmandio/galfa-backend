@@ -119,17 +119,6 @@ export function MutationsAdminTable({ typeFilter }: { typeFilter?: string } = {}
     }
   };
 
-  const formatDateTime = (date: Date | string | null) => {
-    if (!date) return "-";
-    try {
-      const dateObj = new Date(date);
-      if (isNaN(dateObj.getTime())) return "-";
-      return format(dateObj, "d MMMM yyyy HH:mm");
-    } catch (error) {
-      return "-";
-    }
-  };
-
   // Helper function to get column display name
   const getColumnDisplayName = (columnId: string) => {
     const displayNames: Record<string, string> = {
@@ -139,7 +128,6 @@ export function MutationsAdminTable({ typeFilter }: { typeFilter?: string } = {}
       description: "Description",
       status: "Status",
       transaction_date: "Transaction Date",
-      created_at: "Created At",
       updated_at: "Updated At",
     };
     return displayNames[columnId] || columnId;
@@ -439,36 +427,6 @@ export function MutationsAdminTable({ typeFilter }: { typeFilter?: string } = {}
         cell: ({ getValue }) => (
           <div className="text-sm">
             {formatDate(getValue() as Date | string | null)}
-          </div>
-        ),
-        filterFn: dateRangeFilter,
-      },
-      {
-        accessorKey: "created_at",
-        header: ({ column }) => (
-          <div className="flex items-center">
-            <Button
-              variant="ghost"
-              onClick={() =>
-                column.toggleSorting(column.getIsSorted() === "asc")
-              }
-              className="h-auto p-0 font-semibold"
-            >
-              Created At
-              {column.getIsSorted() === "asc" ? (
-                <ArrowUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ArrowDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              )}
-            </Button>
-            <DateRangeFilter column={column} label="Created At" />
-          </div>
-        ),
-        cell: ({ getValue }) => (
-          <div className="text-sm">
-            {formatDateTime(getValue() as Date | string | null)}
           </div>
         ),
         filterFn: dateRangeFilter,
