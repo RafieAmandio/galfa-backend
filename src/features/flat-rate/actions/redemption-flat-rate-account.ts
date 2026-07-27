@@ -81,13 +81,6 @@ export async function redeemFlatRateAccount(
         message: `Redemption date cannot be before account start date (${account.transactionDate.toLocaleDateString()})`,
       };
     }
-    if (account.endDate && request.redemptionDate > account.endDate) {
-      return {
-        success: false,
-        message: `Redemption date cannot be after account end date (${account.endDate.toLocaleDateString()})`,
-      };
-    }
-
     // Calculate current account value (NPV) with redemptions
     const adminFeeRate = Number(account.adminFeeRate || 0);
     const currentValue = await calculateNetPresentValueWithRedemptions(

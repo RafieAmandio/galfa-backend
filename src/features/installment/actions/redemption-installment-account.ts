@@ -104,13 +104,6 @@ export async function redeemInstallmentAccount(
         message: `Redemption date cannot be before account start date (${account.transactionDate.toLocaleDateString()})`,
       };
     }
-    if (account.endDate && request.redemptionDate > account.endDate) {
-      return {
-        success: false,
-        message: `Redemption date cannot be after account end date (${account.endDate.toLocaleDateString()})`,
-      };
-    }
-
     // Calculate current account value with existing redemptions
     const grossCapital = Number(account.grossCapital);
     const adminFee = Number(account.adminFee);
