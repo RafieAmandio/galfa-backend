@@ -625,12 +625,18 @@ export function AdminInstallmentTable() {
       totalGainedFunds: acc.totalGainedFunds + investment.totalGainedFunds,
       totalRedemptions:
         acc.totalRedemptions + (investment.totalRedemptions || 0),
+      totalPrincipleRemaining:
+        acc.totalPrincipleRemaining + (investment.principleRemaining || 0),
+      totalCofRemaining:
+        acc.totalCofRemaining + (investment.cofRemaining || 0),
     }),
     {
       totalNetCapital: 0,
       totalPresentValueFund: 0,
       totalGainedFunds: 0,
       totalRedemptions: 0,
+      totalPrincipleRemaining: 0,
+      totalCofRemaining: 0,
     }
   );
 
@@ -664,9 +670,9 @@ export function AdminInstallmentTable() {
         <div className="bg-chart-3 rounded-xl p-5 text-white">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-white/60 mb-1">Total Gained Funds</p>
+              <p className="text-xs font-medium text-white/60 mb-1">Principle Tersisa</p>
               <p className="text-xl font-semibold">
-                {loading ? "-" : formatCurrency(totals.totalGainedFunds)}
+                {loading ? "-" : formatCurrency(totals.totalPrincipleRemaining)}
               </p>
             </div>
             <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center">
@@ -678,9 +684,9 @@ export function AdminInstallmentTable() {
         <div className="bg-accent rounded-xl p-5">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-xs font-medium text-primary/60 mb-1">Total Present Value</p>
+              <p className="text-xs font-medium text-primary/60 mb-1">CoF Tersisa</p>
               <p className="text-xl font-semibold text-primary">
-                {loading ? "-" : formatCurrency(totals.totalPresentValueFund)}
+                {loading ? "-" : formatCurrency(totals.totalCofRemaining)}
               </p>
             </div>
             <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">

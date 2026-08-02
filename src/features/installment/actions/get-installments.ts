@@ -39,6 +39,8 @@ interface InstallmentInvestment {
   netPresentValueFund: number;
   totalGainedFunds: number; // Total interest gained by admin
   totalRedemptions: number; // Total redemptions from mutations table
+  principleRemaining: number;
+  cofRemaining: number;
   // Investor view specific
   totalNetInvestorFund: number; // Running total after redemptions
 }
@@ -276,6 +278,42 @@ export async function getAdminInstallmentInvestments(
         0
       );
 
+      // Calculate paid months (elapsed months since interest start)
+      const now = new Date();
+      const interestStart = addMonths(startOfMonth(result.startDate), 1);
+      const paidMonths = Math.max(0, Math.min(
+        durationMonths,
+        differenceInMonths(now, interestStart) + 1
+      ));
+
+      // Calculate remaining principal and CoF based on investment type
+      let principleRemaining = 0;
+      let cofRemaining = 0;
+
+      if (investmentType === "principle") {
+        const monthlyPrincipal = netCapital / durationMonths;
+        const monthlyInterest = netCapital * monthlyCof;
+        principleRemaining = Math.max(0, netCapital - paidMonths * monthlyPrincipal);
+        cofRemaining = Math.max(0, (durationMonths - paidMonths) * monthlyInterest);
+      } else if (investmentType === "interest_only") {
+        const monthlyInterest = netCapital * monthlyCof;
+        principleRemaining = netCapital;
+        cofRemaining = Math.max(0, (durationMonths - paidMonths) * monthlyInterest);
+      } else if (investmentType === "bullet") {
+        const totalInterest = netCapital * monthlyCof * durationMonths;
+        const isPaid = paidMonths >= durationMonths;
+        principleRemaining = isPaid ? 0 : netCapital;
+        cofRemaining = isPaid ? 0 : totalInterest;
+      } else if (investmentType === "declining") {
+        const monthlyPrincipal = netCapital / durationMonths;
+        principleRemaining = Math.max(0, netCapital - paidMonths * monthlyPrincipal);
+        cofRemaining = 0;
+        for (let m = paidMonths; m < durationMonths; m++) {
+          const remaining = netCapital - m * monthlyPrincipal;
+          cofRemaining += remaining * monthlyCof;
+        }
+      }
+
       // Present value fund is current value of the investment with redemptions
       const presentValueFund = currentValueWithRedemptions.currentValue;
       const netPresentValueFund = presentValueFund;
@@ -316,6 +354,8 @@ export async function getAdminInstallmentInvestments(
         netPresentValueFund,
         totalGainedFunds: totalInterestGained,
         totalRedemptions: currentValueWithRedemptions.totalRedemptions,
+        principleRemaining,
+        cofRemaining,
         totalNetInvestorFund: netCapital,
       } as InstallmentInvestment;
     })
