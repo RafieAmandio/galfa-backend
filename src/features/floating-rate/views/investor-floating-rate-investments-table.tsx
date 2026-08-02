@@ -378,7 +378,7 @@ export default function InvestorFloatingRateInvestmentsTable({
               {formatCurrency(value)}
             </span>
           ) : (
-            <span className="text-gray-500">None</span>
+            <span className="text-muted-foreground">None</span>
           );
         },
         // No filterFn for calculated column
@@ -569,8 +569,8 @@ export default function InvestorFloatingRateInvestmentsTable({
   if (!data || data.investments.length === 0) {
     return (
       <div className="text-center p-8">
-        <p className="text-gray-600 mb-4">No floating rate investments found</p>
-        <p className="text-sm text-gray-500">
+        <p className="text-muted-foreground mb-4">No floating rate investments found</p>
+        <p className="text-sm text-muted-foreground">
           You don't have any floating rate investments yet.
         </p>
       </div>
@@ -779,7 +779,7 @@ export default function InvestorFloatingRateInvestmentsTable({
                     ))}
                     {/* Totals Row */}
                     {filteredData.length > 0 && (
-                      <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                      <TableRow className="bg-accent/10 border-t-2 border-accent/30 font-bold hover:bg-accent/10">
                         <TableCell className="font-bold">TOTAL</TableCell>
                         <TableCell className=" font-bold text-right">
                           {formatCurrency(totals.grossCapital)}

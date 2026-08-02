@@ -770,7 +770,7 @@ export function CapitalMarketPerformanceTable({ userId }: { userId: string }) {
 
                     {/* Totals Row */}
                     {filteredData.length > 0 && (
-                      <TableRow className="bg-yellow-50 border-t-2 border-yellow-200 font-bold hover:bg-yellow-50">
+                      <TableRow className="bg-accent/10 border-t-2 border-accent/30 font-bold hover:bg-accent/10">
                         <TableCell className="font-bold">TOTAL</TableCell>
                         <TableCell className=" font-bold">
                           {formatCurrency(totals.totalInvested)}

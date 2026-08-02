@@ -219,15 +219,15 @@ export function InvestorFlatRateView({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       <div className="w-full max-w-full">
         {/* Header Section */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8">
+        <div className="bg-card rounded-xl border border-border p-8 mb-8">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            <h1 className="text-xl font-semibold text-foreground">
               Flat Rate Investments
             </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            <p className="text-sm text-muted-foreground mt-1">
               Track your flat rate investment portfolio with compound interest
               calculations and detailed performance metrics.
             </p>
@@ -236,7 +236,7 @@ export function InvestorFlatRateView({
 
         {/* Error State */}
         {error && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8">
+          <div className="bg-card rounded-xl border border-border p-8 mb-8">
             <div className="max-w-2xl mx-auto text-center">
               <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
                 <div className="flex items-center justify-center mb-4">
@@ -269,11 +269,11 @@ export function InvestorFlatRateView({
 
         {/* No Data State */}
         {!summary && !error && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 mb-8">
+          <div className="bg-card rounded-xl border border-border p-8 mb-8">
             <div className="max-w-2xl mx-auto text-center">
               <div className="flex items-center justify-center mb-4">
                 <svg
-                  className="w-12 h-12 text-gray-400"
+                  className="w-12 h-12 text-muted-foreground"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -286,10 +286,10 @@ export function InvestorFlatRateView({
                   />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 No Flat Rate Investments
               </h3>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 You don't have any flat rate investments yet. Contact your
                 advisor to get started.
               </p>
@@ -301,12 +301,12 @@ export function InvestorFlatRateView({
         {summary && (
           <div className="space-y-8">
             {/* Portfolio Summary */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="bg-card rounded-xl border border-border p-8">
               <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                <h2 className="text-3xl font-bold text-foreground mb-2">
                   Portfolio Summary
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Your flat rate investment performance overview
                 </p>
               </div>
@@ -453,19 +453,19 @@ export function InvestorFlatRateView({
             </div>
 
             {/* Investment Details Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="bg-card rounded-xl border border-border p-8">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <h2 className="text-2xl font-bold text-foreground mb-2">
                   Investment Details
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Detailed breakdown of all your flat rate investments
                 </p>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <thead className="text-xs text-muted-foreground uppercase bg-muted/50">
                     <tr>
                       <th className="px-6 py-3">Account Number</th>
                       <th className="px-6 py-3">Net Amount</th>
@@ -480,8 +480,8 @@ export function InvestorFlatRateView({
                   </thead>
                   <tbody>
                     {summary.investments.map((investment, index) => (
-                      <tr key={index} className="bg-white border-b">
-                        <td className="px-6 py-4 font-medium text-gray-900">
+                      <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors">
+                        <td className="px-6 py-4 font-medium text-foreground">
                           {investment.accountNumber}
                         </td>
                         <td className="px-6 py-4">
@@ -538,7 +538,7 @@ export function InvestorFlatRateView({
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-foreground"></div>
                   </div>
                 </CardContent>
               </Card>
@@ -677,12 +677,12 @@ export function InvestorFlatRateView({
               )}
 
             {/* Navigation
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+            <div className="bg-card rounded-xl border border-border p-8">
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                <h2 className="text-2xl font-bold text-foreground mb-2">
                   View Other Investments
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Access your complete portfolio across all investment types
                 </p>
               </div>

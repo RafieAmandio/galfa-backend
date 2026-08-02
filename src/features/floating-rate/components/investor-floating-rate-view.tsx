@@ -83,7 +83,7 @@ export function InvestorFloatingRateView({
       <div className="w-full max-w-full">
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-red-600 mb-4">
+            <p className="text-destructive mb-4">
               {error instanceof Error
                 ? error.message
                 : "Failed to load your floating rate investments"}
@@ -103,10 +103,10 @@ export function InvestorFloatingRateView({
   return (
     <div className="w-full max-w-full">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-xl font-semibold text-foreground">
           Your Floating Rate Investments
         </h1>
-        <p className="text-gray-600">
+        <p className="text-sm text-muted-foreground">
           View your floating rate investment performance with real-time market
           adjustments and redemption tracking.
         </p>

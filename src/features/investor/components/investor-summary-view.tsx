@@ -250,19 +250,19 @@ export function InvestorSummaryView({
             <div className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-soft-lg ${summary.totalGainLoss >= 0 ? "card-gradient-gold" : "card-gradient-danger"}`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className={`text-sm font-medium uppercase tracking-wide mb-2 ${summary.totalGainLoss >= 0 ? "text-[#192473]/70" : "text-white/70"}`}>
+                  <p className={`text-sm font-medium uppercase tracking-wide mb-2 ${summary.totalGainLoss >= 0 ? "text-primary/70" : "text-white/70"}`}>
                     Total Performance
                   </p>
-                  <p className={`text-2xl font-bold mb-1 ${summary.totalGainLoss >= 0 ? "text-[#192473]" : "text-white"}`}>
+                  <p className={`text-2xl font-bold mb-1 ${summary.totalGainLoss >= 0 ? "text-primary" : "text-white"}`}>
                     {formatCurrency(summary.totalGainLoss)}
                   </p>
-                  <p className={`text-xs ${summary.totalGainLoss >= 0 ? "text-[#192473]/60" : "text-white/60"}`}>
+                  <p className={`text-xs ${summary.totalGainLoss >= 0 ? "text-primary/60" : "text-white/60"}`}>
                     {formatPercent(summary.totalGainLossPercentage)} overall return
                   </p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.totalGainLoss >= 0 ? "bg-[#192473]/20" : "bg-white/20"}`}>
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.totalGainLoss >= 0 ? "bg-primary/20" : "bg-white/20"}`}>
                   {summary.totalGainLoss >= 0 ? (
-                    <TrendingUp className={`w-6 h-6 ${summary.totalGainLoss >= 0 ? "text-[#192473]" : "text-white"}`} />
+                    <TrendingUp className={`w-6 h-6 ${summary.totalGainLoss >= 0 ? "text-primary" : "text-white"}`} />
                   ) : (
                     <TrendingDown className="w-6 h-6 text-white" />
                   )}
@@ -323,7 +323,7 @@ export function InvestorSummaryView({
                 {fundAllocations && (
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Current Total</p>
-                    <p className="text-lg font-bold text-[#192473]">
+                    <p className="text-lg font-bold text-primary">
                       {formatCompactCurrency(fundAllocations.totalAum)}
                     </p>
                   </div>
@@ -378,7 +378,7 @@ export function InvestorSummaryView({
 
                   <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border/50">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-[#192473]" />
+                      <div className="w-3 h-3 rounded-full bg-primary" />
                       <span className="text-sm text-muted-foreground">Company AUM</span>
                     </div>
                   </div>
@@ -456,8 +456,8 @@ export function InvestorSummaryView({
               <div className="p-6 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center">
-                      <Building2 className="w-6 h-6 text-[#192473]" />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-foreground">Company AUM</h3>
@@ -468,7 +468,7 @@ export function InvestorSummaryView({
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">Total AUM</p>
-                    <p className="text-xl font-bold text-[#192473]">
+                    <p className="text-xl font-bold text-primary">
                       {formatCompactCurrency(fundAllocations.totalAum)}
                     </p>
                   </div>
@@ -515,8 +515,8 @@ export function InvestorSummaryView({
               <div className="p-6 border-b border-border/50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-[#192473]/10 flex items-center justify-center">
-                      <Percent className="w-6 h-6 text-[#192473]" />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Percent className="w-6 h-6 text-primary" />
                     </div>
                     <div>
                       <h3 className="font-bold text-foreground">Flat Rate</h3>
@@ -524,7 +524,7 @@ export function InvestorSummaryView({
                     </div>
                   </div>
                   {summary.flatRateInvestments.hasData && (
-                    <Badge className="bg-[#192473] text-white border-0">
+                    <Badge className="bg-primary text-white border-0">
                       {summary.flatRateInvestments.activeInvestments}
                     </Badge>
                   )}
@@ -553,7 +553,7 @@ export function InvestorSummaryView({
                     </div>
                     <Link
                       href="/investor/flat-rate"
-                      className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-[#192473]/10 text-[#192473] font-medium rounded-xl hover:bg-[#192473]/20 transition-colors"
+                      className="flex items-center justify-center gap-2 w-full py-3 mt-4 bg-primary/10 text-primary font-medium rounded-xl hover:bg-primary/20 transition-colors"
                     >
                       View Details
                       <ChevronRight className="w-4 h-4" />
@@ -701,15 +701,15 @@ export function InvestorSummaryView({
               {summary.flatRateInvestments.hasData ? (
                 <Link
                   href="/investor/flat-rate"
-                  className="flex items-center justify-between p-5 rounded-xl bg-[#192473]/5 border border-[#192473]/10 hover:bg-[#192473]/10 transition-colors group"
+                  className="flex items-center justify-between p-5 rounded-xl bg-primary/5 border border-[#192473]/10 hover:bg-primary/10 transition-colors group"
                 >
                   <div>
-                    <h3 className="font-bold text-[#192473] mb-1">Flat Rate Details</h3>
+                    <h3 className="font-bold text-primary mb-1">Flat Rate Details</h3>
                     <p className="text-xs text-muted-foreground">
                       View detailed breakdown with compound interest calculations
                     </p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-[#192473] group-hover:translate-x-1 transition-transform" />
+                  <ChevronRight className="w-5 h-5 text-primary group-hover:translate-x-1 transition-transform" />
                 </Link>
               ) : (
                 <div className="p-5 rounded-xl bg-muted/50 border border-border/50 opacity-50 cursor-not-allowed">

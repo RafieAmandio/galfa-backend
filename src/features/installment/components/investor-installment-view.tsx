@@ -13,10 +13,10 @@ export function InvestorInstallmentView({
   return (
     <div className="w-full max-w-full">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-xl font-semibold text-foreground">
           Your Installment Investments
         </h1>
-        <p className="text-gray-600">
+        <p className="text-sm text-muted-foreground">
           View your installment investment schedule and track your net investor
           fund.
         </p>

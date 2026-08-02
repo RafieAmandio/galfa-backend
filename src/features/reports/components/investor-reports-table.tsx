@@ -143,7 +143,7 @@ export function InvestorReportsTable({
       <div className="space-y-4">
         <div className="flex items-center gap-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search by email or name..."
               value={globalFilterInput}
@@ -151,7 +151,7 @@ export function InvestorReportsTable({
               className="pl-10"
             />
           </div>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             {table.getFilteredRowModel().rows.length} investor
             {table.getFilteredRowModel().rows.length !== 1 ? "s" : ""}
           </div>
@@ -204,7 +204,7 @@ export function InvestorReportsTable({
         </div>
 
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground">
             Page {table.getState().pagination.pageIndex + 1} of{" "}
             {table.getPageCount()}
           </div>
