@@ -250,8 +250,8 @@ export const slide = StyleSheet.create({
     borderBottomWidth: 0,
   },
   tableCell: {
-    paddingVertical: 3,
-    paddingHorizontal: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 5,
     borderRightWidth: 1,
     borderRightColor: brand.border,
     justifyContent: "center",

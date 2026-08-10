@@ -279,21 +279,52 @@ function drawFundAllocationsSlide(doc: PDFKit.PDFDocument, allocations: FundAllo
   cy += 16;
 
   const tableW = W - PAD_X * 2;
-  const columns = [
-    { header: "", width: tableW * 0.15 },
-    { header: "", width: tableW * 0.45 },
-    { header: "AUM", width: tableW * 0.2, align: "right" },
-    { header: "Rate", width: tableW * 0.2, align: "right" },
-  ];
+  const colW = { name: tableW * 0.2, desc: tableW * 0.42, aum: tableW * 0.19, rate: tableW * 0.19 };
+  const headerH = 16;
+  const fontSize = 6;
+  const descFontSize = 5.5;
 
-  const rows = allocations.map(a => [
-    a.name,
-    a.description || "-",
-    formatIDR(a.aum).replace("Rp", ""),
-    a.rateLabel || `${a.rateType === "loan" ? "Loan" : "ROE"}: ${a.rateValue}% ${a.rateType === "loan" ? "p.a." : "(Div.)"}`,
-  ]);
+  // Header
+  doc.rect(PAD_X, cy, tableW, headerH).lineWidth(0.5).strokeColor(brand.border).stroke();
+  doc.font("Helvetica-Bold").fontSize(7).fillColor(brand.black);
+  let hx = PAD_X;
+  doc.text("", hx + 4, cy + 4, { width: colW.name - 8 });
+  hx += colW.name;
+  doc.text("Allocation", hx + 4, cy + 4, { width: colW.desc - 8, align: "center" });
+  hx += colW.desc;
+  doc.text("AUM", hx + 4, cy + 4, { width: colW.aum - 8, align: "right" });
+  hx += colW.aum;
+  doc.text("Rate", hx + 4, cy + 4, { width: colW.rate - 8, align: "right" });
+  cy += headerH;
 
-  drawTable(doc, PAD_X, cy, tableW, columns, rows, { fontSize: 6 });
+  // Rows with dynamic height
+  allocations.forEach(a => {
+    const descText = a.description || "-";
+    const descW = colW.desc - 10;
+    doc.font("Helvetica").fontSize(descFontSize);
+    const descH = doc.heightOfString(descText, { width: descW });
+    const rowH = Math.max(16, descH + 8);
+
+    doc.rect(PAD_X, cy, tableW, rowH).lineWidth(0.5).strokeColor(brand.border).stroke();
+
+    let rx = PAD_X;
+    doc.font("Helvetica-Bold").fontSize(fontSize).fillColor(brand.black);
+    doc.text(a.name, rx + 4, cy + 4, { width: colW.name - 8 });
+    rx += colW.name;
+
+    doc.font("Helvetica").fontSize(descFontSize);
+    doc.text(descText, rx + 4, cy + 4, { width: descW });
+    rx += colW.desc;
+
+    doc.font("Helvetica").fontSize(fontSize);
+    doc.text(formatIDR(a.aum).replace("Rp", ""), rx + 4, cy + 4, { width: colW.aum - 8, align: "right" });
+    rx += colW.aum;
+
+    const rateText = a.rateLabel || `${a.rateType === "loan" ? "Loan" : "ROE"}: ${a.rateValue}% ${a.rateType === "loan" ? "p.a." : "(Div.)"}`;
+    doc.text(rateText, rx + 4, cy + 4, { width: colW.rate - 8, align: "right" });
+
+    cy += rowH;
+  });
 }
 
 function drawStatementOfAccountSlide(

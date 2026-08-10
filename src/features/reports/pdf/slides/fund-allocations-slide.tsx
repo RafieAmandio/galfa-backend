@@ -34,13 +34,15 @@ export function FundAllocationsSlide({
       <View style={slide.table}>
         {/* Header */}
         <View style={slide.tableHeader}>
-          <View style={[slide.tableHeaderCell, { width: "15%" }]}>
-            <Text style={slide.tableHeaderText}></Text>
-          </View>
-          <View style={[slide.tableHeaderCell, { width: "45%" }]}>
-            <Text style={slide.tableHeaderText}></Text>
-          </View>
           <View style={[slide.tableHeaderCell, { width: "20%" }]}>
+            <Text style={slide.tableHeaderText}></Text>
+          </View>
+          <View style={[slide.tableHeaderCell, { width: "42%" }]}>
+            <Text style={[slide.tableHeaderText, { textAlign: "center" }]}>
+              Allocation
+            </Text>
+          </View>
+          <View style={[slide.tableHeaderCell, { width: "19%" }]}>
             <Text style={[slide.tableHeaderText, { textAlign: "right" }]}>
               AUM
             </Text>
@@ -49,7 +51,7 @@ export function FundAllocationsSlide({
             style={[
               slide.tableHeaderCell,
               slide.tableHeaderCellLast,
-              { width: "20%" },
+              { width: "19%" },
             ]}
           >
             <Text style={[slide.tableHeaderText, { textAlign: "right" }]}>
@@ -67,15 +69,17 @@ export function FundAllocationsSlide({
               i === allocations.length - 1 ? slide.tableRowLast : {},
             ]}
           >
-            <View style={[slide.tableCell, { width: "15%" }]}>
-              <Text style={slide.tableCellTextBold}>{alloc.name}</Text>
+            <View style={[slide.tableCell, { width: "20%" }]}>
+              <Text style={[slide.tableCellTextBold, { fontSize: 6 }]}>
+                {alloc.name}
+              </Text>
             </View>
-            <View style={[slide.tableCell, { width: "45%" }]}>
+            <View style={[slide.tableCell, { width: "42%" }]}>
               <Text style={[slide.tableCellText, { fontSize: 5.5 }]}>
                 {alloc.description || "-"}
               </Text>
             </View>
-            <View style={[slide.tableCell, { width: "20%" }]}>
+            <View style={[slide.tableCell, { width: "19%" }]}>
               <Text style={[slide.tableCellText, { textAlign: "right" }]}>
                 {formatCurrency(alloc.aum)}
               </Text>
@@ -84,7 +88,7 @@ export function FundAllocationsSlide({
               style={[
                 slide.tableCell,
                 slide.tableCellLast,
-                { width: "20%" },
+                { width: "19%" },
               ]}
             >
               <Text style={[slide.tableCellText, { textAlign: "right" }]}>
