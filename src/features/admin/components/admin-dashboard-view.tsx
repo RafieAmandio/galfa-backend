@@ -25,6 +25,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { DashboardSkeleton } from "./dashboard-skeleton";
+import { DashboardSummaryTab } from "./dashboard-summary-tab";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardData } from "@/features/admin/actions/get-dashboard-data";
 
@@ -315,6 +316,7 @@ export function AdminDashboardView({
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="fixed-rate">Fixed Rate</TabsTrigger>
             <TabsTrigger value="floating-rate">Floating Rate</TabsTrigger>
             <TabsTrigger value="installment">Installment</TabsTrigger>
@@ -415,6 +417,10 @@ export function AdminDashboardView({
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          <TabsContent value="summary" className="space-y-4">
+            <DashboardSummaryTab />
           </TabsContent>
 
           <TabsContent value="fixed-rate" className="space-y-4">
