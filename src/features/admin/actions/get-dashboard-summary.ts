@@ -23,8 +23,11 @@ export interface AumRecord {
 
 export interface PrincipleInflow {
   fixRate: number;
+  fixRateCount: number;
   floatingRate: number;
+  floatingRateCount: number;
   installment: number;
+  installmentCount: number;
   total: number;
 }
 
@@ -64,11 +67,14 @@ export interface DashboardSummaryData {
   aumRecords: AumRecord[];
   principleInflow: PrincipleInflow;
   totalCoF: number;
+  cofFixRate: number;
+  cofFixRateCount: number;
   totalSum: number;
   totalAumRealized: number;
   realizedPL: number;
   realizedPLPct: number;
   cofInstallment: number;
+  cofInstallmentCount: number;
   outflowRecords: OutflowRecord[];
   totalOutflow: number;
   performanceRows: PerformanceRow[];
@@ -119,8 +125,11 @@ export async function getDashboardSummary(): Promise<{
       .where(eq(accounts.status, "active"));
 
     let fixRatePrincipal = 0;
+    let fixRateCount = 0;
     let floatingRatePrincipal = 0;
+    let floatingRateCount = 0;
     let installmentPrincipal = 0;
+    let installmentCount = 0;
 
     for (const acc of activeAccounts) {
       const capital = Number(acc.capital);
@@ -130,17 +139,18 @@ export async function getDashboardSummary(): Promise<{
           : capital;
       const net = acc.adminFeeApplied ? capital : needsFee;
 
-      if (acc.accountTypeId === typeMap["fix"]) fixRatePrincipal += net;
-      else if (acc.accountTypeId === typeMap["floating"])
-        floatingRatePrincipal += net;
-      else if (acc.accountTypeId === typeMap["installment"])
-        installmentPrincipal += net;
+      if (acc.accountTypeId === typeMap["fix"]) { fixRatePrincipal += net; fixRateCount++; }
+      else if (acc.accountTypeId === typeMap["floating"]) { floatingRatePrincipal += net; floatingRateCount++; }
+      else if (acc.accountTypeId === typeMap["installment"]) { installmentPrincipal += net; installmentCount++; }
     }
 
     const principleInflow: PrincipleInflow = {
       fixRate: fixRatePrincipal,
+      fixRateCount,
       floatingRate: floatingRatePrincipal,
+      floatingRateCount,
       installment: installmentPrincipal,
+      installmentCount,
       total: fixRatePrincipal + floatingRatePrincipal + installmentPrincipal,
     };
 
@@ -294,11 +304,14 @@ export async function getDashboardSummary(): Promise<{
         aumRecords,
         principleInflow,
         totalCoF,
+        cofFixRate: totalFixRateCoF,
+        cofFixRateCount: fixRateCoFResult.length,
         totalSum,
         totalAumRealized: latestAum,
         realizedPL,
         realizedPLPct,
         cofInstallment,
+        cofInstallmentCount: installmentCoFResult.length,
         outflowRecords,
         totalOutflow,
         performanceRows,
