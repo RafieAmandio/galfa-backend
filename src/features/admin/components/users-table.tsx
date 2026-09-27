@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { getAllUsers, type UserWithDetails } from "../actions/get-users";
 import { deleteUser } from "../actions/delete-user";
+import { resetUserPassword } from "../actions/reset-user-password";
 import {
   Table,
   TableBody,
@@ -22,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, Loader2, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Trash2, KeyRound, Loader2, Search } from "lucide-react";
 
 interface UsersTableProps {
   onRefresh?: () => void;
@@ -42,6 +43,10 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
   const [deleteTarget, setDeleteTarget] = useState<UserWithDetails | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserWithDetails | null>(null);
+  const [newPassword, setNewPassword] = useState("asdfasdf");
+  const [resetting, setResetting] = useState(false);
+  const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -120,6 +125,18 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
       fetchUsers(page);
     } else {
       setDeleteError(result.message);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!resetTarget) return;
+    setResetting(true);
+    setResetResult(null);
+    const result = await resetUserPassword(resetTarget.id, newPassword);
+    setResetting(false);
+    setResetResult(result);
+    if (result.success) {
+      setTimeout(() => { setResetTarget(null); setResetResult(null); setNewPassword("asdfasdf"); }, 1500);
     }
   };
 
@@ -239,17 +256,32 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
                   {formatDate(user.lastSignInAt)}
                 </TableCell>
                 <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => {
-                      setDeleteError(null);
-                      setDeleteTarget(user);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                      title="Reset password"
+                      onClick={() => {
+                        setResetResult(null);
+                        setNewPassword("asdfasdf");
+                        setResetTarget(user);
+                      }}
+                    >
+                      <KeyRound className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => {
+                        setDeleteError(null);
+                        setDeleteTarget(user);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))
@@ -326,6 +358,42 @@ export function UsersTable({ onRefresh }: UsersTableProps) {
             <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!resetTarget} onOpenChange={(open) => { if (!open) { setResetTarget(null); setResetResult(null); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset Password</DialogTitle>
+            <DialogDescription>
+              Set a new password for <span className="font-semibold">{resetTarget?.email}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium text-foreground">New Password</label>
+              <Input
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+                className="mt-1"
+              />
+            </div>
+            {resetResult && (
+              <div className={`p-3 rounded-md text-sm border ${resetResult.success ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
+                {resetResult.message}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResetTarget(null)} disabled={resetting}>
+              Cancel
+            </Button>
+            <Button onClick={handleReset} disabled={resetting || !newPassword}>
+              {resetting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Reset Password
             </Button>
           </DialogFooter>
         </DialogContent>
