@@ -127,6 +127,9 @@ function CofTable({ rows }: { rows: DashboardSummaryData["cofTableRows"] }) {
     <div className="bg-card border border-border rounded-xl overflow-hidden">
       <div className="p-4 border-b border-border">
         <h3 className="text-sm font-semibold">CoF Table Record</h3>
+        <p className="text-[11px] text-muted-foreground mt-0.5">
+          CoF values based on current active accounts — historical months reflect current portfolio, not point-in-time
+        </p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
