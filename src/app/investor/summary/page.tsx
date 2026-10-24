@@ -4,6 +4,8 @@ import { getFundAllocationsSummary } from "@/features/fund-allocations/actions/g
 import { getAllVCPerformance } from "@/features/investments/actions/get-all-vc-performance";
 import { InvestorSummaryView } from "@/features/investor/components/investor-summary-view";
 
+export const maxDuration = 30;
+
 export default async function InvestorSummaryPage() {
   // Authenticate user on server side
   const user = await requireAuth();
