@@ -14,30 +14,25 @@ export default async function InvestorSummaryPage() {
   let fundAllocations = null;
   let vcPerformance: { date: Date; aum: number; monthlyGrossRoi: number | null; monthlyNettRoi: number | null }[] = [];
 
-  const [summaryResult, fundAllocationsResult, vcPerformanceResult] = await Promise.allSettled([
-    getComprehensiveInvestorSummary(user.email),
-    getFundAllocationsSummary(),
-    getAllVCPerformance({ pageSize: 100 }),
-  ]);
+  // Sequential to avoid exhausting Supabase connection pool
+  try {
+    summary = await getComprehensiveInvestorSummary(user.email);
+  } catch (e) { console.error("Summary fetch failed:", e); }
 
-  if (summaryResult.status === "fulfilled") {
-    summary = summaryResult.value;
-  }
+  try {
+    const faResult = await getFundAllocationsSummary();
+    if (faResult.success && faResult.data) fundAllocations = faResult.data;
+  } catch (e) { console.error("Fund allocations fetch failed:", e); }
 
-  if (fundAllocationsResult.status === "fulfilled" && fundAllocationsResult.value.success && fundAllocationsResult.value.data) {
-    fundAllocations = fundAllocationsResult.value.data;
-  }
-
-  if (vcPerformanceResult.status === "fulfilled" && vcPerformanceResult.value.success && vcPerformanceResult.value.data) {
-    vcPerformance = vcPerformanceResult.value.data
-      .reverse()
-      .map((record) => ({
-        date: record.date,
-        aum: record.aum,
-        monthlyGrossRoi: record.monthlyGrossRoi,
-        monthlyNettRoi: record.monthlyNettRoi,
+  try {
+    const vpResult = await getAllVCPerformance({ pageSize: 100 });
+    if (vpResult.success && vpResult.data) {
+      vcPerformance = [...vpResult.data].reverse().map((r) => ({
+        date: r.date, aum: r.aum,
+        monthlyGrossRoi: r.monthlyGrossRoi, monthlyNettRoi: r.monthlyNettRoi,
       }));
-  }
+    }
+  } catch (e) { console.error("VC performance fetch failed:", e); }
 
   return (
     <InvestorSummaryView
