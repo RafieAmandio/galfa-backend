@@ -354,6 +354,7 @@ export const getInvestorFloatingRateInvestments = cache(async function (
       message: `Successfully retrieved ${investments.length} floating rate investments with compound growth calculations`,
       data: {
         investments,
+        monthlyGrowthRates,
         totalGrossCapital,
         totalNetInvestorFund,
         totalAdminFees,

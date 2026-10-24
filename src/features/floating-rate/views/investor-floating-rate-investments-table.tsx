@@ -484,8 +484,10 @@ export default function InvestorFloatingRateInvestmentsTable({
 
   const tableData = useMemo(() => {
     if (!data?.investments) return [];
-    // Hide rollover accounts — investors only see their original fund entries
-    return data.investments.filter((inv: any) => !inv.isRollover);
+    // Hide matured accounts that were rolled over (have a child rollover)
+    // Keep active accounts whether original or rollover
+    const activeIds = new Set(data.investments.filter((inv: any) => inv.status === "active").map((inv: any) => inv.id));
+    return data.investments.filter((inv: any) => inv.status === "active");
   }, [data]);
 
   const table = useReactTable({
@@ -889,6 +891,40 @@ export default function InvestorFloatingRateInvestmentsTable({
           </div>
         </CardContent>
       </Card>
+      {/* Monthly Performance History */}
+      {data?.monthlyGrowthRates && data.monthlyGrowthRates.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Monthly Performance History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Month</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Growth Rate</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Performance Rate</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...data.monthlyGrowthRates].reverse().map((rate: any, i: number) => (
+                    <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/20">
+                      <td className="px-4 py-2">{format(new Date(rate.month), "MMMM yyyy")}</td>
+                      <td className={`px-4 py-2 text-right tabular-nums ${rate.growthPercentage >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {rate.growthPercentage.toFixed(2)}%
+                      </td>
+                      <td className={`px-4 py-2 text-right tabular-nums ${rate.performancePercentage >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {rate.performancePercentage.toFixed(2)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
