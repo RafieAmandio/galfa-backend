@@ -50,6 +50,8 @@ interface FundAllocationsSummary {
 interface VCPerformanceData {
   date: Date;
   aum: number;
+  monthlyGrossRoi?: number | null;
+  monthlyNettRoi?: number | null;
 }
 
 interface InvestorSummaryViewProps {
@@ -115,10 +117,12 @@ export function InvestorSummaryView({
 
     return vcPerformance.map((record) => {
       const date = new Date(record.date);
-      const month = date.toLocaleDateString("en-US", { month: "short" });
+      const month = date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
       return {
         month,
         aum: record.aum,
+        grossRoi: record.monthlyGrossRoi ?? 0,
+        nettRoi: record.monthlyNettRoi ?? 0,
       };
     });
   };
@@ -449,6 +453,49 @@ export function InvestorSummaryView({
               </div>
             </div>
           </div>
+
+          {/* Investment Performance — Gross & Net ROI */}
+          {performanceData.length > 0 && (
+            <div className="bg-card rounded-2xl shadow-soft p-6">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Investment Performance</h3>
+                  <p className="text-sm text-muted-foreground">Monthly Gross ROI &amp; Nett ROI (Investor)</p>
+                </div>
+                {performanceData.length > 0 && (
+                  <div className="flex gap-4 text-right">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Latest Gross ROI</p>
+                      <p className="text-lg font-bold text-primary">{performanceData[performanceData.length - 1].grossRoi.toFixed(2)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Latest Nett ROI</p>
+                      <p className="text-lg font-bold text-emerald-600">{performanceData[performanceData.length - 1].nettRoi.toFixed(2)}%</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={performanceData.slice(-12)} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: "#5a6785", fontSize: 11 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: "#5a6785", fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", boxShadow: "0 4px 20px rgba(0,0,0,0.1)" }}
+                      formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name === "grossRoi" ? "Gross ROI" : "Nett ROI"]}
+                    />
+                    <Legend formatter={(value) => value === "grossRoi" ? "Gross ROI" : "Nett ROI (Investor)"} />
+                    <Bar dataKey="grossRoi" fill="#192473" radius={[4, 4, 0, 0]} barSize={16} />
+                    <Bar dataKey="nettRoi" fill="#10b981" radius={[4, 4, 0, 0]} barSize={16} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <p className="text-xs text-muted-foreground mt-4">
+                Galfa is on track achieving the target of more than 20% gross profit p.a. — more than 10% nett profit for investors.
+              </p>
+            </div>
+          )}
 
           {/* Company AUM / Fund Allocations */}
           {fundAllocations && fundAllocations.allocations.length > 0 && (

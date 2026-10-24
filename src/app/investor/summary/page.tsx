@@ -11,7 +11,7 @@ export default async function InvestorSummaryPage() {
   // Fetch comprehensive summary, fund allocations, and VC performance on server side
   let summary = null;
   let fundAllocations = null;
-  let vcPerformance: { date: Date; aum: number }[] = [];
+  let vcPerformance: { date: Date; aum: number; monthlyGrossRoi: number | null; monthlyNettRoi: number | null }[] = [];
   let error: string | undefined = undefined;
 
   try {
@@ -29,11 +29,12 @@ export default async function InvestorSummaryPage() {
 
     if (vcPerformanceResult.success && vcPerformanceResult.data) {
       vcPerformance = vcPerformanceResult.data
-        .slice(0, 12)
         .reverse()
         .map((record) => ({
           date: record.date,
           aum: record.aum,
+          monthlyGrossRoi: record.monthlyGrossRoi,
+          monthlyNettRoi: record.monthlyNettRoi,
         }));
     }
   } catch (err) {
