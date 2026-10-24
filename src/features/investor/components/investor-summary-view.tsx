@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/db/supabase/browser";
-import type { ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
-import type { FundAllocation } from "@/features/fund-allocations/actions/get-fund-allocations";
+import { useQuery } from "@tanstack/react-query";
+import { getComprehensiveInvestorSummary, type ComprehensiveInvestorSummary } from "@/features/investor/actions/get-comprehensive-summary";
+import { getFundAllocationsSummary, type FundAllocation } from "@/features/fund-allocations/actions/get-fund-allocations";
+import { getAllVCPerformance } from "@/features/investments/actions/get-all-vc-performance";
 import { DownloadPdfButton } from "@/features/reports/components/download-pdf-button";
 import Link from "next/link";
 import {
@@ -68,14 +70,49 @@ interface InvestorSummaryViewProps {
 
 export function InvestorSummaryView({
   user,
-  summary,
-  fundAllocations,
-  vcPerformance,
+  summary: serverSummary,
+  fundAllocations: serverFundAllocations,
+  vcPerformance: serverVcPerformance,
   error,
 }: InvestorSummaryViewProps) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const supabase = createBrowserClient();
+
+  // Client-side data fetching — avoids serverless timeout
+  const { data: clientSummary } = useQuery({
+    queryKey: ["investor-summary", user.email],
+    queryFn: () => getComprehensiveInvestorSummary(user.email),
+    initialData: serverSummary,
+  });
+
+  const { data: clientFundAllocations } = useQuery({
+    queryKey: ["fund-allocations"],
+    queryFn: async () => {
+      const res = await getFundAllocationsSummary();
+      return res.success && res.data ? res.data : null;
+    },
+    initialData: serverFundAllocations,
+  });
+
+  const { data: clientVcPerformance } = useQuery({
+    queryKey: ["vc-performance"],
+    queryFn: async () => {
+      const res = await getAllVCPerformance({ pageSize: 100 });
+      if (!res.success || !res.data) return [];
+      return res.data.reverse().map((r) => ({
+        date: r.date,
+        aum: r.aum,
+        monthlyGrossRoi: r.monthlyGrossRoi,
+        monthlyNettRoi: r.monthlyNettRoi,
+      }));
+    },
+    initialData: serverVcPerformance.length > 0 ? serverVcPerformance : undefined,
+  });
+
+  const summary = clientSummary ?? serverSummary;
+  const fundAllocations = clientFundAllocations ?? serverFundAllocations;
+  const vcPerformance = clientVcPerformance ?? serverVcPerformance;
 
   const handleSignOut = async () => {
     setIsSigningOut(true);
