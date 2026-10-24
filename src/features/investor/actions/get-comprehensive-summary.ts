@@ -43,12 +43,10 @@ export interface ComprehensiveInvestorSummary {
 export async function getComprehensiveInvestorSummary(
   investorEmail: string
 ): Promise<ComprehensiveInvestorSummary | null> {
-  // Get data from all investment types in parallel
-  const [flatRateData, floatingRateData, installmentData] = await Promise.all([
-    getInvestorSummary(investorEmail),
-    getInvestorFloatingRateInvestments(investorEmail),
-    getInvestorInstallmentInvestments(investorEmail),
-  ]);
+  // Sequential to avoid exhausting Supabase connection pool on Vercel
+  const flatRateData = await getInvestorSummary(investorEmail);
+  const floatingRateData = await getInvestorFloatingRateInvestments(investorEmail);
+  const installmentData = await getInvestorInstallmentInvestments(investorEmail);
 
   // Check if we have any data at all
   const hasFlatRateData = flatRateData !== null;
