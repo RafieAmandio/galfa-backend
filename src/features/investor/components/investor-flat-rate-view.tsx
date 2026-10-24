@@ -479,7 +479,7 @@ export function InvestorFlatRateView({
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.investments.map((investment, index) => (
+                    {summary.investments.filter(inv => !inv.isRollover).map((investment, index) => (
                       <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors">
                         <td className="px-6 py-4 font-medium text-foreground">
                           {investment.accountNumber}

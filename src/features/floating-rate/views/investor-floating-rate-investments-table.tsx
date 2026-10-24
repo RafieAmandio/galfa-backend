@@ -482,7 +482,11 @@ export default function InvestorFloatingRateInvestmentsTable({
     [uniqueStatuses]
   );
 
-  const tableData = useMemo(() => data?.investments || [], [data]);
+  const tableData = useMemo(() => {
+    if (!data?.investments) return [];
+    // Hide rollover accounts — investors only see their original fund entries
+    return data.investments.filter((inv: any) => !inv.isRollover);
+  }, [data]);
 
   const table = useReactTable({
     data: tableData,

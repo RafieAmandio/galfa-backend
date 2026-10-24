@@ -19,8 +19,21 @@ import {
   Building2,
   Upload,
   ArrowDownToLine,
+  KeyRound,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { changePassword } from "@/features/auth/actions/change-password";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface NavigationProps {
   user: User | null;
@@ -37,6 +50,26 @@ interface NavItem {
 
 export function Navigation({ user, isAdmin, authError }: NavigationProps) {
   const [loading, setLoading] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordResult, setPasswordResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      setPasswordResult({ success: false, message: "Passwords don't match" });
+      return;
+    }
+    setPasswordLoading(true);
+    setPasswordResult(null);
+    const result = await changePassword(newPassword);
+    setPasswordLoading(false);
+    setPasswordResult(result);
+    if (result.success) {
+      setTimeout(() => { setShowPasswordDialog(false); setNewPassword(""); setConfirmPassword(""); setPasswordResult(null); }, 1500);
+    }
+  };
   const [expandedMenus, setExpandedMenus] = useState<string[]>(["investments"]);
   const router = useRouter();
   const pathname = usePathname();
@@ -251,6 +284,13 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
           </div>
 
           <button
+            onClick={() => { setShowPasswordDialog(true); setPasswordResult(null); setNewPassword(""); setConfirmPassword(""); }}
+            className="sidebar-item w-full text-white/70 hover:text-white hover:bg-white/10"
+          >
+            <KeyRound className="w-4 h-4" />
+            <span>Change Password</span>
+          </button>
+          <button
             onClick={handleSignOut}
             disabled={loading}
             className="sidebar-item w-full text-red-300 hover:text-red-200 hover:bg-red-500/10"
@@ -283,6 +323,36 @@ export function Navigation({ user, isAdmin, authError }: NavigationProps) {
           </p>
         </div>
       )}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Password</DialogTitle>
+            <DialogDescription>Enter your new password below.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium">New Password</label>
+              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Enter new password" className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">Confirm Password</label>
+              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className="mt-1" />
+            </div>
+            {passwordResult && (
+              <div className={`p-3 rounded-md text-sm border ${passwordResult.success ? "bg-emerald-50 text-emerald-800 border-emerald-200" : "bg-red-50 text-red-800 border-red-200"}`}>
+                {passwordResult.message}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPasswordDialog(false)} disabled={passwordLoading}>Cancel</Button>
+            <Button onClick={handleChangePassword} disabled={passwordLoading || !newPassword || !confirmPassword}>
+              {passwordLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Update Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
