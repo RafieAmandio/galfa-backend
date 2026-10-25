@@ -543,6 +543,35 @@ export default function InvestorFloatingRateInvestmentsTable({
     }
   );
 
+  const monthlyValueSummary = useMemo(() => {
+    if (!data?.investments || data.investments.length === 0) return [];
+
+    const allInvestments = data.investments as any[];
+    const totalOriginalInvested = allInvestments
+      .filter((inv: any) => !inv.isRollover)
+      .reduce((sum: number, inv: any) => sum + (Number(inv.netInvestorFund) || 0), 0);
+
+    // Only aggregate active accounts to avoid double-counting with rolled-over parents
+    const activeInvestments = allInvestments.filter((inv: any) => inv.status === "active");
+    const monthMap = new Map<string, number>();
+    for (const inv of activeInvestments) {
+      if (!inv.monthlyPerformance) continue;
+      for (const month of inv.monthlyPerformance) {
+        const key = month.monthLabel as string;
+        monthMap.set(key, (monthMap.get(key) || 0) + (Number(month.presentValueFund) || 0));
+      }
+    }
+
+    return Array.from(monthMap.entries())
+      .map(([monthLabel, presentValue]) => ({
+        monthLabel,
+        totalInvested: totalOriginalInvested,
+        presentValue,
+        totalProfit: presentValue - totalOriginalInvested,
+      }))
+      .sort((a, b) => new Date(b.monthLabel).getTime() - new Date(a.monthLabel).getTime());
+  }, [data]);
+
   if (loading) {
     return (
       <Card>
@@ -891,11 +920,11 @@ export default function InvestorFloatingRateInvestmentsTable({
           </div>
         </CardContent>
       </Card>
-      {/* Monthly Performance History */}
-      {data?.monthlyGrowthRates && data.monthlyGrowthRates.length > 0 && (
-        <Card className="mt-6">
+      {/* Monthly Value Summary */}
+      {monthlyValueSummary.length > 0 && (
+        <Card>
           <CardHeader>
-            <CardTitle>Monthly Performance History</CardTitle>
+            <CardTitle>Monthly Value Summary</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
@@ -903,20 +932,20 @@ export default function InvestorFloatingRateInvestmentsTable({
                 <thead>
                   <tr className="border-b border-border">
                     <th className="px-4 py-2 text-left font-medium text-muted-foreground">Month</th>
-                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Growth Rate</th>
-                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Performance Rate</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total Invested</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total Profit</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Present Value</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[...data.monthlyGrowthRates].reverse().map((rate: any, i: number) => (
+                  {monthlyValueSummary.map((row, i) => (
                     <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/20">
-                      <td className="px-4 py-2">{format(new Date(rate.month), "MMMM yyyy")}</td>
-                      <td className={`px-4 py-2 text-right tabular-nums ${rate.growthPercentage >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {rate.growthPercentage.toFixed(2)}%
+                      <td className="px-4 py-2">{row.monthLabel}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(row.totalInvested)}</td>
+                      <td className={`px-4 py-2 text-right tabular-nums ${row.totalProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {formatCurrency(row.totalProfit)}
                       </td>
-                      <td className={`px-4 py-2 text-right tabular-nums ${rate.performancePercentage >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {rate.performancePercentage.toFixed(2)}%
-                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums font-medium">{formatCurrency(row.presentValue)}</td>
                     </tr>
                   ))}
                 </tbody>
