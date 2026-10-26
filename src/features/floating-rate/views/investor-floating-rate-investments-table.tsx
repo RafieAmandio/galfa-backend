@@ -54,6 +54,7 @@ import {
   Filter,
   X,
   DollarSign,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { TextFilter, NumberRangeFilter, DateRangeFilter, numberRangeFilter, dateRangeFilter } from "@/components/ui/table-filters";
@@ -551,51 +552,22 @@ export default function InvestorFloatingRateInvestmentsTable({
       .filter((inv: any) => !inv.isRollover)
       .reduce((sum: number, inv: any) => sum + (Number(inv.netInvestorFund) || 0), 0);
 
-    // Only aggregate active accounts to avoid double-counting with rolled-over parents
     const activeInvestments = allInvestments.filter((inv: any) => inv.status === "active");
-    const monthMap = new Map<string, {
-      presentValue: number;
-      startingBalance: number;
-      interestEarned: number;
-      redemptions: number;
-      growthRate: number;
-      performanceRate: number;
-      daysInPeriod: number;
-    }>();
+    const monthMap = new Map<string, number>();
     for (const inv of activeInvestments) {
       if (!inv.monthlyPerformance) continue;
       for (const month of inv.monthlyPerformance) {
         const key = month.monthLabel as string;
-        const existing = monthMap.get(key) || {
-          presentValue: 0, startingBalance: 0, interestEarned: 0,
-          redemptions: 0, growthRate: 0, performanceRate: 0, daysInPeriod: 0,
-        };
-        existing.presentValue += Number(month.presentValueFund) || 0;
-        existing.startingBalance += Number(month.previousMonthValue) || 0;
-        existing.interestEarned += Number(month.gainedFund) || 0;
-        existing.growthRate = month.growthRate || 0;
-        existing.performanceRate = month.performanceRate || 0;
-        existing.daysInPeriod = month.daysActive || 0;
-        const monthRedemptions = (month.redemptions || []).reduce(
-          (sum: number, r: any) => sum + (Number(r.amount) || 0), 0
-        );
-        existing.redemptions += monthRedemptions;
-        monthMap.set(key, existing);
+        monthMap.set(key, (monthMap.get(key) || 0) + (Number(month.presentValueFund) || 0));
       }
     }
 
     return Array.from(monthMap.entries())
-      .map(([monthLabel, v]) => ({
+      .map(([monthLabel, presentValue]) => ({
         monthLabel,
         totalInvested: totalOriginalInvested,
-        startingBalance: v.startingBalance,
-        growthRate: v.growthRate,
-        performanceRate: v.performanceRate,
-        interestEarned: v.interestEarned,
-        redemptions: v.redemptions,
-        presentValue: v.presentValue,
-        totalProfit: v.presentValue - totalOriginalInvested,
-        daysInPeriod: v.daysInPeriod,
+        presentValue,
+        totalProfit: presentValue - totalOriginalInvested,
       }))
       .sort((a, b) => new Date(b.monthLabel).getTime() - new Date(a.monthLabel).getTime());
   }, [data]);
@@ -954,44 +926,54 @@ export default function InvestorFloatingRateInvestmentsTable({
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Monthly Value Summary</CardTitle>
-              <div className="text-sm text-muted-foreground">
-                Original Investment: <span className="font-semibold text-foreground tabular-nums">{formatCurrency(monthlyValueSummary[0]?.totalInvested || 0)}</span>
-              </div>
+              <Button variant="outline" size="sm" onClick={() => {
+                const header = "Month,Total Invested,Total Profit,Present Value,Ratio";
+                const rows = monthlyValueSummary.map(r =>
+                  `${r.monthLabel},${r.totalInvested.toFixed(2)},${r.totalProfit.toFixed(2)},${r.presentValue.toFixed(2)},${(r.totalInvested > 0 ? (r.totalProfit / r.totalInvested * 100) : 0).toFixed(2)}%`
+                );
+                const csv = [header, ...rows].join("\n");
+                const blob = new Blob([csv], { type: "text/csv" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "monthly-value-summary.csv";
+                a.click();
+                URL.revokeObjectURL(url);
+              }}>
+                <Download className="h-4 w-4 mr-2" />
+                Download CSV
+              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <p className="text-xs text-muted-foreground mb-4">
-              Present Value = Starting Balance + Interest Earned − Redemptions. Total Profit = Present Value − Original Investment.
-            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="px-3 py-2 text-left font-medium text-muted-foreground">Month</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Starting Balance</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Growth Rate</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Interest Earned</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Redemptions</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Present Value</th>
-                    <th className="px-3 py-2 text-right font-medium text-muted-foreground">Total Profit</th>
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Month</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total Invested</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total Profit</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Present Value</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Ratio</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {monthlyValueSummary.map((row, i) => (
-                    <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/20">
-                      <td className="px-3 py-2">{row.monthLabel}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{formatCurrency(row.startingBalance)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.growthRate.toFixed(2)}%</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-emerald-600">{formatCurrency(row.interestEarned)}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-red-600">
-                        {row.redemptions > 0 ? formatCurrency(row.redemptions) : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium">{formatCurrency(row.presentValue)}</td>
-                      <td className={`px-3 py-2 text-right tabular-nums font-medium ${row.totalProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {formatCurrency(row.totalProfit)}
-                      </td>
-                    </tr>
-                  ))}
+                  {monthlyValueSummary.map((row, i) => {
+                    const ratio = row.totalInvested > 0 ? (row.totalProfit / row.totalInvested * 100) : 0;
+                    return (
+                      <tr key={i} className="border-b border-border last:border-0 hover:bg-muted/20">
+                        <td className="px-4 py-2">{row.monthLabel}</td>
+                        <td className="px-4 py-2 text-right tabular-nums">{formatCurrency(row.totalInvested)}</td>
+                        <td className={`px-4 py-2 text-right tabular-nums ${row.totalProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatCurrency(row.totalProfit)}
+                        </td>
+                        <td className="px-4 py-2 text-right tabular-nums font-medium">{formatCurrency(row.presentValue)}</td>
+                        <td className={`px-4 py-2 text-right tabular-nums ${ratio >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {ratio.toFixed(2)}%
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
