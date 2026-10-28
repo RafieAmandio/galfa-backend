@@ -66,13 +66,17 @@ export async function getAccountsForRedemptionWithBalance(
       const adminFeeApplied = account.adminFeeApplied !== false;
       const adminFeeRate = Number(account.adminFeeRate || 0);
 
-      // Calculate NPV with pre-fetched redemptions up to the redemption date
+      // Cap calculation date at maturity — interest stops accruing after endDate
+      const effectiveDate = account.endDate && redemptionDate > account.endDate
+        ? account.endDate
+        : redemptionDate;
+
       const npvResult = await calculateNetPresentValueWithRedemptions(
         account.id,
         grossCapital,
         annualRate,
         account.startDate,
-        redemptionDate,
+        effectiveDate,
         isRollover,
         adminFeeApplied,
         redemptionMap.get(account.id),
