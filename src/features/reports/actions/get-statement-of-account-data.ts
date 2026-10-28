@@ -222,53 +222,11 @@ async function computeStatement(investorEmail: string) {
     // reportedInvested = original parent capital for rollovers, own capital otherwise
     const accountData: AccountDetail[] = [];
 
-    // Process floating rate accounts
-    for (const result of floatingResults) {
-      const grossCapital = parseFloat(result.grossCapital);
-      const adminFeeAmount = parseFloat(result.adminFee);
-      const netInvestorFund = grossCapital - adminFeeAmount;
-
-      const isRollover = result.isRollover || false;
-      let reportedInvested = netInvestorFund;
-      if (isRollover && result.parentAccountId) {
-        const rootCapital = getRootCapital(result.parentAccountId);
-        if (rootCapital) reportedInvested = rootCapital;
-      }
-
-      const valueWithRedemptions = await calculateFloatingRateValueWithRedemptions(
-        result.id,
-        netInvestorFund,
-        result.transactionDate,
-        currentDate,
-        redemptionMap.get(result.id),
-        growthRatesMap,
-        result.endDate
-      );
-
-      let entries = valueWithRedemptions.monthlyBreakdown.map((m) => ({
-        monthYear: m.monthYear,
-        gain: m.gainedFund,
-        endingBalance: m.endingBalance,
-        redemptions: m.redemptions,
-        hasData: m.hasData,
-      }));
-
-      accountData.push({
-        id: result.id,
-        accountNumber: result.accountNumber,
-        netInvestorFund,
-        reportedInvested,
-        parentAccountId: result.parentAccountId,
-        transactionDate: result.transactionDate,
-        endDate: result.endDate,
-        monthlyEntries: entries,
-      });
-    }
-
     // Map to store each account's maturity ending balance (for rollover child capital)
     const accountMaturityValue = new Map<number, number>();
 
-    // Process fix rate accounts (ordered by transaction_date, so parents come before children)
+    // Process fix rate accounts FIRST so parent maturity values are available
+    // for floating rate rollover children (e.g. fixed Fund 1 → floating Fund 1R)
     // Interest is always calculated on the ORIGINAL principal (not reduced by redemptions)
     // This matches the business logic: investors earn fixed interest on locked-in capital
     for (const result of fixResults) {
@@ -371,6 +329,59 @@ async function computeStatement(investorEmail: string) {
         netInvestorFund,
         reportedInvested,
         parentAccountId: result.parentAccountId ?? null,
+        transactionDate: result.transactionDate,
+        endDate: result.endDate,
+        monthlyEntries: entries,
+      });
+    }
+
+    // Process floating rate accounts AFTER fixed rate, so parent maturity values
+    // are available for rollovers from fixed → floating (e.g. Fund 1 → Fund 1R)
+    for (const result of floatingResults) {
+      const grossCapital = parseFloat(result.grossCapital);
+      const adminFeeAmount = parseFloat(result.adminFee);
+      let netInvestorFund = grossCapital - adminFeeAmount;
+
+      // Use parent's calculated maturity value if available (fixed→floating rollover)
+      const isRollover = result.isRollover || false;
+      if (isRollover && result.parentAccountId && accountMaturityValue.has(result.parentAccountId)) {
+        netInvestorFund = accountMaturityValue.get(result.parentAccountId)!;
+      }
+
+      let reportedInvested = netInvestorFund;
+      if (isRollover && result.parentAccountId) {
+        const rootCapital = getRootCapital(result.parentAccountId);
+        if (rootCapital) reportedInvested = rootCapital;
+      }
+
+      const valueWithRedemptions = await calculateFloatingRateValueWithRedemptions(
+        result.id,
+        netInvestorFund,
+        result.transactionDate,
+        currentDate,
+        redemptionMap.get(result.id),
+        growthRatesMap,
+        result.endDate
+      );
+
+      const entries = valueWithRedemptions.monthlyBreakdown.map((m) => ({
+        monthYear: m.monthYear,
+        gain: m.gainedFund,
+        endingBalance: m.endingBalance,
+        redemptions: m.redemptions,
+        hasData: m.hasData,
+      }));
+
+      if (entries.length > 0) {
+        accountMaturityValue.set(result.id, entries[entries.length - 1].endingBalance);
+      }
+
+      accountData.push({
+        id: result.id,
+        accountNumber: result.accountNumber,
+        netInvestorFund,
+        reportedInvested,
+        parentAccountId: result.parentAccountId,
         transactionDate: result.transactionDate,
         endDate: result.endDate,
         monthlyEntries: entries,
