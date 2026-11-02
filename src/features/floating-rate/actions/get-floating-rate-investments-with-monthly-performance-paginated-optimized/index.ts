@@ -11,6 +11,7 @@ import {
   vcPerformance,
 } from "@/db/drizzle/schema";
 import { eq, desc, asc, and, sql, gte, lt, inArray, ilike } from "drizzle-orm";
+import { getBatchFloatingRateGrowthPercentages } from "../get-floating-rate-growth-percentage/index";
 import {
   startOfMonth,
   endOfMonth,
@@ -400,55 +401,21 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
         );
       }
 
-      // Check cache for monthly growth rates
-      let monthlyGrowthRates = monthlyGrowthRatesCache.get(growthRatesCacheKey);
-      if (!monthlyGrowthRates) {
-        // OPTIMIZATION 4: Pre-calculate all monthly growth rates
-        monthlyGrowthRates = monthsToCalculate.map((month) => {
-          const monthKey = format(month, "yyyy-MM");
-          const previousMonth = subMonths(month, 1);
-          const previousMonthKey = format(previousMonth, "yyyy-MM");
-
-          const currentMonthData = vcDataByMonth[monthKey]?.[0];
-          const previousMonthData = vcDataByMonth[previousMonthKey]?.[0];
-
-          if (!currentMonthData || !previousMonthData) {
-            return {
-              month,
-              growthPercentage: 0,
-              performancePercentage: 0,
-              hasData: false,
-            };
-          }
-
-          const currentAUM = Number(currentMonthData.aum);
-          const previousAUM = Number(previousMonthData.aum);
-
-          // Calculate performance percentage (annualized)
-          const performancePercentage =
-            previousAUM > 0
-              ? ((currentAUM - previousAUM) / previousAUM) * 100 * 12
-              : 0;
-
-          // Apply business rules
-          const growthPercentage =
-            performancePercentage < 24 ? performancePercentage / 12 : 1.42;
-
-          return {
-            month,
-            growthPercentage,
-            performancePercentage,
-            hasData: true,
-          };
-        });
-
-        // Cache for 10 minutes
-        monthlyGrowthRatesCache.set(growthRatesCacheKey, monthlyGrowthRates);
-        setTimeout(
-          () => monthlyGrowthRatesCache.delete(growthRatesCacheKey),
-          10 * 60 * 1000
-        );
-      }
+      // Use the shared growth rate source (MONTHLY_NETT_RATES + cap/floor fallback)
+      const growthRatesMap = await getBatchFloatingRateGrowthPercentages(
+        monthsToCalculate[0],
+        monthsToCalculate[monthsToCalculate.length - 1]
+      );
+      const monthlyGrowthRates = monthsToCalculate.map((month) => {
+        const key = format(month, "yyyy-MM");
+        const data = growthRatesMap.get(key);
+        return {
+          month,
+          growthPercentage: data?.growthPercentage || 0,
+          performancePercentage: data?.performancePercentage || 0,
+          hasData: data?.hasData || false,
+        };
+      });
 
       // OPTIMIZATION 5: Process investments with pre-calculated data
       const investmentData = validResults.map((result) => ({
