@@ -508,31 +508,25 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
                 calculationDate.getTime() ===
                   startOfMonth(investment.transactionDate).getTime()
               ) {
-                // First month: partial month calculation
-                const daysPassed = Math.max(
-                  0,
-                  Math.ceil(
-                    (Math.min(new Date().getTime(), monthEnd.getTime()) -
-                      investment.transactionDate.getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  )
-                );
+                // First month: partial month, WIB day count (start-exclusive)
+                const wibDay = new Date(
+                  investment.transactionDate.getTime() + 7 * 60 * 60 * 1000
+                ).getUTCDate();
                 const totalDaysInMonth = monthEnd.getDate();
-                const daysFraction = daysPassed / totalDaysInMonth;
+                const daysFraction =
+                  (totalDaysInMonth - wibDay) / totalDaysInMonth;
 
-                newBalance =
-                  balanceAfterRedemptions *
-                  Math.pow(
-                    1 + growthRateData.growthPercentage / 100,
-                    daysFraction
-                  );
-                gainedFund = newBalance - balanceAfterRedemptions;
+                gainedFund =
+                  investment.netInvestorFund *
+                  (growthRateData.growthPercentage / 100) *
+                  daysFraction;
+                newBalance = balanceAfterRedemptions + gainedFund;
               } else {
-                // Subsequent months: full month calculation
-                newBalance =
-                  balanceAfterRedemptions *
-                  (1 + growthRateData.growthPercentage / 100);
-                gainedFund = newBalance - balanceAfterRedemptions;
+                // Subsequent months: simple interest on original capital
+                gainedFund =
+                  investment.netInvestorFund *
+                  (growthRateData.growthPercentage / 100);
+                newBalance = balanceAfterRedemptions + gainedFund;
               }
             }
 
