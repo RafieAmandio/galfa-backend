@@ -288,7 +288,7 @@ export const getFloatingRateInvestmentsWithMonthlyPerformance = cache(
                     gainedFund: monthBreakdown.gainedFund,
                     isFirstMonth,
                     daysActive: monthBreakdown.daysInPeriod,
-                    totalDaysInMonth: monthBreakdown.daysInPeriod, // We can improve this if needed
+                    totalDaysInMonth: monthBreakdown.totalDaysInMonth,
                     appliedRule: monthBreakdown.appliedRule,
                     hasData: monthBreakdown.hasData,
                     redemptions: monthBreakdown.redemptionDetails.map(

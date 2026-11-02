@@ -539,16 +539,12 @@ export const getFloatingRateInvestmentsWithMonthlyPerformancePaginatedOptimized 
             currentValue = newBalance;
 
             const monthKey = format(calculationDate, "MMM yyyy");
+            const totalDays = monthEnd.getDate();
+            const wibDate = (d: Date) =>
+              new Date(d.getTime() + 7 * 60 * 60 * 1000).getUTCDate();
             const daysInPeriod = isFirstMonth
-              ? Math.max(
-                  0,
-                  Math.ceil(
-                    (Math.min(new Date().getTime(), monthEnd.getTime()) -
-                      investment.transactionDate.getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  )
-                )
-              : monthEnd.getDate();
+              ? totalDays - wibDate(investment.transactionDate)
+              : totalDays;
 
             monthlyPerformance.push({
               month: calculationDate,

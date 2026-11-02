@@ -32,6 +32,7 @@ export interface MonthlyFloatingRateCalculation {
   gainedFund: number;
   endingBalance: number;
   daysInPeriod: number;
+  totalDaysInMonth: number;
   growthRate: number;
   performanceRate: number;
   appliedRule: string;
@@ -185,15 +186,15 @@ export async function calculateFloatingRateValueWithRedemptions(
     //   end month:   day(end)
     let gainedFund = 0;
 
-    if (growthData.hasData && growthData.growthPercentage > 0) {
-      const totalDaysInMonth = monthEnd.getDate();
-      const isStartMonth =
-        isFirstMonth &&
-        calculationDate.getTime() === startOfMonth(transactionDate).getTime();
-      const isEndMonth =
-        investmentEndDate != null &&
-        calculationDate.getTime() === startOfMonth(investmentEndDate).getTime();
+    const totalDaysInMonth = monthEnd.getDate();
+    const isStartMonth =
+      isFirstMonth &&
+      calculationDate.getTime() === startOfMonth(transactionDate).getTime();
+    const isEndMonth =
+      investmentEndDate != null &&
+      calculationDate.getTime() === startOfMonth(investmentEndDate).getTime();
 
+    if (growthData.hasData && growthData.growthPercentage > 0) {
       const startCut = isStartMonth ? getLocalDate(transactionDate) : 0;
       const endDay = isEndMonth ? getLocalDate(investmentEndDate!) : totalDaysInMonth;
       const daysFraction = Math.max(0, endDay - startCut) / totalDaysInMonth;
@@ -205,16 +206,9 @@ export async function calculateFloatingRateValueWithRedemptions(
     currentValue = balanceAfterRedemptions + gainedFund;
 
     const monthKey = format(calculationDate, "MMMM yyyy");
-    const daysInPeriod = isFirstMonth
-      ? Math.max(
-          0,
-          Math.ceil(
-            (Math.min(currentDate.getTime(), monthEnd.getTime()) -
-              transactionDate.getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        )
-      : monthEnd.getDate();
+    const daysInPeriod = isStartMonth
+      ? totalDaysInMonth - getLocalDate(transactionDate)
+      : totalDaysInMonth;
 
     monthlyBreakdown.push({
       monthYear: monthKey,
@@ -223,6 +217,7 @@ export async function calculateFloatingRateValueWithRedemptions(
       gainedFund,
       endingBalance: currentValue,
       daysInPeriod,
+      totalDaysInMonth,
       growthRate: growthData.growthPercentage,
       performanceRate: growthData.performancePercentage,
       appliedRule: growthData.appliedRule,
