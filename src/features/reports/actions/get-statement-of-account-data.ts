@@ -399,8 +399,24 @@ async function computeStatement(investorEmail: string) {
       }
     >();
 
-    // Track cumulative redemptions per account
+    // Track cumulative redemptions per account, seeded with ancestor totals
+    // so rollovers carry forward the parent chain's redeemed amounts
     const accountCumulativeRedemptions = new Map<number, number>();
+    for (const account of accountData) {
+      let ancestorRedemptions = 0;
+      let parentId = account.parentAccountId;
+      const visited = new Set<number>();
+      while (parentId != null && !visited.has(parentId)) {
+        visited.add(parentId);
+        const parent = accountData.find((a) => a.id === parentId);
+        if (!parent) break;
+        ancestorRedemptions += parent.monthlyEntries.reduce((sum, e) => sum + e.redemptions, 0);
+        parentId = parent.parentAccountId;
+      }
+      if (ancestorRedemptions > 0) {
+        accountCumulativeRedemptions.set(account.id, ancestorRedemptions);
+      }
+    }
 
     let monthCursor = startOfMonth(earliestDate);
     const endMonth = startOfMonth(currentDate);
